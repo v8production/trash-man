@@ -124,28 +124,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: debd4563b0ac25d4f8500ba54b95def9, type: 3}
   m_PrefabInstance: {fileID: 706564165}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &247914527
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 247914525}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 50a91fa81b0458941b34176b7c1810ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TrashMan.TrashTitanRightLegInputController
-  maxThetaDegrees: 55
-  thetaRadiusPixels: 260
-  useScreenCenterAsOrigin: 1
-  mouseOriginPixels: {x: 960, y: 540}
-  kneeSpeed: 90
-  hipYawLimit: {x: -20, y: 60}
-  hipRollLimit: {x: -120, y: 60}
-  kneeRollLimit: {x: 0, y: 130}
-  rightHip: {fileID: 0}
-  rightKnee: {fileID: 0}
 --- !u!95 &247914528
 Animator:
   serializedVersion: 7
@@ -254,8 +232,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalRotation: {x: -0.04763437, y: 0.92494184, z: -0.12355511, w: -0.35629743}
+  m_LocalPosition: {x: 0.9808664, y: 0.8053121, z: 0.96298844}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -491,9 +469,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: debd4563b0ac25d4f8500ba54b95def9, type: 3}
       insertIndex: -1
       addedObject: {fileID: 247914528}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: debd4563b0ac25d4f8500ba54b95def9, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 247914527}
   m_SourcePrefab: {fileID: 100100000, guid: debd4563b0ac25d4f8500ba54b95def9, type: 3}
 --- !u!1 &832575517
 GameObject:
