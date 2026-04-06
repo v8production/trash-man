@@ -30,6 +30,11 @@ namespace Titan
 
         public TitanAggregatedInput Current => current;
 
+        public void SetCurrent(TitanAggregatedInput value)
+        {
+            current = value;
+        }
+
         private void Update()
         {
             if (!autoCaptureInUpdate)

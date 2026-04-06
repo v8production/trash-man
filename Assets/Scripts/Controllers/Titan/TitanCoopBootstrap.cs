@@ -29,7 +29,7 @@ namespace Titan
 
             if (target == null)
             {
-                target = GameObject.Find("Trash_titan");
+                target = GameObject.Find("Titan");
             }
 
             if (target == null)

@@ -2,6 +2,35 @@ using UnityEngine;
 
 namespace Titan
 {
+    public struct TitanRigPoseSnapshot
+    {
+        public Vector3 RootPosition;
+        public Quaternion RootRotation;
+
+        public bool HasLeftShoulder;
+        public Quaternion LeftShoulderRotation;
+        public bool HasLeftElbow;
+        public Quaternion LeftElbowRotation;
+
+        public bool HasRightShoulder;
+        public Quaternion RightShoulderRotation;
+        public bool HasRightElbow;
+        public Quaternion RightElbowRotation;
+
+        public bool HasLeftHip;
+        public Quaternion LeftHipRotation;
+        public bool HasLeftKnee;
+        public Quaternion LeftKneeRotation;
+
+        public bool HasRightHip;
+        public Quaternion RightHipRotation;
+        public bool HasRightKnee;
+        public Quaternion RightKneeRotation;
+
+        public bool HasSpine;
+        public Quaternion SpineRotation;
+    }
+
     public class TitanRig : MonoBehaviour
     {
         [Header("Optional Bone Overrides")]
@@ -52,7 +81,7 @@ namespace Titan
             if (!hasAnyDrivenBone && !warnedMissingBones)
             {
                 warnedMissingBones = true;
-                Debug.LogWarning("[TitanRig] Could not resolve any controllable bones. Assign bone overrides on Trash_titan.", this);
+                Debug.LogWarning("[TitanRig] Could not resolve any controllable bones. Assign bone overrides on Titan.", this);
             }
 
             if (hasAnyDrivenBone && !loggedResolvedBones)
@@ -121,6 +150,132 @@ namespace Titan
             if (spine != null)
             {
                 spine.localRotation = spineBaseRotation * Quaternion.Euler(pitch, yaw, roll);
+            }
+        }
+
+        public bool TryGetPoseSnapshot(out TitanRigPoseSnapshot snapshot)
+        {
+            snapshot = default;
+            if (!EnsureReady())
+            {
+                return false;
+            }
+
+            Transform movementRoot = MovementRoot;
+            snapshot.RootPosition = movementRoot.position;
+            snapshot.RootRotation = movementRoot.rotation;
+
+            snapshot.HasLeftShoulder = leftShoulder != null;
+            if (snapshot.HasLeftShoulder)
+            {
+                snapshot.LeftShoulderRotation = leftShoulder.localRotation;
+            }
+
+            snapshot.HasLeftElbow = leftElbow != null;
+            if (snapshot.HasLeftElbow)
+            {
+                snapshot.LeftElbowRotation = leftElbow.localRotation;
+            }
+
+            snapshot.HasRightShoulder = rightShoulder != null;
+            if (snapshot.HasRightShoulder)
+            {
+                snapshot.RightShoulderRotation = rightShoulder.localRotation;
+            }
+
+            snapshot.HasRightElbow = rightElbow != null;
+            if (snapshot.HasRightElbow)
+            {
+                snapshot.RightElbowRotation = rightElbow.localRotation;
+            }
+
+            snapshot.HasLeftHip = leftHip != null;
+            if (snapshot.HasLeftHip)
+            {
+                snapshot.LeftHipRotation = leftHip.localRotation;
+            }
+
+            snapshot.HasLeftKnee = leftKnee != null;
+            if (snapshot.HasLeftKnee)
+            {
+                snapshot.LeftKneeRotation = leftKnee.localRotation;
+            }
+
+            snapshot.HasRightHip = rightHip != null;
+            if (snapshot.HasRightHip)
+            {
+                snapshot.RightHipRotation = rightHip.localRotation;
+            }
+
+            snapshot.HasRightKnee = rightKnee != null;
+            if (snapshot.HasRightKnee)
+            {
+                snapshot.RightKneeRotation = rightKnee.localRotation;
+            }
+
+            snapshot.HasSpine = spine != null;
+            if (snapshot.HasSpine)
+            {
+                snapshot.SpineRotation = spine.localRotation;
+            }
+
+            return true;
+        }
+
+        public void ApplyPoseSnapshot(in TitanRigPoseSnapshot snapshot)
+        {
+            if (!EnsureReady())
+            {
+                return;
+            }
+
+            Transform movementRoot = MovementRoot;
+            movementRoot.position = snapshot.RootPosition;
+            movementRoot.rotation = snapshot.RootRotation;
+
+            if (snapshot.HasLeftShoulder && leftShoulder != null)
+            {
+                leftShoulder.localRotation = snapshot.LeftShoulderRotation;
+            }
+
+            if (snapshot.HasLeftElbow && leftElbow != null)
+            {
+                leftElbow.localRotation = snapshot.LeftElbowRotation;
+            }
+
+            if (snapshot.HasRightShoulder && rightShoulder != null)
+            {
+                rightShoulder.localRotation = snapshot.RightShoulderRotation;
+            }
+
+            if (snapshot.HasRightElbow && rightElbow != null)
+            {
+                rightElbow.localRotation = snapshot.RightElbowRotation;
+            }
+
+            if (snapshot.HasLeftHip && leftHip != null)
+            {
+                leftHip.localRotation = snapshot.LeftHipRotation;
+            }
+
+            if (snapshot.HasLeftKnee && leftKnee != null)
+            {
+                leftKnee.localRotation = snapshot.LeftKneeRotation;
+            }
+
+            if (snapshot.HasRightHip && rightHip != null)
+            {
+                rightHip.localRotation = snapshot.RightHipRotation;
+            }
+
+            if (snapshot.HasRightKnee && rightKnee != null)
+            {
+                rightKnee.localRotation = snapshot.RightKneeRotation;
+            }
+
+            if (snapshot.HasSpine && spine != null)
+            {
+                spine.localRotation = snapshot.SpineRotation;
             }
         }
 
