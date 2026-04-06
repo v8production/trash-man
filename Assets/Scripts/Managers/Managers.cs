@@ -9,9 +9,11 @@ public class Managers : MonoBehaviour
     GameStateManager _gameStateManager = new();
     ChatMessageManager _chatMessageManager = new();
     CoopManager _coopManager = new();
+    TitanRigManager _titanRigManager = TitanRigManager.Instance;
     public static GameStateManager GameState { get { return Instance._gameStateManager; } }
     public static ChatMessageManager Chat { get { return Instance._chatMessageManager; } }
     public static CoopManager Coop { get { return Instance._coopManager; } }
+    public static TitanRigManager TitanRig { get { return Instance._titanRigManager; } }
     #endregion
 
     #region  Core
@@ -62,6 +64,7 @@ public class Managers : MonoBehaviour
             _instance._coopManager.Init();
             _instance._poolManager.Init();
             _instance._soundManager.Init();
+            _instance._titanRigManager.Init();
         }
     }
 
@@ -75,5 +78,6 @@ public class Managers : MonoBehaviour
         Chat.Clear();
         Coop.Clear();
         Pool.Clear();
+        TitanRig.Clear();
     }
 }

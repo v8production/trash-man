@@ -1,4 +1,3 @@
-using Titan;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
@@ -88,7 +87,7 @@ public static class CoopUtpGameBootstrap
     {
         TitanCoopBootstrap.AttachControllerIfMissing();
 
-        TitanRig rig = Object.FindAnyObjectByType<TitanRig>();
+        TitanRigRuntime rig = Object.FindAnyObjectByType<TitanRigRuntime>();
         if (rig == null)
         {
             return;
