@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "com.discord.partnersdk": {
-      "version": "file:C:/Users/9/Downloads/DiscordSocialSdk-UnityPlugin-1.8.14985/com.discord.partnersdk",
+      "version": "file:C:/Users/2gang/Downloads/DiscordSocialSdk-UnityPlugin-1.8.14985/com.discord.partnersdk",
       "depth": 0,
       "source": "local",
       "dependencies": {}
@@ -22,7 +22,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.burst": {
-      "version": "1.8.27",
+      "version": "1.8.28",
       "depth": 2,
       "source": "registry",
       "dependencies": {
