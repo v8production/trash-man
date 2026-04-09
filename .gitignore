@@ -44,3 +44,7 @@ Thumbs.db
 
 # AGENTS Settings
 AGENTS.md
+
+# Local secrets / env
+.env
+.env.*
