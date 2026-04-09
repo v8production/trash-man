@@ -37,6 +37,16 @@ public class UIManager
             canvas.sortingOrder = 0;
     }
 
+    public void ShowCanvas(GameObject go, int order = 0)
+    {
+        Canvas canvas = go.GetorAddComponent<Canvas>();
+
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.overrideSorting = true;
+
+        canvas.sortingOrder = order;
+    }
+
     public T CreateWorldSpaceUI<T>(Transform parent = null, string name = null) where T : UI_Base
     {
         if (string.IsNullOrEmpty(name))

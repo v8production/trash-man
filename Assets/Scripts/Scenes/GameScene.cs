@@ -5,6 +5,7 @@ public class GameScene : BaseScene
         base.Init();
         SceneType = Define.Scene.Game;
         LoadManagers();
+        Managers.Input.SetMode(Define.InputMode.Player);
     }
 
     private static void LoadManagers()

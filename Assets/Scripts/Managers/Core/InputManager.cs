@@ -17,7 +17,7 @@ public class InputManager
         _asset = Managers.Resource.Load<InputActionAsset>("InputSystem_Actions");
         PlayerMap = _asset.FindActionMap(_playerMapName, throwIfNotFound: true);
         UIMap = _asset.FindActionMap(_uiMapName, throwIfNotFound: true);
-        SetMode(Define.InputMode.Player);
+        SetMode(Define.InputMode.UI);
     }
 
     public void SetMode(Define.InputMode mode)
