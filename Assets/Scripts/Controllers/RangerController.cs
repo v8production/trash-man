@@ -134,7 +134,7 @@ public class RangerController : MonoBehaviour
 
     private static LobbyCameraController GetMainCameraController()
     {
-        LobbyCameraController cameraController = Object.FindFirstObjectByType<LobbyCameraController>();
+        LobbyCameraController cameraController = Object.FindAnyObjectByType<LobbyCameraController>();
         if (cameraController != null)
             return cameraController;
 

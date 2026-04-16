@@ -870,7 +870,7 @@ public sealed class TitanRigRuntime : MonoBehaviour
 
     private static int GetId(Transform value)
     {
-        return value != null ? value.GetInstanceID() : 0;
+        return value != null ? value.GetEntityId().GetHashCode() : 0;
     }
 
     private static string NameOrNone(Transform value)

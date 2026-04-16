@@ -7,11 +7,13 @@ public class Managers : MonoBehaviour
 
     #region Contents
     GameStateManager _gameStateManager = new();
+    OutlineManager _outlineManager = new();
     ChatManager _chatManager = new();
     ToastManager _toastManager = new();
     LobbySessionManager _lobbySessionManager = new();
     TitanRigManager _titanRigManager = TitanRigManager.Instance;
     public static GameStateManager GameState { get { return Instance._gameStateManager; } }
+    public static OutlineManager Outline { get { return Instance._outlineManager; } }
     public static ChatManager Chat { get { return Instance._chatManager; } }
     public static ToastManager Toast { get { return Instance._toastManager; } }
     public static LobbySessionManager LobbySession { get { return Instance._lobbySessionManager; } }
@@ -67,6 +69,7 @@ public class Managers : MonoBehaviour
             _instance._dataManager.Init();
             _instance._sceneManager.Init();
             _instance._gameStateManager.Init();
+            _instance._outlineManager.Init();
             _instance._chatManager.Init();
             _instance._toastManager.Init();
             _instance._lobbySessionManager.Init();
@@ -84,6 +87,7 @@ public class Managers : MonoBehaviour
         UI.Clear();
 
         GameState.Clear();
+        Outline.Clear();
         Chat.Clear();
         Toast.Clear();
         LobbySession.Clear();

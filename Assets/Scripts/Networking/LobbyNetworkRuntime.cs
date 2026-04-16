@@ -18,7 +18,7 @@ public static class LobbyNetworkRuntime
 
     public static bool EnsureSetup(out NetworkManager networkManager, out UnityTransport transport)
     {
-        networkManager = Object.FindFirstObjectByType<NetworkManager>();
+        networkManager = Object.FindAnyObjectByType<NetworkManager>();
         transport = networkManager != null ? networkManager.GetComponent<UnityTransport>() : null;
 
         if (networkManager == null)

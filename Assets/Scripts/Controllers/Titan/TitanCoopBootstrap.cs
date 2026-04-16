@@ -32,7 +32,7 @@ public static class TitanCoopBootstrap
 
         if (target == null)
         {
-            Animator[] animators = Object.FindObjectsByType<Animator>(FindObjectsSortMode.None);
+            Animator[] animators = Object.FindObjectsByType<Animator>();
             for (int i = 0; i < animators.Length; i++)
             {
                 Animator current = animators[i];

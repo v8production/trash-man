@@ -101,7 +101,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
         }
 
-        LobbyCameraController[] existingCameras = Object.FindObjectsByType<LobbyCameraController>(FindObjectsSortMode.None);
+        LobbyCameraController[] existingCameras = Object.FindObjectsByType<LobbyCameraController>();
         for (int i = 0; i < existingCameras.Length; i++)
             Object.Destroy(existingCameras[i].gameObject);
 

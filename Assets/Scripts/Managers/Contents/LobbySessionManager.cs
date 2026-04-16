@@ -44,6 +44,7 @@ public class LobbySessionManager
     public string HostUserId { get; private set; } = string.Empty;
     public string CurrentJoinCode { get; private set; } = string.Empty;
     public string CurrentVoiceSecret => _currentVoiceSecret;
+    public bool HasJoinedLobbySession => _currentDiscordLobbyId != 0;
 
     public void Init()
     {
@@ -112,6 +113,9 @@ public class LobbySessionManager
         if (string.IsNullOrWhiteSpace(userId))
             return;
 
+        if (nickname != null && _nicknamesByUserId.TryGetValue(userId, out UI_Nickname prevNickname) && prevNickname != null && prevNickname != nickname)
+            UnityEngine.Object.Destroy(prevNickname.gameObject);
+
         if (ranger != null)
             _rangersByUserId[userId] = ranger;
 
@@ -119,6 +123,39 @@ public class LobbySessionManager
             _nicknamesByUserId[userId] = nickname;
 
         LobbyScene.RegisterUserObjects(userId, ranger, nickname);
+    }
+
+    public bool TryGetLocalRangerTransform(out Transform rangerTransform)
+    {
+        rangerTransform = null;
+
+        string localUserId = Managers.Discord.LocalUserId;
+        if (!string.IsNullOrWhiteSpace(localUserId) && _rangersByUserId.TryGetValue(localUserId, out RangerController cachedRanger) && cachedRanger != null)
+        {
+            rangerTransform = cachedRanger.transform;
+            if (rangerTransform != null)
+                return true;
+        }
+
+        LobbyNetworkPlayer[] networkPlayers = UnityEngine.Object.FindObjectsByType<LobbyNetworkPlayer>();
+        for (int i = 0; i < networkPlayers.Length; i++)
+        {
+            LobbyNetworkPlayer networkPlayer = networkPlayers[i];
+            if (networkPlayer == null || !networkPlayer.IsOwner)
+                continue;
+
+            rangerTransform = networkPlayer.transform;
+            if (rangerTransform == null)
+                continue;
+
+            RangerController ownerRanger = networkPlayer.GetComponent<RangerController>();
+            if (!string.IsNullOrWhiteSpace(localUserId) && ownerRanger != null)
+                _rangersByUserId[localUserId] = ownerRanger;
+
+            return true;
+        }
+
+        return false;
     }
 
     public void UnregisterLobbyUserObjects(string userId, RangerController ranger, UI_Nickname nickname)
@@ -131,6 +168,8 @@ public class LobbySessionManager
 
         if (_nicknamesByUserId.TryGetValue(userId, out UI_Nickname storedNickname) && storedNickname == nickname)
             _nicknamesByUserId.Remove(userId);
+
+        LobbyScene.UnregisterUserObjects(userId, ranger, nickname);
     }
 
     public bool JoinLobbyByCode(string rawJoinCode)
@@ -339,11 +378,11 @@ public class LobbySessionManager
 
     private static void CleanupExistingLobbyObjects()
     {
-        RangerController[] rangers = UnityEngine.Object.FindObjectsByType<RangerController>(FindObjectsSortMode.None);
+        RangerController[] rangers = UnityEngine.Object.FindObjectsByType<RangerController>();
         for (int i = 0; i < rangers.Length; i++)
             UnityEngine.Object.Destroy(rangers[i].gameObject);
 
-        LobbyCameraController[] cameras = UnityEngine.Object.FindObjectsByType<LobbyCameraController>(FindObjectsSortMode.None);
+        LobbyCameraController[] cameras = UnityEngine.Object.FindObjectsByType<LobbyCameraController>();
         for (int i = 0; i < cameras.Length; i++)
             UnityEngine.Object.Destroy(cameras[i].gameObject);
     }

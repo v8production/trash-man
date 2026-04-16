@@ -57,6 +57,14 @@ public class UI_EnterCode : UI_Scene
         }
 
         Close();
+
+        UI_Intro intro = Object.FindAnyObjectByType<UI_Intro>();
+        if (intro != null)
+        {
+            intro.StartJoinTransition(normalizedCode);
+            return;
+        }
+
         Managers.Scene.LoadLobbyByCode(normalizedCode);
     }
 
