@@ -1,22 +1,42 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class UI_Loading : UI_Scene
 {
-    [SerializeField] private string _baseMessage = "Loading Lobby";
+    private const string BaseMessage = "Loading Lobby";
 
-    private Image _dim;
-    private Text _label;
+    private enum Images
+    {
+        Dim,
+        LoadingGif,
+    }
+
+    private enum Texts
+    {
+        Message,
+    }
+
+    [SerializeField] private float _gifRotationSpeed = -220f;
+
+    private Image _loadingGif;
+    private TextMeshProUGUI _label;
     private float _nextTickTime;
     private int _dotCount;
-    private string _message = string.Empty;
+    private string _message = BaseMessage;
 
     public override void Init()
     {
         base.Init();
         Managers.UI.ShowCanvas(gameObject, 500);
-        EnsureLayout();
-        SetMessage(_baseMessage);
+
+        Bind<Image>(typeof(Images));
+        Bind<TextMeshProUGUI>(typeof(Texts));
+
+        _loadingGif = GetImage((int)Images.LoadingGif);
+        _label = GetText((int)Texts.Message);
+
+        SetMessage(BaseMessage);
     }
 
     private void OnEnable()
@@ -27,6 +47,9 @@ public class UI_Loading : UI_Scene
 
     private void Update()
     {
+        if (_loadingGif != null)
+            _loadingGif.rectTransform.Rotate(0f, 0f, _gifRotationSpeed * Time.unscaledDeltaTime);
+
         if (_label == null)
             return;
 
@@ -40,60 +63,8 @@ public class UI_Loading : UI_Scene
 
     public void SetMessage(string message)
     {
-        _message = string.IsNullOrWhiteSpace(message) ? _baseMessage : message.Trim();
+        _message = string.IsNullOrWhiteSpace(message) ? BaseMessage : message.Trim();
         if (_label != null)
             _label.text = _message;
-    }
-
-    private void EnsureLayout()
-    {
-        if (_dim == null)
-            _dim = EnsureDimImage();
-
-        if (_label == null)
-            _label = EnsureLabelText();
-    }
-
-    private Image EnsureDimImage()
-    {
-        Transform dimTransform = transform.Find("Dim");
-        GameObject dimObject = dimTransform != null ? dimTransform.gameObject : new GameObject("Dim");
-        dimObject.transform.SetParent(transform, false);
-
-        RectTransform rect = dimObject.GetorAddComponent<RectTransform>();
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
-
-        Image image = dimObject.GetorAddComponent<Image>();
-        image.color = new Color(0f, 0f, 0f, 0.72f);
-        image.raycastTarget = true;
-        return image;
-    }
-
-    private Text EnsureLabelText()
-    {
-        Transform labelTransform = transform.Find("Message");
-        GameObject labelObject = labelTransform != null ? labelTransform.gameObject : new GameObject("Message");
-        labelObject.transform.SetParent(transform, false);
-
-        RectTransform rect = labelObject.GetorAddComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 0.5f);
-        rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.sizeDelta = new Vector2(500f, 80f);
-        rect.anchoredPosition = Vector2.zero;
-
-        Text label = labelObject.GetorAddComponent<Text>();
-        label.alignment = TextAnchor.MiddleCenter;
-        label.fontSize = 34;
-        label.color = Color.white;
-        label.raycastTarget = false;
-        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        if (font == null)
-            font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-
-        label.font = font;
-        return label;
     }
 }

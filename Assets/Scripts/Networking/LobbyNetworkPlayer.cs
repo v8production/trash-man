@@ -11,11 +11,15 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     private readonly NetworkVariable<FixedString64Bytes> _discordUserId = new(default);
     private readonly NetworkVariable<FixedString64Bytes> _displayName = new(new FixedString64Bytes("Player"));
+    private readonly NetworkVariable<int> _selectedTitanRole = new(0);
 
     private RangerController _rangerController;
     private CharacterController _characterController;
     private UI_Nickname _nicknameUI;
     private LobbyCameraController _localCamera;
+
+    public int SelectedTitanRoleValue => _selectedTitanRole.Value;
+    public bool HasSelectedTitanRole => IsValidTitanRoleValue(_selectedTitanRole.Value);
 
     private void Awake()
     {
@@ -30,6 +34,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         EnsureVisualComponentsEnabled();
         _discordUserId.OnValueChanged += HandleIdentityChanged;
         _displayName.OnValueChanged += HandleIdentityChanged;
+        _selectedTitanRole.OnValueChanged += HandleSelectedRoleChanged;
 
         ApplyOwnershipState();
         EnsureNicknameUI();
@@ -47,10 +52,14 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     {
         _discordUserId.OnValueChanged -= HandleIdentityChanged;
         _displayName.OnValueChanged -= HandleIdentityChanged;
+        _selectedTitanRole.OnValueChanged -= HandleSelectedRoleChanged;
 
         string lobbyUserId = GetLobbyUserId();
         if (!string.IsNullOrWhiteSpace(lobbyUserId))
+        {
             Managers.LobbySession.UnregisterLobbyUserObjects(lobbyUserId, _rangerController, _nicknameUI);
+            LobbyScene.RegisterUserPartSelection(lobbyUserId, 0);
+        }
 
         if (_nicknameUI != null)
             Destroy(_nicknameUI.gameObject);
@@ -68,9 +77,60 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _displayName.Value = displayName;
     }
 
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void SubmitSelectedTitanRoleServerRpc(int titanRoleValue)
+    {
+        _selectedTitanRole.Value = NormalizeTitanRoleValue(titanRoleValue);
+    }
+
+    [Rpc(SendTo.ClientsAndHost)]
+    private void LoadGameSceneClientRpc()
+    {
+        Managers.Scene.LoadScene(Define.Scene.Game);
+    }
+
+    public bool TryGetLobbyUserId(out string userId)
+    {
+        userId = GetLobbyUserId();
+        return !string.IsNullOrWhiteSpace(userId);
+    }
+
+    public void SelectTitanRole(Define.TitanRole titanRole)
+    {
+        if (!IsOwner)
+            return;
+
+        int roleValue = NormalizeTitanRoleValue((int)titanRole);
+        if (_selectedTitanRole.Value == roleValue)
+            return;
+
+        SubmitSelectedTitanRoleServerRpc(roleValue);
+    }
+
+    public static bool RequestLoadGameForAll()
+    {
+        LobbyNetworkPlayer[] players = Object.FindObjectsByType<LobbyNetworkPlayer>();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || !player.IsServer || !player.IsSpawned)
+                continue;
+
+            player.LoadGameSceneClientRpc();
+            return true;
+        }
+
+        return false;
+    }
+
     private void HandleIdentityChanged(FixedString64Bytes previousValue, FixedString64Bytes newValue)
     {
         RefreshIdentityPresentation();
+    }
+
+    private void HandleSelectedRoleChanged(int previousValue, int newValue)
+    {
+        RefreshRoleSelectionPresentation();
     }
 
     private void ApplyOwnershipState()
@@ -137,6 +197,17 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         string lobbyUserId = GetLobbyUserId();
         if (!string.IsNullOrWhiteSpace(lobbyUserId))
             Managers.LobbySession.RegisterLobbyUserObjects(lobbyUserId, _rangerController, _nicknameUI);
+
+        RefreshRoleSelectionPresentation();
+    }
+
+    private void RefreshRoleSelectionPresentation()
+    {
+        string lobbyUserId = GetLobbyUserId();
+        if (string.IsNullOrWhiteSpace(lobbyUserId))
+            return;
+
+        LobbyScene.RegisterUserPartSelection(lobbyUserId, _selectedTitanRole.Value);
     }
 
     private string GetLobbyUserId()
@@ -161,5 +232,15 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     {
         int slot = (int)(OwnerClientId % 4);
         return new Vector3(slot * 2.5f, 0f, 0f);
+    }
+
+    private static int NormalizeTitanRoleValue(int roleValue)
+    {
+        return IsValidTitanRoleValue(roleValue) ? roleValue : 0;
+    }
+
+    private static bool IsValidTitanRoleValue(int roleValue)
+    {
+        return roleValue >= (int)Define.TitanRole.Body && roleValue <= (int)Define.TitanRole.RightLeg;
     }
 }

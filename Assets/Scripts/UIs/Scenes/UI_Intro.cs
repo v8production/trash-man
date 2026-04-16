@@ -1,4 +1,3 @@
-using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -79,7 +78,8 @@ public class UI_Intro : UI_Scene
         if (_isTransitioning)
             return;
 
-        StartCoroutine(LoadLobbyTransitionCoroutine(true, string.Empty));
+        _isTransitioning = true;
+        Managers.Scene.LoadLobbyAsHost();
     }
 
     private void OnJoinButtonClicked(PointerEventData eventData)
@@ -101,31 +101,13 @@ public class UI_Intro : UI_Scene
 #endif
     }
 
-    private IEnumerator LoadLobbyTransitionCoroutine(bool asHost, string joinCode)
-    {
-        _isTransitioning = true;
-
-        UI_Loading loadingUi = Managers.UI.ShowSceneUI<UI_Loading>(nameof(UI_Loading));
-        if (loadingUi != null)
-        {
-            loadingUi.gameObject.SetActive(true);
-            loadingUi.SetMessage(asHost ? "Preparing lobby..." : "Joining lobby...");
-        }
-
-        yield return null;
-
-        if (asHost)
-            Managers.Scene.LoadLobbyAsHost();
-        else
-            Managers.Scene.LoadLobbyByCode(joinCode);
-    }
-
     public void StartJoinTransition(string joinCode)
     {
         if (_isTransitioning)
             return;
 
-        StartCoroutine(LoadLobbyTransitionCoroutine(false, joinCode));
+        _isTransitioning = true;
+        Managers.Scene.LoadLobbyByCode(joinCode);
     }
 
     private void HandleDiscordAuthStateChanged()

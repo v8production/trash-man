@@ -19,6 +19,7 @@ public class LobbyScene : BaseScene
     {
         public RangerController Ranger;
         public UI_Nickname Nickname;
+        public int SelectedRole;
     }
 
     public static void RegisterUserObjects(string userId, RangerController ranger, UI_Nickname nickname)
@@ -37,6 +38,20 @@ public class LobbyScene : BaseScene
 
         if (nickname != null)
             entry.Nickname = nickname;
+    }
+
+    public static void RegisterUserPartSelection(string userId, int selectedRoleValue)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+            return;
+
+        if (!s_userEntriesByDiscordUserId.TryGetValue(userId, out LobbyUserEntry entry) || entry == null)
+        {
+            entry = new LobbyUserEntry();
+            s_userEntriesByDiscordUserId[userId] = entry;
+        }
+
+        entry.SelectedRole = NormalizeRoleValue(selectedRoleValue);
     }
 
     public static void UnregisterUserObjects(string userId, RangerController ranger, UI_Nickname nickname)
@@ -100,8 +115,9 @@ public class LobbyScene : BaseScene
 
     private void Update()
     {
-        UpdateLobbyLoadingState();
         EnsureLocalLobbyCameraReady();
+        UpdateLobbyLoadingState();
+        HandleLocalPartSelectionInput();
 
         if (!IsEscapePressedThisFrame())
             return;
@@ -156,6 +172,21 @@ public class LobbyScene : BaseScene
 
         if (string.IsNullOrWhiteSpace(_pendingJoinCode))
         {
+            if (_isLobbySetupPending)
+            {
+                if (!Managers.LobbySession.HasJoinedLobbySession)
+                {
+                    SetLobbyLoading(true, "Preparing lobby...");
+                    return;
+                }
+
+                if (!IsLocalLobbyInteractionReady())
+                {
+                    SetLobbyLoading(true, "Spawning local player...");
+                    return;
+                }
+            }
+
             SetLobbyLoading(false);
             return;
         }
@@ -176,6 +207,9 @@ public class LobbyScene : BaseScene
             return;
 
         if (!Managers.LobbySession.HasJoinedLobbySession)
+            return;
+
+        if (!IsLocalLobbyInteractionReady())
             return;
 
         SetLobbyLoading(false);
@@ -236,16 +270,13 @@ public class LobbyScene : BaseScene
             Debug.LogWarning("[Lobby] LobbyScreenHostStartButton is missing on Screen. Attach it in scene and keep button root hidden by default.");
             return;
         }
-        
+
         _screenHostStartButton.StartButtonClicked -= HandleHostStartButtonClicked;
         _screenHostStartButton.StartButtonClicked += HandleHostStartButtonClicked;
     }
 
     private void EnsureLocalLobbyCameraReady()
     {
-        if (_isLobbySetupPending)
-            return;
-
         if (!Managers.LobbySession.HasJoinedLobbySession)
             return;
 
@@ -269,6 +300,92 @@ public class LobbyScene : BaseScene
         _localLobbyCamera.SetTarget(localRanger);
     }
 
+    private bool IsLocalLobbyInteractionReady()
+    {
+        if (_localLobbyCamera == null)
+            return false;
+
+        if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform localRanger) || localRanger == null)
+            return false;
+
+        return true;
+    }
+
+    private void HandleLocalPartSelectionInput()
+    {
+        if (_isLobbySetupPending || !Managers.LobbySession.HasJoinedLobbySession)
+            return;
+
+        if (Managers.Input.Mode != Define.InputMode.Player)
+            return;
+
+        if (!TryReadRoleSelectionInput(out Define.TitanRole selectedRole))
+            return;
+
+        LobbyNetworkPlayer localPlayer = FindLocalOwnedNetworkPlayer();
+        if (localPlayer == null)
+            return;
+
+        localPlayer.SelectTitanRole(selectedRole);
+
+        if (localPlayer.TryGetLobbyUserId(out string lobbyUserId))
+            RegisterUserPartSelection(lobbyUserId, (int)selectedRole);
+
+        Managers.Toast.EnqueueMessage($"Selected part: {GetRoleLabel(selectedRole)}", 1.4f);
+    }
+
+    private static bool TryReadRoleSelectionInput(out Define.TitanRole selectedRole)
+    {
+        selectedRole = Define.TitanRole.Body;
+        if (Keyboard.current == null)
+            return false;
+
+        if (Keyboard.current.digit1Key.wasPressedThisFrame || Keyboard.current.numpad1Key.wasPressedThisFrame)
+        {
+            selectedRole = Define.TitanRole.Body;
+            return true;
+        }
+
+        if (Keyboard.current.digit2Key.wasPressedThisFrame || Keyboard.current.numpad2Key.wasPressedThisFrame)
+        {
+            selectedRole = Define.TitanRole.LeftArm;
+            return true;
+        }
+
+        if (Keyboard.current.digit3Key.wasPressedThisFrame || Keyboard.current.numpad3Key.wasPressedThisFrame)
+        {
+            selectedRole = Define.TitanRole.RightArm;
+            return true;
+        }
+
+        if (Keyboard.current.digit4Key.wasPressedThisFrame || Keyboard.current.numpad4Key.wasPressedThisFrame)
+        {
+            selectedRole = Define.TitanRole.LeftLeg;
+            return true;
+        }
+
+        if (Keyboard.current.digit5Key.wasPressedThisFrame || Keyboard.current.numpad5Key.wasPressedThisFrame)
+        {
+            selectedRole = Define.TitanRole.RightLeg;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static LobbyNetworkPlayer FindLocalOwnedNetworkPlayer()
+    {
+        LobbyNetworkPlayer[] players = Object.FindObjectsByType<LobbyNetworkPlayer>();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player != null && player.IsOwner)
+                return player;
+        }
+
+        return null;
+    }
+
     private void HandleHostStartButtonClicked()
     {
         if (Managers.LobbySession == null || !Managers.LobbySession.IsHosting)
@@ -277,7 +394,67 @@ public class LobbyScene : BaseScene
             return;
         }
 
-        Managers.Toast.EnqueueMessage("GameScene transition is not implemented yet.", 2.5f);
+        if (!AreAllLobbyUsersReadyForGame(out string missingUserId))
+        {
+            string missingLabel = string.IsNullOrWhiteSpace(missingUserId) ? "unknown user" : missingUserId;
+            Managers.Toast.EnqueueMessage($"{missingLabel} must select at least one part before starting.", 2.8f);
+            return;
+        }
+
+        if (!LobbyNetworkPlayer.RequestLoadGameForAll())
+            Managers.Scene.LoadScene(Define.Scene.Game);
+    }
+
+    private static bool AreAllLobbyUsersReadyForGame(out string missingUserId)
+    {
+        missingUserId = string.Empty;
+        if (s_userEntriesByDiscordUserId.Count == 0)
+        {
+            missingUserId = "No lobby users";
+            return false;
+        }
+
+        foreach (KeyValuePair<string, LobbyUserEntry> pair in s_userEntriesByDiscordUserId)
+        {
+            string userId = pair.Key;
+            LobbyUserEntry entry = pair.Value;
+            if (entry == null || entry.Ranger == null)
+            {
+                missingUserId = userId;
+                return false;
+            }
+
+            if (!IsValidRoleValue(entry.SelectedRole))
+            {
+                missingUserId = userId;
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static int NormalizeRoleValue(int roleValue)
+    {
+        return IsValidRoleValue(roleValue) ? roleValue : 0;
+    }
+
+    private static bool IsValidRoleValue(int roleValue)
+    {
+        return roleValue >= (int)Define.TitanRole.Body && roleValue <= (int)Define.TitanRole.RightLeg;
+    }
+
+    private static string GetRoleLabel(Define.TitanRole role)
+    {
+        return role switch
+        {
+            Define.TitanRole.Body => "Center",
+            Define.TitanRole.LeftArm => "Left Arm",
+            Define.TitanRole.RightArm => "Right Arm",
+            Define.TitanRole.LeftLeg => "Left Leg",
+            Define.TitanRole.RightLeg => "Right Leg",
+            _ => "Unknown",
+        };
     }
 
     private void ToggleLobbyMenu()
@@ -373,4 +550,3 @@ public class LobbyScene : BaseScene
         _screenHostStartButton = null;
     }
 }
-
