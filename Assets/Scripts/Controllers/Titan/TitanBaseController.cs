@@ -34,9 +34,7 @@ public abstract class TitanBaseController : MonoBehaviour
     protected TitanAggregatedInput GetInputSnapshot(bool autoCaptureIfEmpty = true)
     {
         if (autoCaptureIfEmpty && !hasSharedInput)
-        {
             CaptureSharedInput();
-        }
 
         return sharedInput;
     }
@@ -47,7 +45,7 @@ public abstract class TitanBaseController : MonoBehaviour
         hasSharedInput = true;
     }
 
-    public static void CaptureSharedInput()
+    public static TitanAggregatedInput CaptureCurrentInputSnapshot(bool updateShared = true)
     {
         TitanAggregatedInput input = default;
 
@@ -83,8 +81,18 @@ public abstract class TitanBaseController : MonoBehaviour
         input.LeftLegKnee = ws;
         input.RightLegKnee = ws;
 
-        sharedInput = input;
-        hasSharedInput = true;
+        if (updateShared)
+        {
+            sharedInput = input;
+            hasSharedInput = true;
+        }
+
+        return input;
+    }
+
+    public static void CaptureSharedInput()
+    {
+        CaptureCurrentInputSnapshot(updateShared: true);
     }
 
     public abstract Define.TitanRole Role { get; }

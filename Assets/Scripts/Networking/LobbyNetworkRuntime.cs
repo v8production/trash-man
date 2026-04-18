@@ -27,6 +27,8 @@ public static class LobbyNetworkRuntime
             if (runtimeRoot == null)
                 runtimeRoot = new GameObject { name = RuntimeRootName };
 
+            Object.DontDestroyOnLoad(runtimeRoot);
+
             networkManager = runtimeRoot.GetComponent<NetworkManager>();
             if (networkManager == null)
                 networkManager = runtimeRoot.AddComponent<NetworkManager>();
@@ -50,7 +52,7 @@ public static class LobbyNetworkRuntime
             networkManager.NetworkConfig.Prefabs = new NetworkPrefabs();
 
         networkManager.NetworkConfig.NetworkTransport = transport;
-        networkManager.NetworkConfig.EnableSceneManagement = false;
+        networkManager.NetworkConfig.EnableSceneManagement = true;
         networkManager.NetworkConfig.ConnectionApproval = false;
         networkManager.NetworkConfig.ForceSamePrefabs = false;
         networkManager.NetworkConfig.PlayerPrefab = playerPrefab;

@@ -12,12 +12,14 @@ public class Managers : MonoBehaviour
     ToastManager _toastManager = new();
     LobbySessionManager _lobbySessionManager = new();
     TitanRigManager _titanRigManager = TitanRigManager.Instance;
+    TitanRoleManager _titanRoleManager = new();
     public static GameStateManager GameState { get { return Instance._gameStateManager; } }
     public static OutlineManager Outline { get { return Instance._outlineManager; } }
     public static ChatManager Chat { get { return Instance._chatManager; } }
     public static ToastManager Toast { get { return Instance._toastManager; } }
     public static LobbySessionManager LobbySession { get { return Instance._lobbySessionManager; } }
     public static TitanRigManager TitanRig { get { return Instance._titanRigManager; } }
+    public static TitanRoleManager TitanRole { get { return Instance._titanRoleManager; } }
     #endregion
 
     #region  Core
@@ -76,6 +78,7 @@ public class Managers : MonoBehaviour
             _instance._poolManager.Init();
             _instance._soundManager.Init();
             _instance._titanRigManager.Init();
+            _instance._titanRoleManager.Init();
             _instance._discordManager.Init();
         }
     }
@@ -93,6 +96,7 @@ public class Managers : MonoBehaviour
         LobbySession.Clear();
         Pool.Clear();
         TitanRig.Clear();
+        TitanRole.Clear();
         Discord.Clear();
     }
 }

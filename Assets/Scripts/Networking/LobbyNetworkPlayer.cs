@@ -1,6 +1,7 @@
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(NetworkObject))]
 [RequireComponent(typeof(RangerController))]
@@ -12,6 +13,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private readonly NetworkVariable<FixedString64Bytes> _discordUserId = new(default);
     private readonly NetworkVariable<FixedString64Bytes> _displayName = new(new FixedString64Bytes("Player"));
     private readonly NetworkVariable<int> _selectedTitanRole = new(0);
+    private readonly NetworkVariable<TitanRoleInputPayload> _roleInput = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     private RangerController _rangerController;
     private CharacterController _characterController;
@@ -20,6 +22,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     public int SelectedTitanRoleValue => _selectedTitanRole.Value;
     public bool HasSelectedTitanRole => IsValidTitanRoleValue(_selectedTitanRole.Value);
+    public TitanRoleInputPayload CurrentRoleInput => _roleInput.Value;
 
     private void Awake()
     {
@@ -83,6 +86,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _selectedTitanRole.Value = NormalizeTitanRoleValue(titanRoleValue);
     }
 
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void SubmitRoleInputServerRpc(TitanRoleInputPayload inputPayload)
+    {
+        _roleInput.Value = inputPayload;
+    }
+
     [Rpc(SendTo.ClientsAndHost)]
     private void LoadGameSceneClientRpc()
     {
@@ -93,6 +102,16 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     {
         userId = GetLobbyUserId();
         return !string.IsNullOrWhiteSpace(userId);
+    }
+
+    public bool TryGetSelectedRole(out Define.TitanRole role)
+    {
+        role = Define.TitanRole.Body;
+        if (!IsValidTitanRoleValue(_selectedTitanRole.Value))
+            return false;
+
+        role = (Define.TitanRole)_selectedTitanRole.Value;
+        return true;
     }
 
     public void SelectTitanRole(Define.TitanRole titanRole)
@@ -107,6 +126,35 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         SubmitSelectedTitanRoleServerRpc(roleValue);
     }
 
+    public void PublishLocalRoleInput()
+    {
+        if (!IsOwner)
+            return;
+
+        if (Managers.Scene.CurrentScene == null || Managers.Scene.CurrentScene.SceneType != Define.Scene.Game)
+            return;
+
+        TitanAggregatedInput currentInput = TitanBaseController.CaptureCurrentInputSnapshot(updateShared: false);
+        TitanRoleInputPayload payload = new(currentInput);
+        if (_roleInput.Value.Equals(payload))
+            return;
+
+        SubmitRoleInputServerRpc(payload);
+    }
+
+    public static LobbyNetworkPlayer FindLocalOwnedPlayer()
+    {
+        LobbyNetworkPlayer[] players = Object.FindObjectsByType<LobbyNetworkPlayer>();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player != null && player.IsOwner)
+                return player;
+        }
+
+        return null;
+    }
+
     public static bool RequestLoadGameForAll()
     {
         LobbyNetworkPlayer[] players = Object.FindObjectsByType<LobbyNetworkPlayer>();
@@ -116,11 +164,26 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             if (player == null || !player.IsServer || !player.IsSpawned)
                 continue;
 
+            if (player.TryLoadGameSceneForSession())
+                return true;
+
             player.LoadGameSceneClientRpc();
             return true;
         }
 
         return false;
+    }
+
+    private bool TryLoadGameSceneForSession()
+    {
+        if (!IsServer || NetworkManager == null)
+            return false;
+
+        if (!NetworkManager.NetworkConfig.EnableSceneManagement || NetworkManager.SceneManager == null)
+            return false;
+
+        SceneEventProgressStatus status = NetworkManager.SceneManager.LoadScene(Util.GetEnumName(Define.Scene.Game), LoadSceneMode.Single);
+        return status == SceneEventProgressStatus.Started || status == SceneEventProgressStatus.SceneEventInProgress;
     }
 
     private void HandleIdentityChanged(FixedString64Bytes previousValue, FixedString64Bytes newValue)

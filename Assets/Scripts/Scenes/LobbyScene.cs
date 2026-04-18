@@ -509,8 +509,8 @@ public class LobbyScene : BaseScene
 
         if (!AreAllLobbyUsersReadyForGame(out string missingUserId))
         {
-            string missingLabel = string.IsNullOrWhiteSpace(missingUserId) ? "unknown user" : missingUserId;
-            Managers.Toast.EnqueueMessage($"{missingLabel} must select at least one part before starting.", 2.8f);
+            string missingLabel = string.IsNullOrWhiteSpace(missingUserId) ? "unknown requirement" : missingUserId;
+            Managers.Toast.EnqueueMessage($"Cannot start game: {missingLabel}", 2.8f);
             return;
         }
 
@@ -527,6 +527,8 @@ public class LobbyScene : BaseScene
             return false;
         }
 
+        HashSet<int> claimedRoles = new();
+
         foreach (KeyValuePair<string, LobbyUserEntry> pair in s_userEntriesByDiscordUserId)
         {
             string userId = pair.Key;
@@ -540,6 +542,21 @@ public class LobbyScene : BaseScene
             if (!IsValidRoleValue(entry.SelectedRole))
             {
                 missingUserId = userId;
+                return false;
+            }
+
+            if (!claimedRoles.Add(entry.SelectedRole))
+            {
+                missingUserId = $"Duplicate role: {GetRoleLabel((Define.TitanRole)entry.SelectedRole)}";
+                return false;
+            }
+        }
+
+        for (int roleValue = (int)Define.TitanRole.Body; roleValue <= (int)Define.TitanRole.RightLeg; roleValue++)
+        {
+            if (!claimedRoles.Contains(roleValue))
+            {
+                missingUserId = $"Missing role: {GetRoleLabel((Define.TitanRole)roleValue)}";
                 return false;
             }
         }
