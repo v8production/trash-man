@@ -1,4 +1,3 @@
-#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
 
@@ -25,7 +24,7 @@ public static class TitanRigRuntimePrefabBaker
                 return;
             }
 
-            bool ok = rig.BakeBoneReferencesInEditor();
+            bool ok = rig.BakeBoneReferences();
             PrefabUtility.SaveAsPrefabAsset(root, TitanPrefabPath);
 
             Debug.Log($"[TitanRigRuntimeBaker] Bake complete. ok={ok}. Saved: {TitanPrefabPath}");
@@ -36,4 +35,3 @@ public static class TitanRigRuntimePrefabBaker
         }
     }
 }
-#endif

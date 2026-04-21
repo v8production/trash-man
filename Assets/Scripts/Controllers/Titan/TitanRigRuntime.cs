@@ -42,14 +42,13 @@ public sealed class TitanRigRuntime : MonoBehaviour
     private bool loggedResolvedBones;
     private bool basePoseInitialized;
 
-#if UNITY_EDITOR
-    [ContextMenu("TitanRigRuntime/Bake Bone References (Editor)")]
-    private void BakeBoneReferencesInEditorContextMenu()
+    [ContextMenu("TitanRigRuntime/Bake Bone References")]
+    private void BakeBoneReferencesContextMenu()
     {
-        BakeBoneReferencesInEditor();
+        BakeBoneReferences();
     }
 
-    public bool BakeBoneReferencesInEditor()
+    public bool BakeBoneReferences()
     {
         ResolveAndCacheIfNeeded(forceCache: true);
 
@@ -57,10 +56,8 @@ public sealed class TitanRigRuntime : MonoBehaviour
         warnedMissingBones = false;
         loggedResolvedBones = false;
 
-        UnityEditor.EditorUtility.SetDirty(this);
         return HasAnyDrivenBone();
     }
-#endif
 
     public Transform MovementRoot => mechaRoot != null ? mechaRoot : transform;
     public Transform Spine => spine;

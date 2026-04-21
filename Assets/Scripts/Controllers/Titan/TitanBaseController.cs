@@ -1,7 +1,5 @@
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
-#endif
 
 [System.Serializable]
 public struct TitanAggregatedInput
@@ -73,30 +71,22 @@ public abstract class TitanBaseController : MonoBehaviour
         input.MousePosition = TitanInputUtility.ReadMousePosition();
 
         input.BodyForward = TitanInputUtility.GetAxis(
-            KeyCode.UpArrow,
-            KeyCode.DownArrow,
             Key.UpArrow,
             Key.DownArrow);
 
         input.BodyStrafe = TitanInputUtility.GetAxis(
-            KeyCode.RightArrow,
-            KeyCode.LeftArrow,
             Key.RightArrow,
             Key.LeftArrow);
 
         input.BodyTurn = TitanInputUtility.GetAxis(
-            KeyCode.Period,
-            KeyCode.Comma,
             Key.Period,
             Key.Comma);
 
         input.BodyWaist = TitanInputUtility.GetAxis(
-            KeyCode.D,
-            KeyCode.A,
             Key.D,
             Key.A);
 
-        float ws = TitanInputUtility.GetAxis(KeyCode.W, KeyCode.S, Key.W, Key.S);
+        float ws = TitanInputUtility.GetAxis(Key.W, Key.S);
         input.LeftArmElbow = ws;
         input.RightArmElbow = ws;
         input.LeftLegKnee = ws;

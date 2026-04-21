@@ -96,9 +96,6 @@ public class UI_Intro : UI_Scene
     private void OnQuitButtonClicked(PointerEventData eventData)
     {
         Application.Quit();
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-#endif
     }
 
     public void StartJoinTransition(string joinCode)
