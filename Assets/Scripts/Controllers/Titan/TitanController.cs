@@ -4,7 +4,6 @@ public class TitanController : MonoBehaviour
 {
     [Header("Auto Attach")]
     [SerializeField] private bool attachControllersOnAwake = true;
-    [SerializeField] private bool attachLocalRoleTester = true;
 
     [Header("References")]
     [SerializeField] private TitanRigRuntime rigRuntime;
@@ -13,7 +12,6 @@ public class TitanController : MonoBehaviour
     [SerializeField] private TitanRightArmRoleController rightArmController;
     [SerializeField] private TitanLeftLegRoleController leftLegController;
     [SerializeField] private TitanRightLegRoleController rightLegController;
-    [SerializeField] private TitanLocalRoleSwitchTester localRoleSwitchTester;
 
     private void Awake()
     {
@@ -33,12 +31,6 @@ public class TitanController : MonoBehaviour
         rightArmController = EnsureComponent(rightArmController);
         leftLegController = EnsureComponent(leftLegController);
         rightLegController = EnsureComponent(rightLegController);
-
-        if (attachLocalRoleTester)
-        {
-            localRoleSwitchTester = EnsureComponent(localRoleSwitchTester);
-            localRoleSwitchTester.SetHostAuthority(true);
-        }
     }
 
     private T EnsureComponent<T>(T existing) where T : Component

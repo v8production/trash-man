@@ -4,53 +4,81 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(NetworkObject))]
-[RequireComponent(typeof(RangerController))]
-[RequireComponent(typeof(CharacterController))]
 public class LobbyNetworkPlayer : NetworkBehaviour
 {
     private const string LobbyCameraPrefabName = "Lobby_Camera";
+    private const string LobbyRangerPrefabName = "Ranger(TEMP)";
     private const int FirstTitanRoleValue = (int)Define.TitanRole.Body;
     private const int LastTitanRoleValue = (int)Define.TitanRole.RightLeg;
 
     private readonly NetworkVariable<FixedString64Bytes> _discordUserId = new(default);
     private readonly NetworkVariable<FixedString64Bytes> _displayName = new(new FixedString64Bytes("Player"));
     private readonly NetworkVariable<int> _selectedTitanRoleMask = new(0);
+    private readonly NetworkVariable<int> _activeTitanRole = new(0);
     private readonly NetworkVariable<TitanRoleInputPayload> _roleInput = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    private RangerController _rangerController;
-    private CharacterController _characterController;
+    private RangerController _lobbyRanger;
+    private CharacterController _lobbyRangerCharacterController;
     private UI_Nickname _nicknameUI;
     private LobbyCameraController _localCamera;
 
     public int SelectedTitanRoleMaskValue => NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
     public bool HasSelectedTitanRole => NormalizeTitanRoleMask(_selectedTitanRoleMask.Value) != 0;
+    public int ActiveTitanRoleValue => NormalizeTitanRoleValue(_activeTitanRole.Value);
     public TitanRoleInputPayload CurrentRoleInput => _roleInput.Value;
     public string DisplayName => GetDisplayName();
 
     private void Awake()
     {
-        _rangerController = GetComponent<RangerController>();
-        _characterController = GetComponent<CharacterController>();
+        // This NetworkBehaviour lives on the minimal Netcode player object.
+    }
+
+    private void Update()
+    {
+        // Handle local control switching on the render frame so we don't miss key down events.
+        TryHandleLocalRoleSwitchInput();
     }
 
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
+
+        // Unity appends "(Clone)" to instantiated prefab names; use stable, readable names in Hierarchy.
+        UpdateRuntimeObjectName();
+
+        bool isGameScene = Managers.Scene.CurrentScene != null && Managers.Scene.CurrentScene.SceneType == Define.Scene.Game;
+        bool isLobbyScene = Managers.Scene.CurrentScene != null && Managers.Scene.CurrentScene.SceneType == Define.Scene.Lobby;
+
         gameObject.hideFlags = HideFlags.None;
-        EnsureVisualComponentsEnabled();
         _discordUserId.OnValueChanged += HandleIdentityChanged;
         _displayName.OnValueChanged += HandleIdentityChanged;
         _selectedTitanRoleMask.OnValueChanged += HandleSelectedRoleChanged;
+        _activeTitanRole.OnValueChanged += HandleSelectedRoleChanged;
 
-        ApplyOwnershipState();
-        EnsureNicknameUI();
-        RefreshIdentityPresentation();
+        if (isLobbyScene)
+        {
+            EnsureLobbyRanger();
+            ApplyOwnershipState();
+            EnsureNicknameUI();
+            RefreshIdentityPresentation();
+        }
+        else if (isGameScene)
+        {
+            Transform runtimeRoot = NetworkManager != null ? NetworkManager.transform : GameObject.Find("@LobbyNetworkRuntime")?.transform;
+            PrepareForGameScene(runtimeRoot);
+        }
 
         if (IsOwner)
         {
-            transform.position = GetInitialSpawnPosition();
-            EnsureLocalCamera();
-            SubmitIdentityServerRpc(Managers.Discord.LocalUserId, Managers.Discord.LocalDisplayName);
+            if (isLobbyScene)
+            {
+                EnsureLocalCamera();
+                SubmitIdentityServerRpc(Managers.Discord.LocalUserId, Managers.Discord.LocalDisplayName);
+            }
+            else if (isGameScene)
+            {
+                SubmitIdentityServerRpc(Managers.Discord.LocalUserId, Managers.Discord.LocalDisplayName);
+            }
         }
     }
 
@@ -59,11 +87,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _discordUserId.OnValueChanged -= HandleIdentityChanged;
         _displayName.OnValueChanged -= HandleIdentityChanged;
         _selectedTitanRoleMask.OnValueChanged -= HandleSelectedRoleChanged;
+        _activeTitanRole.OnValueChanged -= HandleSelectedRoleChanged;
 
         string lobbyUserId = GetLobbyUserId();
         if (!string.IsNullOrWhiteSpace(lobbyUserId))
         {
-            Managers.LobbySession.UnregisterLobbyUserObjects(lobbyUserId, _rangerController, _nicknameUI);
+            Managers.LobbySession.UnregisterLobbyUserObjects(lobbyUserId, _lobbyRanger, _nicknameUI);
             LobbyScene.RegisterUserPartSelection(lobbyUserId, 0);
         }
 
@@ -72,6 +101,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         if (_localCamera != null)
             Destroy(_localCamera.gameObject);
+
+        if (_lobbyRanger != null)
+            Destroy(_lobbyRanger.gameObject);
 
         base.OnNetworkDespawn();
     }
@@ -87,6 +119,33 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private void SubmitSelectedTitanRoleMaskServerRpc(int titanRoleMask)
     {
         _selectedTitanRoleMask.Value = NormalizeTitanRoleMask(titanRoleMask);
+
+        int normalizedMask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
+        int activeRoleValue = NormalizeTitanRoleValue(_activeTitanRole.Value);
+        if (normalizedMask == 0)
+        {
+            _activeTitanRole.Value = 0;
+            return;
+        }
+
+        int activeBit = activeRoleValue != 0 ? (1 << (activeRoleValue - FirstTitanRoleValue)) : 0;
+        if (activeBit == 0 || (normalizedMask & activeBit) == 0)
+            _activeTitanRole.Value = (int)GetFirstRoleFromMask(normalizedMask);
+    }
+
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void SubmitActiveTitanRoleServerRpc(int titanRoleValue)
+    {
+        int normalizedRoleValue = NormalizeTitanRoleValue(titanRoleValue);
+        if (normalizedRoleValue == 0)
+            return;
+
+        int mask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
+        int bit = 1 << (normalizedRoleValue - FirstTitanRoleValue);
+        if ((mask & bit) == 0)
+            return;
+
+        _activeTitanRole.Value = normalizedRoleValue;
     }
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
@@ -150,6 +209,56 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         SubmitSelectedTitanRoleMaskServerRpc(nextMask);
     }
 
+    public bool TryGetActiveTitanRole(out Define.TitanRole role)
+    {
+        role = Define.TitanRole.Body;
+        int activeRoleValue = NormalizeTitanRoleValue(_activeTitanRole.Value);
+        if (activeRoleValue == 0)
+            return false;
+
+        int mask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
+        int bit = 1 << (activeRoleValue - FirstTitanRoleValue);
+        if ((mask & bit) == 0)
+            return false;
+
+        role = (Define.TitanRole)activeRoleValue;
+        return true;
+    }
+
+    public bool IsActivelyControllingRole(Define.TitanRole role)
+    {
+        if (!TryGetActiveTitanRole(out Define.TitanRole active))
+            return false;
+
+        return active == role;
+    }
+
+    public void TryHandleLocalRoleSwitchInput()
+    {
+        if (!IsOwner)
+            return;
+
+        if (Managers.Scene.CurrentScene == null || Managers.Scene.CurrentScene.SceneType != Define.Scene.Game)
+            return;
+
+        TrySwitchActiveRoleFromDigit(1, Define.TitanRole.Body);
+        TrySwitchActiveRoleFromDigit(2, Define.TitanRole.LeftArm);
+        TrySwitchActiveRoleFromDigit(3, Define.TitanRole.RightArm);
+        TrySwitchActiveRoleFromDigit(4, Define.TitanRole.LeftLeg);
+        TrySwitchActiveRoleFromDigit(5, Define.TitanRole.RightLeg);
+    }
+
+    private void TrySwitchActiveRoleFromDigit(int digit, Define.TitanRole role)
+    {
+        if (!TitanInputUtility.WasDigitPressedThisFrame(digit))
+            return;
+
+        if (!HasSelectedTitanRoleValue(role))
+            return;
+
+        SubmitActiveTitanRoleServerRpc((int)role);
+    }
+
     public void PublishLocalRoleInput()
     {
         if (!IsOwner)
@@ -157,6 +266,14 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         if (Managers.Scene.CurrentScene == null || Managers.Scene.CurrentScene.SceneType != Define.Scene.Game)
             return;
+
+        // If the user owns roles but hasn't established an active one yet, pick the first role.
+        if (!TryGetActiveTitanRole(out _))
+        {
+            int mask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
+            if (mask != 0)
+                SubmitActiveTitanRoleServerRpc((int)GetFirstRoleFromMask(mask));
+        }
 
         TitanAggregatedInput currentInput = TitanBaseController.CaptureCurrentInputSnapshot(updateShared: false);
         TitanRoleInputPayload payload = new(currentInput);
@@ -212,6 +329,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     private void HandleIdentityChanged(FixedString64Bytes previousValue, FixedString64Bytes newValue)
     {
+        UpdateRuntimeObjectName();
+        UpdateLobbyRangerName();
         RefreshIdentityPresentation();
     }
 
@@ -220,31 +339,60 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         RefreshRoleSelectionPresentation();
     }
 
-    private void ApplyOwnershipState()
+    private void UpdateRuntimeObjectName()
     {
-        if (_rangerController != null)
-            _rangerController.enabled = IsOwner;
-
-        if (_characterController != null)
-            _characterController.enabled = IsOwner;
+        string userId = GetLobbyUserId();
+        string suffix = string.IsNullOrWhiteSpace(userId) ? OwnerClientId.ToString() : userId;
+        gameObject.name = $"@NetworkObject({suffix})";
     }
 
-    private void EnsureVisualComponentsEnabled()
+    private void UpdateLobbyRangerName()
     {
-        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
-        for (int i = 0; i < renderers.Length; i++)
-            renderers[i].enabled = true;
+        if (_lobbyRanger == null)
+            return;
 
-        Animator[] animators = GetComponentsInChildren<Animator>(true);
-        for (int i = 0; i < animators.Length; i++)
-            animators[i].enabled = true;
+        string userId = GetLobbyUserId();
+        string suffix = string.IsNullOrWhiteSpace(userId) ? OwnerClientId.ToString() : userId;
+        _lobbyRanger.gameObject.name = $"Ranger({suffix})";
+    }
+
+    private void ApplyOwnershipState()
+    {
+        bool isLobbyScene = Managers.Scene.CurrentScene != null && Managers.Scene.CurrentScene.SceneType == Define.Scene.Lobby;
+
+        if (_lobbyRanger != null)
+            _lobbyRanger.enabled = isLobbyScene && IsOwner;
+
+        if (_lobbyRangerCharacterController != null)
+            _lobbyRangerCharacterController.enabled = isLobbyScene && IsOwner;
+    }
+
+    private void EnsureLobbyRanger()
+    {
+        if (_lobbyRanger != null)
+            return;
+
+        GameObject rangerObject = Managers.Resource.Instantiate(LobbyRangerPrefabName);
+        if (rangerObject == null)
+            return;
+
+        rangerObject.name = $"Ranger({OwnerClientId})";
+        rangerObject.transform.position = GetInitialSpawnPosition();
+
+        _lobbyRanger = rangerObject.GetComponent<RangerController>();
+        _lobbyRangerCharacterController = rangerObject.GetComponent<CharacterController>();
+        ApplyOwnershipState();
+        UpdateLobbyRangerName();
     }
 
     private void EnsureLocalCamera()
     {
+        if (_lobbyRanger == null)
+            EnsureLobbyRanger();
+
         if (_localCamera != null)
         {
-            _localCamera.SetTarget(transform);
+            _localCamera.SetTarget(_lobbyRanger != null ? _lobbyRanger.transform : transform);
             return;
         }
 
@@ -258,7 +406,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         _localCamera = cameraObject.GetComponent<LobbyCameraController>();
         if (_localCamera != null)
-            _localCamera.SetTarget(transform);
+            _localCamera.SetTarget(_lobbyRanger != null ? _lobbyRanger.transform : transform);
     }
 
     private void EnsureNicknameUI()
@@ -266,7 +414,13 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (_nicknameUI != null)
             return;
 
-        _nicknameUI = Managers.UI.CreateWorldSpaceUI<UI_Nickname>(transform, nameof(UI_Nickname));
+        if (_lobbyRanger == null)
+            EnsureLobbyRanger();
+
+        if (_lobbyRanger == null)
+            return;
+
+        _nicknameUI = Managers.UI.CreateWorldSpaceUI<UI_Nickname>(_lobbyRanger.transform, nameof(UI_Nickname));
         if (_nicknameUI == null)
             return;
 
@@ -283,7 +437,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         string lobbyUserId = GetLobbyUserId();
         if (!string.IsNullOrWhiteSpace(lobbyUserId))
-            Managers.LobbySession.RegisterLobbyUserObjects(lobbyUserId, _rangerController, _nicknameUI);
+            Managers.LobbySession.RegisterLobbyUserObjects(lobbyUserId, _lobbyRanger, _nicknameUI);
 
         RefreshRoleSelectionPresentation();
     }
@@ -295,6 +449,37 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         LobbyScene.RegisterUserPartSelection(lobbyUserId, NormalizeTitanRoleMask(_selectedTitanRoleMask.Value));
+    }
+
+    public void PrepareForGameScene(Transform runtimeRoot)
+    {
+        // Keep the network player object alive for role input syncing.
+        DontDestroyOnLoad(gameObject);
+
+        if (_nicknameUI != null)
+            Destroy(_nicknameUI.gameObject);
+
+        if (_localCamera != null)
+            Destroy(_localCamera.gameObject);
+
+        if (_lobbyRanger != null)
+            Destroy(_lobbyRanger.gameObject);
+
+        if (runtimeRoot != null)
+            transform.SetParent(runtimeRoot, true);
+
+        gameObject.hideFlags = HideFlags.HideInHierarchy;
+    }
+
+    public bool TryGetLobbyRangerTransform(out Transform rangerTransform)
+    {
+        rangerTransform = null;
+
+        if (_lobbyRanger == null)
+            return false;
+
+        rangerTransform = _lobbyRanger.transform;
+        return rangerTransform != null;
     }
 
     private string GetLobbyUserId()

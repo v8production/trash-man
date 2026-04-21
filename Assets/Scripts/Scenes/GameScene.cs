@@ -6,15 +6,6 @@ public class GameScene : BaseScene
     private TitanController _titanController;
     private TitanRoleNetworkDriver _titanRoleDriver;
 
-    protected override void Init()
-    {
-        base.Init();
-        SceneType = Define.Scene.Game;
-        LoadManagers();
-        EnsureTitanRuntime();
-        Managers.Input.SetMode(Define.InputMode.Player);
-    }
-
     private static void LoadManagers()
     {
         _ = Managers.Input;
@@ -37,13 +28,34 @@ public class GameScene : BaseScene
 
         _titanController.EnsureInitialized();
 
-        TitanLocalRoleSwitchTester tester = _titanController.GetComponent<TitanLocalRoleSwitchTester>();
-        if (tester != null)
-            tester.enabled = false;
-
         _titanRoleDriver = _titanController.GetComponent<TitanRoleNetworkDriver>();
         if (_titanRoleDriver == null)
             _titanRoleDriver = _titanController.gameObject.AddComponent<TitanRoleNetworkDriver>();
+    }
+
+    protected override void Init()
+    {
+        base.Init();
+        SceneType = Define.Scene.Game;
+        LoadManagers();
+        EnsureTitanRuntime();
+        CleanupLobbyRangers();
+        Managers.Input.SetMode(Define.InputMode.Player);
+    }
+
+    private static void CleanupLobbyRangers()
+    {
+        Transform runtimeRoot = GameObject.Find("@LobbyNetworkRuntime")?.transform;
+
+        LobbyNetworkPlayer[] players = FindObjectsByType<LobbyNetworkPlayer>();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null)
+                continue;
+
+            player.PrepareForGameScene(runtimeRoot);
+        }
     }
 
     public override void Clear()

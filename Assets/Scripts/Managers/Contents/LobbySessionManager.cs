@@ -148,15 +148,11 @@ public class LobbySessionManager
             if (networkPlayer == null || !networkPlayer.IsOwner)
                 continue;
 
-            rangerTransform = networkPlayer.transform;
-            if (rangerTransform == null)
-                continue;
-
-            RangerController ownerRanger = networkPlayer.GetComponent<RangerController>();
-            if (!string.IsNullOrWhiteSpace(localUserId) && ownerRanger != null)
-                _rangersByUserId[localUserId] = ownerRanger;
-
-            return true;
+            if (networkPlayer.TryGetLobbyRangerTransform(out Transform lobbyRangerTransform) && lobbyRangerTransform != null)
+            {
+                rangerTransform = lobbyRangerTransform;
+                return true;
+            }
         }
 
         return false;

@@ -115,6 +115,9 @@ public class TitanRoleManager
         if (!_playersByRole.TryGetValue(role, out LobbyNetworkPlayer player) || player == null)
             return false;
 
+        if (!player.IsActivelyControllingRole(role))
+            return false;
+
         input = player.CurrentRoleInput.ToAggregatedInput();
         return true;
     }

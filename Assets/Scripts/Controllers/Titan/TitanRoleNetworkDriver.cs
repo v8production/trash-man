@@ -14,7 +14,6 @@ public class TitanRoleNetworkDriver : MonoBehaviour
     private void Awake()
     {
         ResolveControllers();
-        DisableLocalRoleTester();
     }
 
     private void FixedUpdate()
@@ -90,10 +89,4 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         _rightLegController ??= GetComponent<TitanRightLegRoleController>();
     }
 
-    private void DisableLocalRoleTester()
-    {
-        TitanLocalRoleSwitchTester tester = GetComponent<TitanLocalRoleSwitchTester>();
-        if (tester != null)
-            tester.enabled = false;
-    }
 }
