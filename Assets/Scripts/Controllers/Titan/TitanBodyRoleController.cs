@@ -78,7 +78,7 @@ public class TitanBodyRoleController : TitanBaseController
 
     public override void TickRoleInput(float deltaTime)
     {
-        if (!inputEnabled || Managers.TitanRig == null || !Managers.TitanRig.EnsureReady())
+        if (!inputEnabled || !Managers.TitanRig.EnsureReady())
         {
             return;
         }
@@ -92,7 +92,7 @@ public class TitanBodyRoleController : TitanBaseController
 
     public void TickPhysics(float deltaTime)
     {
-        if (Managers.TitanRig == null || !Managers.TitanRig.EnsureReady())
+        if (!Managers.TitanRig.EnsureReady())
         {
             return;
         }
@@ -415,7 +415,7 @@ public class TitanBodyRoleController : TitanBaseController
 
     private void UpdateWaistRotation(float waistInput, float deltaTime)
     {
-        if (Managers.TitanRig == null || !Managers.TitanRig.EnsureReady() || Managers.TitanRig.Spine == null)
+        if (!Managers.TitanRig.EnsureReady() || Managers.TitanRig.Spine == null)
         {
             return;
         }

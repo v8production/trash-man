@@ -2,11 +2,7 @@ using UnityEngine;
 
 public sealed class TitanRigManager
 {
-    private static readonly TitanRigManager instance = new TitanRigManager();
-
     private TitanRigRuntime runtime;
-
-    public static TitanRigManager Instance => instance;
 
     public TitanRigRuntime Runtime => runtime;
     public bool IsBound => runtime != null;
@@ -15,9 +11,8 @@ public sealed class TitanRigManager
     public Transform Spine => runtime != null ? runtime.Spine : null;
     public float WaistYaw => runtime != null ? runtime.WaistYaw : 0f;
 
-    private TitanRigManager()
-    {
-    }
+
+    public TitanRigManager() { }
 
     public bool EnsureBoundFromScene()
     {

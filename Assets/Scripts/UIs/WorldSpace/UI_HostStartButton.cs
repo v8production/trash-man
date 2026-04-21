@@ -117,7 +117,7 @@ public class UI_HostStartButton : UI_Base, ILobbyWorldButtonInteractionTarget
         StartButtonClicked = null;
         LobbyWorldButtonInteractionRegistry.Unregister(this);
 
-        if (_outlineRegistered && Managers.Outline != null)
+        if (_outlineRegistered)
             Managers.Outline.UnregisterTarget(this);
     }
 
@@ -173,7 +173,7 @@ public class UI_HostStartButton : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private void RefreshVisibility(bool force)
     {
-        bool isHost = Managers.LobbySession != null && Managers.LobbySession.IsHosting;
+        bool isHost = Managers.LobbySession.IsHosting;
         if (!force && _hostStateInitialized && _lastHostState == isHost)
             return;
 
@@ -192,7 +192,7 @@ public class UI_HostStartButton : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private void RefreshProximityOutline()
     {
-        if (Managers.LobbySession == null || !Managers.LobbySession.IsHosting)
+        if (!Managers.LobbySession.IsHosting)
         {
             _isInteractableByProximity = false;
             _currentProximitySqrDistance = float.PositiveInfinity;
@@ -237,7 +237,7 @@ public class UI_HostStartButton : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private void SetOutlineVisible(bool visible)
     {
-        if (!_hasOutlineRenderers || Managers.Outline == null)
+        if (!_hasOutlineRenderers)
             return;
 
         Managers.Outline.SetVisible(this, visible);

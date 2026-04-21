@@ -22,7 +22,7 @@ public abstract class TitanBaseArmRoleController : TitanBaseController
 
     public override void TickRoleInput(float deltaTime)
     {
-        if (Managers.TitanRig == null || !Managers.TitanRig.EnsureReady())
+        if (!Managers.TitanRig.EnsureReady())
         {
             return;
         }

@@ -544,7 +544,7 @@ public class LobbyScene : BaseScene
 
     private void HandleHostStartButtonClicked()
     {
-        if (Managers.LobbySession == null || !Managers.LobbySession.IsHosting)
+        if (!Managers.LobbySession.IsHosting)
         {
             Managers.Toast.EnqueueMessage("Only the host can start this action.", 2.5f);
             return;

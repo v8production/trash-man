@@ -129,7 +129,7 @@ public class UI_RoleSelectButton : UI_Base, ILobbyWorldButtonInteractionTarget
         RoleSelectButtonClicked = null;
         LobbyWorldButtonInteractionRegistry.Unregister(this);
 
-        if (_outlineRegistered && Managers.Outline != null)
+        if (_outlineRegistered)
             Managers.Outline.UnregisterTarget(this);
     }
 
@@ -158,7 +158,7 @@ public class UI_RoleSelectButton : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private void RefreshVisibility(bool force)
     {
-        bool isVisible = Managers.LobbySession != null && Managers.LobbySession.HasJoinedLobbySession;
+        bool isVisible = Managers.LobbySession.HasJoinedLobbySession;
         if (!force && _visibilityInitialized && _lastVisibleState == isVisible)
             return;
 
@@ -177,7 +177,7 @@ public class UI_RoleSelectButton : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private void RefreshProximityOutline()
     {
-        if (Managers.LobbySession == null || !Managers.LobbySession.HasJoinedLobbySession)
+        if (!Managers.LobbySession.HasJoinedLobbySession)
         {
             _isInteractableByProximity = false;
             _currentProximitySqrDistance = float.PositiveInfinity;
@@ -249,7 +249,7 @@ public class UI_RoleSelectButton : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private void SetOutlineVisible(bool visible)
     {
-        if (!_hasOutlineRenderers || Managers.Outline == null)
+        if (!_hasOutlineRenderers)
             return;
 
         Managers.Outline.SetVisible(this, visible);

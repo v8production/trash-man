@@ -11,7 +11,7 @@ public class Managers : MonoBehaviour
     ChatManager _chatManager = new();
     ToastManager _toastManager = new();
     LobbySessionManager _lobbySessionManager = new();
-    TitanRigManager _titanRigManager = TitanRigManager.Instance;
+    TitanRigManager _titanRigManager = new();
     TitanRoleManager _titanRoleManager = new();
     public static GameStateManager GameState { get { return Instance._gameStateManager; } }
     public static OutlineManager Outline { get { return Instance._outlineManager; } }

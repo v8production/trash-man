@@ -47,7 +47,7 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
         float targetYaw = targetAngles.x;
         float targetRoll = targetAngles.y;
 
-        if (Managers.TitanRig == null || !Managers.TitanRig.EnsureReady())
+        if (!Managers.TitanRig.EnsureReady())
         {
             return;
         }
