@@ -23,6 +23,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private UI_Nickname _nicknameUI;
     private LobbyCameraController _localCamera;
 
+    private bool _submittedIdentity;
+
     public int SelectedTitanRoleMaskValue => NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
     public bool HasSelectedTitanRole => NormalizeTitanRoleMask(_selectedTitanRoleMask.Value) != 0;
     public int ActiveTitanRoleValue => NormalizeTitanRoleValue(_activeTitanRole.Value);
@@ -41,11 +43,45 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     {
         // Handle local control switching on the render frame so we don't miss key down events.
         TryHandleLocalRoleSwitchInput();
+
+        // Netcode player objects can spawn before the LobbyScene finishes initializing.
+        // Ensure lobby-local objects (ranger/camera/nickname) are created once the lobby scene is actually active.
+        TryEnsureLobbyLocalObjects();
+    }
+
+    private void TryEnsureLobbyLocalObjects()
+    {
+        if (!IsSpawned)
+            return;
+
+        BaseScene scene = Managers.Scene.CurrentScene;
+        if (scene == null || scene.SceneType != Define.Scene.Lobby)
+            return;
+
+        EnsureLobbyRanger();
+        ApplyOwnershipState();
+        EnsureNicknameUI();
+
+        if (IsOwner)
+        {
+            EnsureLocalCamera();
+
+            if (!_submittedIdentity)
+            {
+                _submittedIdentity = true;
+                SubmitIdentityServerRpc(Managers.Discord.LocalUserId, Managers.Discord.LocalDisplayName);
+            }
+        }
+
+        // Register lobby objects once we have them; remote identity updates will refresh via OnValueChanged.
+        RefreshIdentityPresentation();
     }
 
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
+
+        _submittedIdentity = false;
 
         // Unity appends "(Clone)" to instantiated prefab names; use stable, readable names in Hierarchy.
         UpdateRuntimeObjectName();
@@ -81,10 +117,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             {
                 EnsureLocalCamera();
                 SubmitIdentityServerRpc(Managers.Discord.LocalUserId, Managers.Discord.LocalDisplayName);
+                _submittedIdentity = true;
             }
             else if (isGameScene)
             {
                 SubmitIdentityServerRpc(Managers.Discord.LocalUserId, Managers.Discord.LocalDisplayName);
+                _submittedIdentity = true;
             }
         }
     }
@@ -472,9 +510,14 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
         }
 
-        LobbyCameraController[] existingCameras = Object.FindObjectsByType<LobbyCameraController>();
-        for (int i = 0; i < existingCameras.Length; i++)
-            Object.Destroy(existingCameras[i].gameObject);
+        // Prefer reusing an authored/existing lobby camera when present.
+        LobbyCameraController existingCamera = Object.FindAnyObjectByType<LobbyCameraController>();
+        if (existingCamera != null)
+        {
+            _localCamera = existingCamera;
+            _localCamera.SetTarget(_lobbyRanger != null ? _lobbyRanger.transform : transform);
+            return;
+        }
 
         GameObject cameraObject = Managers.Resource.Instantiate(LobbyCameraPrefabName);
         if (cameraObject == null)
