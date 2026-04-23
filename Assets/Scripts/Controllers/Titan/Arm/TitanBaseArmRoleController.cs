@@ -5,10 +5,10 @@ public abstract class TitanBaseArmRoleController : TitanBaseController
     [Header("Shoulder Mouse Mapping")]
     [SerializeField] private float maxThetaDegrees = 55f;
     [SerializeField] private float thetaRadiusPixels = 260f;
+    [SerializeField] private float shoulderYawRadiusPixels = 2600f;
     [SerializeField] private bool useScreenCenterAsOrigin = true;
     [SerializeField] private Vector2 mouseOriginPixels = new(960f, 540f);
-    [SerializeField, Range(0.05f, 1f)] private float mouseSensitivity = 0.35f;
-    [SerializeField] private float mouseResponseSpeed = 5f;
+    [SerializeField] private float shoulderSpeed = 1f;
 
     [Header("Elbow Input")]
     [SerializeField] private float elbowSpeed = 120f;
@@ -39,12 +39,12 @@ public abstract class TitanBaseArmRoleController : TitanBaseController
             origin,
             thetaRadiusPixels,
             maxThetaDegrees,
-            mouseSensitivity,
+            Managers.Input.GetTitanMouseSensitivity(),
             secondaryMaxDegrees: 360f,
             applySensitivityToSecondary: false);
 
-        float normalizedX = thetaRadiusPixels > 0f
-            ? Mathf.Clamp((mousePosition.x - origin.x) / thetaRadiusPixels, -1f, 1f)
+        float normalizedX = shoulderYawRadiusPixels > 0f
+            ? Mathf.Clamp((mousePosition.x - origin.x) / shoulderYawRadiusPixels, -1f, 1f)
             : 0f;
         float yawT = Mathf.InverseLerp(-1f, 1f, normalizedX);
         if (IsLeftArm)
@@ -56,7 +56,7 @@ public abstract class TitanBaseArmRoleController : TitanBaseController
         float targetPitch = targetAngles.y;
 
         TitanArmControlState state = Managers.TitanRig.GetArmState(left: IsLeftArm);
-        float blend = 1f - Mathf.Exp(-mouseResponseSpeed * deltaTime);
+        float blend = 1f - Mathf.Exp(-shoulderSpeed * deltaTime);
         state.ShoulderYaw = Mathf.Lerp(state.ShoulderYaw, targetYaw, blend);
         state.ShoulderPitch = Mathf.Lerp(state.ShoulderPitch, targetPitch, blend);
 

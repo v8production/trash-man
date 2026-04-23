@@ -4,11 +4,10 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
 {
     [Header("Hip Mouse Mapping")]
     [SerializeField] private float maxThetaDegrees = 55f;
-    [SerializeField] private float thetaRadiusPixels = 260f;
+    [SerializeField] private float thetaRadiusPixels = 2600f;
     [SerializeField] private bool useScreenCenterAsOrigin = true;
     [SerializeField] private Vector2 mouseOriginPixels = new(960f, 540f);
-    [SerializeField, Range(0.05f, 1f)] private float mouseSensitivity = 0.35f;
-    [SerializeField] private float mouseResponseSpeed = 12f;
+    [SerializeField] private float hipSpeed = 2f;
 
     [Header("Knee Input")]
     [SerializeField] private float kneeSpeed = 110f;
@@ -33,7 +32,7 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
             origin,
             thetaRadiusPixels,
             maxThetaDegrees,
-            mouseSensitivity,
+            Managers.Input.GetTitanMouseSensitivity(),
             secondaryMaxDegrees: Mathf.Max(Mathf.Abs(hipRollLimit.x), Mathf.Abs(hipRollLimit.y)),
             applySensitivityToSecondary: false);
 
@@ -46,7 +45,7 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
         }
 
         TitanLegControlState state = Managers.TitanRig.GetLegState(left: IsLeftLeg);
-        float blend = 1f - Mathf.Exp(-mouseResponseSpeed * deltaTime);
+        float blend = 1f - Mathf.Exp(-hipSpeed * deltaTime);
         state.HipYaw = Mathf.Lerp(state.HipYaw, targetYaw, blend);
         state.HipRoll = Mathf.Lerp(state.HipRoll, targetRoll, blend);
 

@@ -13,14 +13,20 @@ public class InputManager
     private CursorLockMode _lastCursorLockMode;
     private float _nextTitanInputLogTime;
     private const float TitanInputLogIntervalSeconds = 0.20f;
-    private const bool UseTitanSingleAxisCorrection = true;
+    private const bool UseTitanSingleAxisCorrection = false;
     private const float TitanSingleAxisDeadZonePixels = 2f;
     private const float TitanHorizontalAssistBiasPixels = 18f;
+    private const float TitanMouseSensitivity = 0.0000035f;
 
     public Define.InputMode Mode { get; private set; } = Define.InputMode.Player;
 
     public InputActionMap PlayerMap;
     public InputActionMap UIMap;
+
+    public float GetTitanMouseSensitivity()
+    {
+        return TitanMouseSensitivity;
+    }
 
     private InputAction _lookAction;
 
@@ -101,6 +107,9 @@ public class InputManager
 
     private Vector2 CorrectTitanMousePosition(Vector2 mousePosition)
     {
+        if (!UseTitanSingleAxisCorrection)
+            return mousePosition;
+
         Vector2 origin = new(Screen.width * 0.5f, Screen.height * 0.5f);
         Vector2 fromOrigin = mousePosition - origin;
         Vector2 dominant = TitanInputUtility.KeepDominantAxisWithHorizontalBias(
