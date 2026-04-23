@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class LobbyCameraController : MonoBehaviour
 {
@@ -14,15 +13,12 @@ public class LobbyCameraController : MonoBehaviour
 
     private float _yaw;
     private float _pitch = 18f;
-    private InputAction _lookAction;
 
     private void Start()
     {
         Vector3 euler = transform.eulerAngles;
         _yaw = euler.y;
         _pitch = Mathf.Clamp(euler.x, _minPitch, _maxPitch);
-
-        BindLookInput();
 
         if (_lockCursor)
         {
@@ -36,7 +32,7 @@ public class LobbyCameraController : MonoBehaviour
         if (_target == null)
             return;
 
-        Vector2 lookInput = ReadLookInput();
+        Vector2 lookInput = Managers.Input.ReadPlayerLookInput();
         float mouseX = lookInput.x;
         float mouseY = lookInput.y;
 
@@ -58,26 +54,5 @@ public class LobbyCameraController : MonoBehaviour
     public void SetTarget(Transform target)
     {
         _target = target;
-    }
-
-    private void BindLookInput()
-    {
-        InputActionMap playerMap = Managers.Input.PlayerMap;
-        if (playerMap == null)
-            return;
-
-        _lookAction = playerMap.FindAction("Look", throwIfNotFound: false);
-    }
-
-    private Vector2 ReadLookInput()
-    {
-        if (_lookAction != null)
-            return _lookAction.ReadValue<Vector2>();
-
-        Mouse mouse = Mouse.current;
-        if (mouse == null)
-            return Vector2.zero;
-
-        return mouse.delta.ReadValue();
     }
 }

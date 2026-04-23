@@ -44,6 +44,10 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         // Handle local control switching on the render frame so we don't miss key down events.
         TryHandleLocalRoleSwitchInput();
 
+        // Publish local titan input from the owning network player itself.
+        // This keeps input flow alive even if the Titan runtime discovers the local player later.
+        PublishLocalRoleInput();
+
         // Netcode player objects can spawn before the LobbyScene finishes initializing.
         // Ensure lobby-local objects (ranger/camera/nickname) are created once the lobby scene is actually active.
         TryEnsureLobbyLocalObjects();
@@ -305,7 +309,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     private void TrySwitchActiveRoleFromDigit(int digit, Define.TitanRole role)
     {
-        if (!TitanInputUtility.WasDigitPressedThisFrame(digit))
+        if (!Managers.Input.WasDigitPressedThisFrame(digit))
             return;
 
         InputDebug.Log($"Digit{digit} pressed (client={OwnerClientId}, isOwner={IsOwner}). role={role}, selectedMask=0x{SelectedTitanRoleMaskValue:X}, activeRole={ActiveTitanRoleValue}");
@@ -345,7 +349,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             // InputDebug.Log($"PublishLocalRoleInput (client={OwnerClientId}, isOwner={IsOwner}) selectedMask=0x{selectedMask:X}, activeRole={activeRole}");
         }
 
-        TitanAggregatedInput currentInput = TitanBaseController.CaptureCurrentInputSnapshot(updateShared: false);
+        TitanAggregatedInput currentInput = Managers.Input.CaptureTitanInput();
         TitanRoleInputPayload payload = new(currentInput);
         if (_roleInput.Value.Equals(payload))
             return;

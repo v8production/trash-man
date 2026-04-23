@@ -76,14 +76,13 @@ public class TitanBodyRoleController : TitanBaseController
         }
     }
 
-    public override void TickRoleInput(float deltaTime)
+    public override void TickRoleInput(in TitanAggregatedInput input, float deltaTime)
     {
         if (!inputEnabled || !Managers.TitanRig.EnsureReady())
         {
             return;
         }
 
-        TitanAggregatedInput input = GetInputSnapshot();
         forwardInput = input.BodyForward;
         strafeInput = input.BodyStrafe;
         turnInput = input.BodyTurn;

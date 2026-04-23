@@ -7,8 +7,6 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
     [SerializeField] private float thetaRadiusPixels = 260f;
     [SerializeField] private bool useScreenCenterAsOrigin = true;
     [SerializeField] private Vector2 mouseOriginPixels = new(960f, 540f);
-    [SerializeField] private bool useSingleAxisMouseAssist = true;
-    [SerializeField] private float singleAxisDeadZonePixels = 2f;
     [SerializeField, Range(0.05f, 1f)] private float mouseSensitivity = 0.35f;
     [SerializeField] private float mouseResponseSpeed = 12f;
 
@@ -23,20 +21,12 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
 
     protected abstract bool IsLeftLeg { get; }
 
-    public override void TickRoleInput(float deltaTime)
+    public override void TickRoleInput(in TitanAggregatedInput input, float deltaTime)
     {
-        TitanAggregatedInput input = GetInputSnapshot();
         Vector2 mousePosition = input.MousePosition;
         Vector2 origin = useScreenCenterAsOrigin
             ? new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)
             : mouseOriginPixels;
-
-        if (useSingleAxisMouseAssist)
-        {
-            Vector2 fromOrigin = mousePosition - origin;
-            Vector2 dominant = TitanInputUtility.KeepDominantAxis(fromOrigin, singleAxisDeadZonePixels);
-            mousePosition = origin + dominant;
-        }
 
         Vector2 targetAngles = TitanInputUtility.ComputeSphericalAngles(
             mousePosition,
