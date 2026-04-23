@@ -3,8 +3,7 @@ using UnityEngine;
 public abstract class TitanBaseLegRoleController : TitanBaseController
 {
     [Header("Hip Mouse Mapping")]
-    [SerializeField] private float maxThetaDegrees = 55f;
-    [SerializeField] private float thetaRadiusPixels = 2600f;
+    [SerializeField] private float hipRadiusPixels = 260f;
     [SerializeField] private bool useScreenCenterAsOrigin = true;
     [SerializeField] private Vector2 mouseOriginPixels = new(960f, 540f);
     [SerializeField] private float hipSpeed = 2f;
@@ -22,28 +21,24 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
 
     public override void TickRoleInput(in TitanAggregatedInput input, float deltaTime)
     {
+        if (!Managers.TitanRig.EnsureReady())
+        {
+            return;
+        }
+
         Vector2 mousePosition = input.MousePosition;
         float sensitivity = Managers.Input.GetTitanMouseSensitivity();
         Vector2 origin = useScreenCenterAsOrigin
             ? new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)
             : mouseOriginPixels;
+        float maxYawDegrees = Mathf.Max(Mathf.Abs(hipYawLimit.x), Mathf.Abs(hipYawLimit.y));
+        float maxRollDegrees = Mathf.Max(Mathf.Abs(hipRollLimit.x), Mathf.Abs(hipRollLimit.y));
+        float resolvedBaseRadius = Mathf.Max(0.01f, hipRadiusPixels);
+        float normalizedX = Mathf.Clamp((mousePosition.x - origin.x) / resolvedBaseRadius, -1f, 1f);
+        float normalizedY = Mathf.Clamp((mousePosition.y - origin.y) / resolvedBaseRadius, -1f, 1f);
 
-        Vector2 targetAngles = TitanInputUtility.ComputeSphericalAngles(
-            mousePosition,
-            origin,
-            thetaRadiusPixels,
-            maxThetaDegrees,
-            sensitivity,
-            secondaryMaxDegrees: Mathf.Max(Mathf.Abs(hipRollLimit.x), Mathf.Abs(hipRollLimit.y)),
-            applySensitivityToSecondary: true);
-
-        float targetYaw = targetAngles.x;
-        float targetRoll = targetAngles.y;
-
-        if (!Managers.TitanRig.EnsureReady())
-        {
-            return;
-        }
+        float targetYaw = normalizedX * maxYawDegrees * sensitivity;
+        float targetRoll = -normalizedY * maxRollDegrees * sensitivity;
 
         TitanLegControlState state = Managers.TitanRig.GetLegState(left: IsLeftLeg);
         float blend = 1f - Mathf.Exp(-hipSpeed * deltaTime);
