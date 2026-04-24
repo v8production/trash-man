@@ -4,7 +4,7 @@ public class GameScene : BaseScene
 {
     private const string TitanPrefabName = "Titan";
     private const string GrolarPrefabName = "Grolar";
-    private static readonly Vector3 GrolarSpawnPosition = new(-0.489070356f, 7.18142701e-09f, 1.08038938f);
+    private static readonly Vector3 GrolarSpawnPosition = new(0, 0, 1);
     private static readonly Quaternion GrolarSpawnRotation = Quaternion.Euler(0f, 180f, 0f);
     private TitanController _titanController;
     private TitanRoleNetworkDriver _titanRoleDriver;
