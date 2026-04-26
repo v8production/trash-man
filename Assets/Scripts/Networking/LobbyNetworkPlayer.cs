@@ -23,6 +23,11 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private UI_Nickname _nicknameUI;
     private LobbyCameraController _localCamera;
 
+    private Animator _remoteAnimator;
+    private Vector3 _remoteLastPosition;
+    private bool _remoteHasLastPosition;
+    private bool _remoteWasWalking;
+
     private bool _submittedIdentity;
 
     public int SelectedTitanRoleMaskValue => NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
@@ -33,6 +38,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     private float _nextPublishLogTime;
     private const float PublishLogIntervalSeconds = 0.50f;
+    private const float DetachInputBufferSeconds = 0.20f;
+    private float _detachInputBufferRemaining;
 
     private void Awake()
     {
@@ -51,6 +58,18 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         // Netcode player objects can spawn before the LobbyScene finishes initializing.
         // Ensure lobby-local objects (ranger/camera/nickname) are created once the lobby scene is actually active.
         TryEnsureLobbyLocalObjects();
+    }
+
+    private void LateUpdate()
+    {
+        if (!IsSpawned)
+            return;
+
+        BaseScene scene = Managers.Scene.CurrentScene;
+        if (scene == null || scene.SceneType != Define.Scene.Lobby)
+            return;
+
+        SyncLobbyRangerTransform();
     }
 
     private void TryEnsureLobbyLocalObjects()
@@ -105,6 +124,16 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             ApplyOwnershipState();
             EnsureNicknameUI();
             RefreshIdentityPresentation();
+
+            // Ensure an initial, deterministic spawn position is applied on the server.
+            // This avoids a frame of (0,0,0) before the first NetworkTransform tick.
+            if (IsServer)
+            {
+                Vector3 initial = GetInitialSpawnPosition();
+                transform.SetPositionAndRotation(initial, Quaternion.identity);
+                if (_lobbyRanger != null)
+                    _lobbyRanger.transform.SetPositionAndRotation(initial, Quaternion.identity);
+            }
         }
         else if (isGameScene)
         {
@@ -350,11 +379,23 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         }
 
         TitanAggregatedInput currentInput = Managers.Input.CaptureTitanInput();
+        if (currentInput.RightMousePressedThisFrame)
+        {
+            string activeRoleLabel = activeRole != 0 ? ((Define.TitanRole)activeRole).ToString() : "<none>";
+            InputDebug.Log($"[TitanDetachClick] owner={OwnerClientId} selectedMask=0x{selectedMask:X} activeRole={activeRoleLabel} rmbHeld={currentInput.RightMouseHeld} mouse={currentInput.MousePosition} delta={currentInput.MouseDelta}");
+            _detachInputBufferRemaining = DetachInputBufferSeconds;
+        }
+        else
+        {
+            _detachInputBufferRemaining = Mathf.Max(0f, _detachInputBufferRemaining - Time.unscaledDeltaTime);
+        }
+
+        currentInput.RightMouseDetachBuffered = currentInput.RightMouseHeld || _detachInputBufferRemaining > 0f;
         TitanRoleInputPayload payload = new(currentInput);
         if (_roleInput.Value.Equals(payload))
             return;
 
-        // InputDebug.Log($"SubmitRoleInputServerRpc (mask=0x{selectedMask:X}, activeRole={activeRole}) waist={currentInput.BodyWaist} ws={currentInput.LeftArmElbow}");
+        InputDebug.Log($"SubmitRoleInputServerRpc (mask=0x{selectedMask:X}, activeRole={activeRole}) rmbHeld={currentInput.RightMouseHeld} rmbPressed={currentInput.RightMousePressedThisFrame} rmbBuffered={currentInput.RightMouseDetachBuffered} bufferRemaining={_detachInputBufferRemaining:F3} mouse={currentInput.MousePosition} delta={currentInput.MouseDelta}");
 
         SubmitRoleInputServerRpc(payload);
     }
@@ -495,12 +536,71 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         rangerObject.name = $"Ranger({OwnerClientId})";
-        rangerObject.transform.position = GetInitialSpawnPosition();
+        Vector3 initial = GetInitialSpawnPosition();
+        rangerObject.transform.SetPositionAndRotation(initial, Quaternion.identity);
 
         _lobbyRanger = rangerObject.GetComponent<RangerController>();
         _lobbyRangerCharacterController = rangerObject.GetComponent<CharacterController>();
         ApplyOwnershipState();
         UpdateLobbyRangerName();
+
+        // On the owner, drive the network player object's transform from the visible lobby ranger.
+        // This is what remote clients will replicate and follow.
+        if (IsOwner)
+            transform.SetPositionAndRotation(initial, Quaternion.identity);
+    }
+
+    private void SyncLobbyRangerTransform()
+    {
+        if (_lobbyRanger == null)
+            return;
+
+        if (IsOwner)
+        {
+            // Owner drives network transform (replicated to server/others via OwnerNetworkTransform).
+            Transform rangerTransform = _lobbyRanger.transform;
+            transform.SetPositionAndRotation(rangerTransform.position, rangerTransform.rotation);
+            return;
+        }
+
+        // Non-owners follow the replicated network player transform.
+        Transform networkTransform = transform;
+        Transform ranger = _lobbyRanger.transform;
+        ranger.SetPositionAndRotation(networkTransform.position, networkTransform.rotation);
+        UpdateRemoteRangerAnimation();
+    }
+
+    private void UpdateRemoteRangerAnimation()
+    {
+        if (_lobbyRanger == null)
+            return;
+
+        if (_remoteAnimator == null)
+            _remoteAnimator = _lobbyRanger.GetComponentInChildren<Animator>(true);
+
+        if (_remoteAnimator == null)
+            return;
+
+        Vector3 currentPos = _lobbyRanger.transform.position;
+        if (!_remoteHasLastPosition)
+        {
+            _remoteHasLastPosition = true;
+            _remoteLastPosition = currentPos;
+            _remoteAnimator.CrossFade("idle", 0.05f);
+            _remoteWasWalking = false;
+            return;
+        }
+
+        float dt = Mathf.Max(Time.deltaTime, 0.0001f);
+        float speed = (currentPos - _remoteLastPosition).magnitude / dt;
+        _remoteLastPosition = currentPos;
+
+        bool walking = speed > 0.15f;
+        if (walking == _remoteWasWalking)
+            return;
+
+        _remoteWasWalking = walking;
+        _remoteAnimator.CrossFade(walking ? "walk" : "idle", 0.10f);
     }
 
     private void EnsureLocalCamera()

@@ -5,6 +5,9 @@ public struct TitanAggregatedInput
 {
     public Vector2 MousePosition;
     public Vector2 MouseDelta;
+    public bool RightMouseHeld;
+    public bool RightMousePressedThisFrame;
+    public bool RightMouseDetachBuffered;
 
     public float BodyForward;
     public float BodyStrafe;

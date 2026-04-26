@@ -41,6 +41,7 @@ public sealed class TitanRigRuntime : MonoBehaviour
     private bool warnedMissingBones;
     private bool loggedResolvedBones;
     private bool basePoseInitialized;
+    private Rigidbody movementRigidbody;
 
     [ContextMenu("TitanRigRuntime/Bake Bone References")]
     private void BakeBoneReferencesContextMenu()
@@ -60,12 +61,21 @@ public sealed class TitanRigRuntime : MonoBehaviour
     }
 
     public Transform MovementRoot => mechaRoot != null ? mechaRoot : transform;
+    public Rigidbody MovementRigidbody
+    {
+        get
+        {
+            EnsureMovementRigidbodyCached();
+            return movementRigidbody;
+        }
+    }
     public Transform Spine => spine;
     public float WaistYaw => waistYaw;
 
     public void Init()
     {
         ResolveAndCacheIfNeeded(forceCache: true);
+        EnsureMovementRigidbodyCached();
     }
 
     public void Clear()
@@ -73,6 +83,28 @@ public sealed class TitanRigRuntime : MonoBehaviour
         warnedMissingBones = false;
         loggedResolvedBones = false;
         basePoseInitialized = false;
+        movementRigidbody = null;
+    }
+
+    public void ApplyMovementRootPose(Vector3 worldPosition, Quaternion worldRotation, bool zeroVelocities)
+    {
+        EnsureMovementRigidbodyCached();
+
+        if (movementRigidbody != null)
+        {
+            movementRigidbody.position = worldPosition;
+            movementRigidbody.rotation = worldRotation;
+
+            if (zeroVelocities)
+            {
+                movementRigidbody.linearVelocity = Vector3.zero;
+                movementRigidbody.angularVelocity = Vector3.zero;
+            }
+
+            return;
+        }
+
+        MovementRoot.SetPositionAndRotation(worldPosition, worldRotation);
     }
 
     public bool EnsureReady()
@@ -249,6 +281,26 @@ public sealed class TitanRigRuntime : MonoBehaviour
         Quaternion rollRotation = Quaternion.AngleAxis(shoulderRoll, Vector3.forward);
         Quaternion pitchRotation = Quaternion.AngleAxis(shoulderPitch, Vector3.right);
         return baseRotation * rollRotation * pitchRotation;
+    }
+
+    private void EnsureMovementRigidbodyCached()
+    {
+        if (movementRigidbody != null)
+        {
+            return;
+        }
+
+        Transform movementRoot = MovementRoot;
+        if (movementRoot == null)
+        {
+            return;
+        }
+
+        movementRigidbody = movementRoot.GetComponent<Rigidbody>();
+        if (movementRigidbody == null)
+        {
+            movementRigidbody = movementRoot.GetComponentInParent<Rigidbody>();
+        }
     }
 
     public bool TryGetPoseSnapshot(out TitanRigPoseSnapshot snapshot)

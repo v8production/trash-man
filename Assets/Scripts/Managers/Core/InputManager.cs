@@ -79,6 +79,8 @@ public class InputManager
         input.MouseDelta = ReadTitanMouseDelta();
         input.MousePosition = ReadMousePosition();
         input.MousePosition = CorrectTitanMousePosition(input.MousePosition);
+        input.RightMouseHeld = IsRightMouseHeld();
+        input.RightMousePressedThisFrame = WasRightMousePressedThisFrame();
         input.BodyForward = GetAxis(Key.UpArrow, Key.DownArrow);
         input.BodyStrafe = GetAxis(Key.RightArrow, Key.LeftArrow);
         input.BodyTurn = GetAxis(Key.Period, Key.Comma);
@@ -113,6 +115,18 @@ public class InputManager
             return Vector2.zero;
 
         return mouse.delta.ReadValue();
+    }
+
+    public bool IsRightMouseHeld()
+    {
+        Mouse mouse = Mouse.current;
+        return mouse != null && mouse.rightButton.isPressed;
+    }
+
+    public bool WasRightMousePressedThisFrame()
+    {
+        Mouse mouse = Mouse.current;
+        return mouse != null && mouse.rightButton.wasPressedThisFrame;
     }
 
     private Vector2 CorrectTitanMousePosition(Vector2 mousePosition)

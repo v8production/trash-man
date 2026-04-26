@@ -7,6 +7,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
     private bool _shouldLogThisFrame;
     [Header("Role Controllers")]
     [SerializeField] private TitanBodyRoleController _bodyController;
+    [SerializeField] private TitanLegAnchorResolver _legAnchorResolver;
     [SerializeField] private TitanLeftArmRoleController _leftArmController;
     [SerializeField] private TitanRightArmRoleController _rightArmController;
     [SerializeField] private TitanLeftLegRoleController _leftLegController;
@@ -30,11 +31,19 @@ public class TitanRoleNetworkDriver : MonoBehaviour
 
         float dt = Time.fixedDeltaTime;
 
+        TitanAggregatedInput leftLegInput = default;
+        TitanAggregatedInput rightLegInput = default;
+        bool hasLeftLegInput = TryGetLegRoleInput(true, out leftLegInput);
+        bool hasRightLegInput = TryGetLegRoleInput(false, out rightLegInput);
+
+        ApplyLegDetachPrepass(true, hasLeftLegInput, in leftLegInput, dt);
+        ApplyLegDetachPrepass(false, hasRightLegInput, in rightLegInput, dt);
+
         TickBodyRole(dt);
         TickArmRole(true, dt);
         TickArmRole(false, dt);
-        TickLegRole(true, dt);
-        TickLegRole(false, dt);
+        TickLegRole(true, hasLeftLegInput, in leftLegInput, dt);
+        TickLegRole(false, hasRightLegInput, in rightLegInput, dt);
     }
 
     private void TickBodyRole(float dt)
@@ -42,6 +51,8 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         if (_bodyController == null)
             return;
 
+        bool anchorActive = _legAnchorResolver != null && _legAnchorResolver.HasAnyAttachedFoot();
+        _bodyController.SetAnchorPhysicsOverride(anchorActive);
         bool ok = Managers.TitanRole.TryGetRoleInput(Define.TitanRole.Body, out TitanAggregatedInput input);
         _bodyController.SetInputEnabled(true);
         _bodyController.TickRoleInput(input, dt);
@@ -63,16 +74,49 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         }
     }
 
-    private void TickLegRole(bool left, float dt)
+    private bool TryGetLegRoleInput(bool left, out TitanAggregatedInput input)
+    {
+        Define.TitanRole role = left ? Define.TitanRole.LeftLeg : Define.TitanRole.RightLeg;
+        return Managers.TitanRole.TryGetRoleInput(role, out input);
+    }
+
+    private void ApplyLegDetachPrepass(bool left, bool hasInput, in TitanAggregatedInput input, float dt)
+    {
+        bool detachRequested = hasInput && (input.RightMouseDetachBuffered || input.RightMouseHeld || input.RightMousePressedThisFrame);
+
+        TitanBaseLegRoleController controller = left ? _leftLegController : _rightLegController;
+        if (_shouldLogThisFrame)
+        {
+            InputDebug.Log($"[TitanLegDriver] Prepass side={(left ? "Left" : "Right")} hasInput={hasInput} controller={(controller != null)} detachRequested={detachRequested} held={input.RightMouseHeld} pressed={input.RightMousePressedThisFrame} buffered={input.RightMouseDetachBuffered}");
+        }
+
+        if (!detachRequested || controller == null)
+        {
+            return;
+        }
+
+        controller.TickRoleInput(input, dt);
+    }
+
+    private void TickLegRole(bool left, bool hasInput, in TitanAggregatedInput input, float dt)
     {
         TitanBaseLegRoleController controller = left ? _leftLegController : _rightLegController;
         if (controller == null)
+        {
+            if (_shouldLogThisFrame)
+            {
+                InputDebug.LogWarning($"[TitanLegDriver] Missing {(left ? "Left" : "Right")} leg controller.");
+            }
             return;
+        }
 
-        Define.TitanRole role = left ? Define.TitanRole.LeftLeg : Define.TitanRole.RightLeg;
-        bool ok = Managers.TitanRole.TryGetRoleInput(role, out TitanAggregatedInput input);
+        bool detachRequested = hasInput && (input.RightMouseDetachBuffered || input.RightMouseHeld || input.RightMousePressedThisFrame);
+        if (_shouldLogThisFrame)
+        {
+            InputDebug.Log($"[TitanLegDriver] Tick side={(left ? "Left" : "Right")} hasInput={hasInput} detachRequested={detachRequested} held={input.RightMouseHeld} pressed={input.RightMousePressedThisFrame} buffered={input.RightMouseDetachBuffered}");
+        }
 
-        if (ok)
+        if (hasInput && !detachRequested)
         {
             controller.TickRoleInput(input, dt);
         }
@@ -81,6 +125,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
     private void ResolveControllers()
     {
         _bodyController ??= GetComponent<TitanBodyRoleController>();
+        _legAnchorResolver ??= GetComponent<TitanLegAnchorResolver>();
         _leftArmController ??= GetComponent<TitanLeftArmRoleController>();
         _rightArmController ??= GetComponent<TitanRightArmRoleController>();
         _leftLegController ??= GetComponent<TitanLeftLegRoleController>();

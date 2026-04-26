@@ -93,6 +93,9 @@ public class TitanRoleManager
         if (hadDuplicate && string.IsNullOrWhiteSpace(error))
             error = "Duplicate role masks detected; routing uses deterministic ownership.";
 
+        if (_playersByRole.Count == 0 && string.IsNullOrWhiteSpace(error))
+            error = "No selected Titan roles are currently mapped.";
+
         return _playersByRole.Count > 0;
     }
 
@@ -125,14 +128,24 @@ public class TitanRoleManager
     public bool TryGetRoleInput(Define.TitanRole role, out TitanAggregatedInput input)
     {
         input = default;
-        if (!RefreshRoleMap(false, out _))
+        if (!RefreshRoleMap(false, out string error))
+        {
+            InputDebug.LogWarning($"[TitanRoleManager] TryGetRoleInput role={role} failed: refreshRoleMap error='{error}'");
             return false;
+        }
 
         if (!_playersByRole.TryGetValue(role, out LobbyNetworkPlayer player) || player == null)
+        {
+            InputDebug.LogWarning($"[TitanRoleManager] TryGetRoleInput role={role} failed: no mapped player.");
             return false;
+        }
 
         if (!player.IsActivelyControllingRole(role))
+        {
+            player.TryGetActiveTitanRole(out Define.TitanRole activeRole);
+            InputDebug.LogWarning($"[TitanRoleManager] TryGetRoleInput role={role} blocked: owner={player.OwnerClientId} activeRole={activeRole} selectedMask=0x{player.SelectedTitanRoleMaskValue:X}");
             return false;
+        }
 
         input = player.CurrentRoleInput.ToAggregatedInput();
         return true;

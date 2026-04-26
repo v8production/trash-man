@@ -8,6 +8,7 @@ public sealed class TitanRigManager
     public bool IsBound => runtime != null;
     public GameObject RuntimeGameObject => runtime != null ? runtime.gameObject : null;
     public Transform MovementRoot => runtime != null ? runtime.MovementRoot : null;
+    public Rigidbody MovementRigidbody => runtime != null ? runtime.MovementRigidbody : null;
     public Transform Spine => runtime != null ? runtime.Spine : null;
     public float WaistYaw => runtime != null ? runtime.WaistYaw : 0f;
 
@@ -186,6 +187,16 @@ public sealed class TitanRigManager
     {
         snapshot = default;
         return EnsureBoundFromScene() && runtime.TryGetPoseSnapshot(out snapshot);
+    }
+
+    public void ApplyMovementRootPose(Vector3 worldPosition, Quaternion worldRotation, bool zeroVelocities)
+    {
+        if (!EnsureBoundFromScene())
+        {
+            return;
+        }
+
+        runtime.ApplyMovementRootPose(worldPosition, worldRotation, zeroVelocities);
     }
 
     public void ApplyPoseSnapshot(in TitanRigPoseSnapshot snapshot)

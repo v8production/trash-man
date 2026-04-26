@@ -7,10 +7,13 @@ public static class LobbyNetworkRuntime
 {
     private const string RuntimeRootName = "@NetworkManager";
     private const string NetworkObjectPrefabPath = "Prefabs/@NetworkObject";
-    private const uint LobbyPlayerPrefabHash = 1804289383;
+    // Deterministic per-project hash for the runtime-created lobby player prefab.
+    // Must be stable across host/client, and must not collide with any authored NetworkObject prefab hashes.
+    private static readonly uint LobbyPlayerPrefabHash = ComputeStableHash32("TrashMan.LobbyNetworkPlayerPrefab.v1");
 
     private static GameObject s_runtimePlayerPrefab;
     private static bool s_inputDebugBootLogged;
+    private static int s_registeredNetworkManagerInstanceId;
 
     public static bool EnsureSetup()
     {
@@ -74,7 +77,8 @@ public static class LobbyNetworkRuntime
         networkManager.NetworkConfig.ConnectionApproval = false;
         networkManager.NetworkConfig.ForceSamePrefabs = false;
         networkManager.NetworkConfig.PlayerPrefab = playerPrefab;
-        networkManager.AddNetworkPrefab(playerPrefab);
+
+        EnsureNetworkPrefabRegistered(networkManager, playerPrefab);
         return true;
     }
 
@@ -98,6 +102,10 @@ public static class LobbyNetworkRuntime
         NetworkObject networkObject = s_runtimePlayerPrefab.GetorAddComponent<NetworkObject>();
         EnsureGlobalObjectIdHash(networkObject, LobbyPlayerPrefabHash);
 
+        // The visible Ranger is a separate lobby-local object.
+        // The network player object must carry transform replication so other clients can see movement.
+        s_runtimePlayerPrefab.GetorAddComponent<OwnerNetworkTransform>();
+
         s_runtimePlayerPrefab.GetorAddComponent<LobbyNetworkPlayer>();
 
         return s_runtimePlayerPrefab;
@@ -109,8 +117,97 @@ public static class LobbyNetworkRuntime
         if (hashField == null)
             return;
 
-        uint currentValue = (uint)hashField.GetValue(networkObject);
-        if (currentValue == 0)
-            hashField.SetValue(networkObject, hash);
+        // Always overwrite so we don't carry a stale/duplicate serialized value from prefab mode.
+        // This prefab is created at runtime and must use a deterministic hash.
+        hashField.SetValue(networkObject, hash);
+    }
+
+    private static void EnsureNetworkPrefabRegistered(NetworkManager networkManager, GameObject prefab)
+    {
+        if (networkManager == null || prefab == null)
+            return;
+
+        int instanceId = networkManager.GetInstanceID();
+        if (instanceId != 0 && s_registeredNetworkManagerInstanceId == instanceId)
+            return;
+
+        NetworkPrefabs prefabs = networkManager.NetworkConfig != null ? networkManager.NetworkConfig.Prefabs : null;
+        if (prefabs != null && IsPrefabAlreadyRegistered(prefabs, prefab))
+        {
+            if (instanceId != 0)
+                s_registeredNetworkManagerInstanceId = instanceId;
+            return;
+        }
+
+        networkManager.AddNetworkPrefab(prefab);
+
+        if (instanceId != 0)
+            s_registeredNetworkManagerInstanceId = instanceId;
+    }
+
+    private static bool IsPrefabAlreadyRegistered(NetworkPrefabs prefabs, GameObject prefab)
+    {
+        if (prefabs == null || prefab == null)
+            return false;
+
+        // NetworkPrefabs API/fields vary across NGO versions; use reflection to stay resilient.
+        const BindingFlags Flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
+        object listObj = null;
+        PropertyInfo prop = prefabs.GetType().GetProperty("Prefabs", Flags);
+        if (prop != null)
+            listObj = prop.GetValue(prefabs);
+
+        if (listObj == null)
+        {
+            FieldInfo field = prefabs.GetType().GetField("m_Prefabs", Flags);
+            if (field != null)
+                listObj = field.GetValue(prefabs);
+        }
+
+        if (listObj is not System.Collections.IEnumerable enumerable)
+            return false;
+
+        foreach (object entry in enumerable)
+        {
+            if (entry == null)
+                continue;
+
+            object entryPrefab = null;
+            FieldInfo prefabField = entry.GetType().GetField("Prefab", Flags);
+            if (prefabField != null)
+                entryPrefab = prefabField.GetValue(entry);
+            else
+            {
+                PropertyInfo prefabProp = entry.GetType().GetProperty("Prefab", Flags);
+                if (prefabProp != null)
+                    entryPrefab = prefabProp.GetValue(entry);
+            }
+
+            if (ReferenceEquals(entryPrefab, prefab))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static uint ComputeStableHash32(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return 0;
+
+        // FNV-1a 32-bit (deterministic, fast, no allocations).
+        const uint OffsetBasis = 2166136261u;
+        const uint Prime = 16777619u;
+
+        uint hash = OffsetBasis;
+        for (int i = 0; i < value.Length; i++)
+        {
+            hash ^= value[i];
+            hash *= Prime;
+        }
+
+        // NGO treats 0 as "unset" for some validation paths; avoid it.
+        return hash != 0 ? hash : 1u;
     }
 }

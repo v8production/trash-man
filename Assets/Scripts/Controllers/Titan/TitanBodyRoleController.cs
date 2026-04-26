@@ -49,6 +49,7 @@ public class TitanBodyRoleController : TitanBaseController
     private float strafeInput;
     private float turnInput;
     private bool inputEnabled = true;
+    private bool anchorPhysicsOverride;
 
     public override Define.TitanRole Role => Define.TitanRole.Body;
 
@@ -73,6 +74,27 @@ public class TitanBodyRoleController : TitanBaseController
             forwardInput = 0f;
             strafeInput = 0f;
             turnInput = 0f;
+        }
+    }
+
+    public void SetAnchorPhysicsOverride(bool enabled)
+    {
+        anchorPhysicsOverride = enabled;
+        if (!anchorPhysicsOverride)
+        {
+            return;
+        }
+
+        planarVelocity = Vector3.zero;
+        verticalVelocity = 0f;
+        forwardInput = 0f;
+        strafeInput = 0f;
+        turnInput = 0f;
+
+        if (movementRigidbody != null)
+        {
+            movementRigidbody.linearVelocity = Vector3.zero;
+            movementRigidbody.angularVelocity = Vector3.zero;
         }
     }
 
@@ -107,6 +129,19 @@ public class TitanBodyRoleController : TitanBaseController
         }
 
         ResolveFeet(movementRoot);
+
+        if (anchorPhysicsOverride)
+        {
+            if (movementRigidbody != null)
+            {
+                movementRigidbody.linearVelocity = Vector3.zero;
+                movementRigidbody.angularVelocity = Vector3.zero;
+            }
+
+            planarVelocity = Vector3.zero;
+            verticalVelocity = 0f;
+            return;
+        }
 
         Vector3 flatForward = Vector3.ProjectOnPlane(movementRoot.forward, Vector3.up).normalized;
         Vector3 flatRight = Vector3.ProjectOnPlane(movementRoot.right, Vector3.up).normalized;

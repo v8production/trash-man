@@ -8,6 +8,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
     public float MouseY;
     public float MouseDeltaX;
     public float MouseDeltaY;
+    public bool RightMouseHeld;
+    public bool RightMousePressedThisFrame;
+    public bool RightMouseDetachBuffered;
 
     public float BodyForward;
     public float BodyStrafe;
@@ -25,6 +28,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
         MouseY = input.MousePosition.y;
         MouseDeltaX = input.MouseDelta.x;
         MouseDeltaY = input.MouseDelta.y;
+        RightMouseHeld = input.RightMouseHeld;
+        RightMousePressedThisFrame = input.RightMousePressedThisFrame;
+        RightMouseDetachBuffered = input.RightMouseDetachBuffered;
         BodyForward = input.BodyForward;
         BodyStrafe = input.BodyStrafe;
         BodyTurn = input.BodyTurn;
@@ -41,6 +47,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
         {
             MousePosition = new Vector2(MouseX, MouseY),
             MouseDelta = new Vector2(MouseDeltaX, MouseDeltaY),
+            RightMouseHeld = RightMouseHeld,
+            RightMousePressedThisFrame = RightMousePressedThisFrame,
+            RightMouseDetachBuffered = RightMouseDetachBuffered,
             BodyForward = BodyForward,
             BodyStrafe = BodyStrafe,
             BodyTurn = BodyTurn,
@@ -58,6 +67,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
         serializer.SerializeValue(ref MouseY);
         serializer.SerializeValue(ref MouseDeltaX);
         serializer.SerializeValue(ref MouseDeltaY);
+        serializer.SerializeValue(ref RightMouseHeld);
+        serializer.SerializeValue(ref RightMousePressedThisFrame);
+        serializer.SerializeValue(ref RightMouseDetachBuffered);
         serializer.SerializeValue(ref BodyForward);
         serializer.SerializeValue(ref BodyStrafe);
         serializer.SerializeValue(ref BodyTurn);
@@ -74,6 +86,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
             && MouseY.Equals(other.MouseY)
             && MouseDeltaX.Equals(other.MouseDeltaX)
             && MouseDeltaY.Equals(other.MouseDeltaY)
+            && RightMouseHeld == other.RightMouseHeld
+            && RightMousePressedThisFrame == other.RightMousePressedThisFrame
+            && RightMouseDetachBuffered == other.RightMouseDetachBuffered
             && BodyForward.Equals(other.BodyForward)
             && BodyStrafe.Equals(other.BodyStrafe)
             && BodyTurn.Equals(other.BodyTurn)
