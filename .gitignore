@@ -51,3 +51,4 @@ AGENTS.md
 
 # Local third-party SDKs (not for VCS)
 Packages/com.discord.partnersdk/
+Packages/com.rlabrecque.steamworks.net/
