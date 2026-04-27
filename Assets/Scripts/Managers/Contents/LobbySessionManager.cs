@@ -6,14 +6,13 @@ using UnityEngine;
 
 public class LobbySessionManager
 {
-    private const string RangerPrefabName = "Ranger(TEMP)";
-    private const string LobbyCameraPrefabName = "Lobby_Camera";
     private const int JoinCodeLength = 6;
     private const string VoiceSecretPrefix = "trash-man-lobby";
     private const string LobbyMetadataJoinCode = "join_code";
     private const string LobbyMetadataHostUserId = "host_user_id";
 
-    private const int MaxRelayClientConnections = 4;
+    private const int MaxPlayers = 5;
+    private const int MaxRelayClientConnections = MaxPlayers - 1;
 
     private const string LobbyMetadataRelayJoinCode = "relay_join_code";
     private const string LobbyMetadataRelayConnectionType = "relay_connection_type";
@@ -284,6 +283,7 @@ public class LobbySessionManager
         {
             Debug.LogWarning($"[Lobby] Host bootstrap failed: Relay host did not start. {e}");
             Managers.Toast.EnqueueMessage("Failed to start Relay lobby host.", 3f);
+            TryStopUtp();
             IsHosting = false;
             HostUserId = string.Empty;
             ResetNetworkConnectionTracking();
@@ -391,6 +391,7 @@ public class LobbySessionManager
             }
             catch (Exception e)
             {
+                TryStopUtp();
                 HasLobbyNetworkConnectionFailed = true;
                 LastLobbyNetworkError = $"Relay client start failed: {e.Message}";
                 Debug.LogWarning($"[Lobby] {LastLobbyNetworkError}");
@@ -443,65 +444,6 @@ public class LobbySessionManager
             UnityEngine.Object.Destroy(cameras[i].gameObject);
     }
 
-    // private RangerController SpawnRangerForLocalUser()
-    // {
-    //     GameObject rangerObject = Managers.Resource.Instantiate(RangerPrefabName);
-    //     if (rangerObject == null)
-    //     {
-    //         Debug.LogError($"Lobby host bootstrap failed: Prefabs/{RangerPrefabName} not found.");
-    //         return null;
-    //     }
-
-    //     RangerController ranger = rangerObject.GetComponent<RangerController>();
-    //     if (ranger == null)
-    //     {
-    //         Debug.LogError("Lobby host bootstrap failed: Ranger prefab is missing RangerController.");
-    //         return null;
-    //     }
-
-    //     _rangersByUserId[Managers.Discord.LocalUserId] = ranger;
-    //     LobbyScene.RegisterUserObjects(Managers.Discord.LocalUserId, ranger, null);
-    //     return ranger;
-    // }
-
-    // private static void SetupLobbyCamera(RangerController ranger)
-    // {
-    //     GameObject cameraObject = Managers.Resource.Instantiate(LobbyCameraPrefabName);
-    //     if (cameraObject == null)
-    //     {
-    //         Debug.LogError($"Lobby host bootstrap failed: Prefabs/{LobbyCameraPrefabName} not found.");
-    //         return;
-    //     }
-
-    //     LobbyCameraController lobbyCamera = cameraObject.GetComponent<LobbyCameraController>();
-    //     if (lobbyCamera == null)
-    //     {
-    //         Debug.LogError("Lobby host bootstrap failed: Lobby_Camera prefab is missing LobbyCameraController.");
-    //         return;
-    //     }
-
-    //     if (ranger != null)
-    //         lobbyCamera.SetTarget(ranger.transform);
-    // }
-
-    // private void SetupNicknameForLocalUser(RangerController ranger)
-    // {
-    //     if (ranger == null)
-    //         return;
-
-    //     UI_Nickname nicknameUI = Managers.UI.CreateWorldSpaceUI<UI_Nickname>(ranger.transform, nameof(UI_Nickname));
-    //     if (nicknameUI == null)
-    //     {
-    //         Debug.LogError("Lobby host bootstrap failed: UI_Nickname creation returned null.");
-    //         return;
-    //     }
-
-    //     nicknameUI.SetText(Managers.Discord.LocalDisplayName);
-    //     nicknameUI.SetVoiceChatActive(Managers.Discord.IsLobbyUserVoiceChatActive(Managers.Discord.LocalUserId));
-    //     _nicknamesByUserId[Managers.Discord.LocalUserId] = nicknameUI;
-    //     LobbyScene.RegisterUserObjects(Managers.Discord.LocalUserId, ranger, nicknameUI);
-    // }
-
     private void HandleLocalDisplayNameChanged(string displayName)
     {
         if (_nicknamesByUserId.TryGetValue(Managers.Discord.LocalUserId, out UI_Nickname nicknameUI) && nicknameUI != null)
@@ -532,61 +474,10 @@ public class LobbySessionManager
         return GenerateJoinCode();
     }
 
-    // private static ushort CalculatePort(string joinCode)
-    // {
-    //     unchecked
-    //     {
-    //         int hash = 17;
-    //         for (int i = 0; i < joinCode.Length; i++)
-    //             hash = (hash * 31) + joinCode[i];
-
-    //         int offset = Mathf.Abs(hash % LobbyPortRange);
-    //         return (ushort)(BaseLobbyPort + offset);
-    //     }
-    // }
-
     private static string BuildVoiceSecret(string joinCode)
     {
         return $"{VoiceSecretPrefix}-{joinCode.ToLowerInvariant()}";
     }
-
-    // private static string ResolveConfiguredHostAddress()
-    // {
-    //     string detected = TryDetectLocalIPv4Address();
-    //     return string.IsNullOrWhiteSpace(detected) ? DefaultHostAddress : detected;
-    // }
-
-    // private static string TryDetectLocalIPv4Address()
-    // {
-    //     try
-    //     {
-    //         using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-    //         socket.Connect("8.8.8.8", 65530);
-    //         if (socket.LocalEndPoint is IPEndPoint endpoint && endpoint.Address != null)
-    //             return endpoint.Address.ToString();
-    //     }
-    //     catch
-    //     {
-    //     }
-
-    //     try
-    //     {
-    //         IPHostEntry entry = Dns.GetHostEntry(Dns.GetHostName());
-    //         for (int i = 0; i < entry.AddressList.Length; i++)
-    //         {
-    //             IPAddress address = entry.AddressList[i];
-    //             if (address.AddressFamily != AddressFamily.InterNetwork || IPAddress.IsLoopback(address))
-    //                 continue;
-
-    //             return address.ToString();
-    //         }
-    //     }
-    //     catch
-    //     {
-    //     }
-
-    //     return string.Empty;
-    // }
 
     private void HandleSessionLobbyUpdated(ulong lobbyId)
     {
@@ -638,141 +529,6 @@ public class LobbySessionManager
             HostUserId = metadataHostUserId;
     }
 
-    // private static string SelectHostUserId(ulong[] memberIds, string preferredHostUserId)
-    // {
-    //     if (!string.IsNullOrWhiteSpace(preferredHostUserId) && ulong.TryParse(preferredHostUserId, out ulong preferredId))
-    //     {
-    //         for (int i = 0; i < memberIds.Length; i++)
-    //         {
-    //             if (memberIds[i] == preferredId)
-    //                 return preferredHostUserId;
-    //         }
-    //     }
-
-    //     ulong selected = memberIds[0];
-    //     for (int i = 1; i < memberIds.Length; i++)
-    //     {
-    //         if (memberIds[i] < selected)
-    //             selected = memberIds[i];
-    //     }
-
-    //     return selected.ToString();
-    // }
-
-    // private void HandleHostMetadataPublishCompleted(bool success, ulong lobbyId, string error)
-    // {
-    //     _isUpdatingHostMetadata = false;
-
-    //     if (!success)
-    //     {
-    //         Debug.LogWarning($"[Lobby] Failed to publish promoted host metadata: {error}");
-    //         return;
-    //     }
-
-    //     _currentDiscordLobbyId = lobbyId;
-    //     HostUserId = Managers.Discord.LocalUserId;
-    //     _nextLobbyStateSyncTime = 0f;
-    // }
-
-    // private bool TryStartUtpHost(ushort port, out string hostAddress)
-    // {
-    //     hostAddress = DefaultHostAddress;
-    //     try
-    //     {
-    //         if (!TryResolveNetworkObjects(out NetworkManager networkManager, out UnityTransport utpTransport))
-    //             return false;
-
-    //         if (networkManager.IsListening)
-    //         {
-    //             if (networkManager.IsServer)
-    //             {
-    //                 hostAddress = ResolveConfiguredHostAddress();
-    //                 ResetNetworkConnectionTracking();
-    //                 return true;
-    //             }
-
-    //             networkManager.Shutdown();
-    //         }
-
-    //         ConfigureTransportConnection(utpTransport, "0.0.0.0", port);
-    //         hostAddress = ResolveConfiguredHostAddress();
-
-    //         bool started = networkManager.StartHost();
-    //         if (!started)
-    //         {
-    //             Debug.LogWarning($"UTP host start returned false. isListening={networkManager.IsListening}, isServer={networkManager.IsServer}, isClient={networkManager.IsClient}, port={port}");
-    //             return false;
-    //         }
-
-    //         ResetNetworkConnectionTracking();
-    //         return true;
-    //     }
-    //     catch (Exception e)
-    //     {
-    //         Debug.LogWarning($"UTP host start failed: {e}");
-    //         return false;
-    //     }
-    // }
-
-    // private bool TryStartUtpClient(string hostAddress, ushort port)
-    // {
-    //     HasLobbyNetworkConnectionFailed = false;
-    //     LastLobbyNetworkError = string.Empty;
-
-    //     string targetHost = NormalizeHostAddress(hostAddress);
-    //     if (port == 0 || string.IsNullOrWhiteSpace(targetHost))
-    //     {
-    //         Debug.LogWarning($"[Lobby] StartClient skipped: invalid endpoint host={targetHost}, port={port}");
-    //         return false;
-    //     }
-
-    //     try
-    //     {
-    //         if (!TryResolveNetworkObjects(out NetworkManager networkManager, out UnityTransport utpTransport))
-    //             return false;
-
-    //         bool sameEndpoint = string.Equals(_activeClientHostAddress, targetHost, StringComparison.OrdinalIgnoreCase)
-    //             && _activeClientPort == port;
-
-    //         if (networkManager.IsListening)
-    //         {
-    //             if (networkManager.IsClient && !networkManager.IsServer)
-    //             {
-    //                 if (sameEndpoint)
-    //                 {
-    //                     Debug.Log($"[Lobby] StartClient skipped: already using host={targetHost}, port={port}");
-    //                     return true;
-    //                 }
-
-    //                 networkManager.Shutdown();
-    //             }
-    //             else
-    //             {
-    //                 networkManager.Shutdown();
-    //             }
-    //         }
-
-    //         ConfigureTransportConnection(utpTransport, targetHost, port);
-
-    //         bool started = networkManager.StartClient();
-    //         Debug.Log($"[Lobby] StartClient requested. host={targetHost}, port={port}, started={started}");
-    //         if (!started)
-    //             return false;
-    //         networkManager.OnClientConnectedCallback -= HandleClientConnected;
-    //         networkManager.OnClientDisconnectCallback -= HandleClientDisconnected;
-    //         networkManager.OnClientConnectedCallback += HandleClientConnected;
-    //         networkManager.OnClientDisconnectCallback += HandleClientDisconnected;
-    //         _activeClientHostAddress = targetHost;
-    //         _activeClientPort = port;
-    //         return true;
-    //     }
-    //     catch (Exception e)
-    //     {
-    //         Debug.LogWarning($"UTP client start failed: {e.Message}");
-    //         return false;
-    //     }
-    // }
-
     private bool TryStopUtp()
     {
         try
@@ -798,11 +554,6 @@ public class LobbySessionManager
             return false;
         }
     }
-
-    // private static string NormalizeHostAddress(string hostAddress)
-    // {
-    //     return string.IsNullOrWhiteSpace(hostAddress) ? DefaultHostAddress : hostAddress.Trim();
-    // }
 
     private void ResetNetworkConnectionTracking()
     {
@@ -844,30 +595,6 @@ public class LobbySessionManager
         return true;
     }
 
-    // private static void ConfigureTransportConnection(Component utpTransport, string hostAddress, ushort port)
-    // {
-    //     MethodInfo[] methods = utpTransport.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance);
-    //     MethodInfo setConnectionData = methods.FirstOrDefault(m =>
-    //     {
-    //         if (m.Name != "SetConnectionData")
-    //             return false;
-
-    //         ParameterInfo[] parameters = m.GetParameters();
-    //         return parameters.Length >= 2
-    //             && parameters[0].ParameterType == typeof(string)
-    //             && parameters[1].ParameterType == typeof(ushort);
-    //     });
-
-    //     if (setConnectionData == null)
-    //         return;
-
-    //     ParameterInfo[] methodParameters = setConnectionData.GetParameters();
-    //     if (methodParameters.Length >= 3)
-    //         setConnectionData.Invoke(utpTransport, new object[] { hostAddress, port, "0.0.0.0" });
-    //     else
-    //         setConnectionData.Invoke(utpTransport, new object[] { hostAddress, port });
-    // }
-
     public bool IsLobbyNetworkConnected
     {
         get
@@ -881,17 +608,6 @@ public class LobbySessionManager
             return networkManager.IsClient && networkManager.IsConnectedClient;
         }
     }
-
-    // private static bool IsRemoteUnsafeHostAddress(string hostAddress)
-    // {
-    //     if (string.IsNullOrWhiteSpace(hostAddress))
-    //         return true;
-
-    //     if (!IPAddress.TryParse(hostAddress, out IPAddress address))
-    //         return false;
-
-    //     return IPAddress.IsLoopback(address);
-    // }
 
     private static void RegisterClientConnectionCallbacks(NetworkManager networkManager)
     {
@@ -919,7 +635,7 @@ public class LobbySessionManager
 
         HasLobbyNetworkConnectionFailed = true;
         LastLobbyNetworkError =
-            $"Disconnected from lobby host. joinCode={_currentRelayJoinCode}";
+            $"Disconnected from Relay lobby. joinCode={_currentRelayJoinCode}";
 
         Debug.LogWarning($"[Lobby] {LastLobbyNetworkError}");
     }
