@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Net;
 using Netcode.Transports;
 using Unity.Netcode;
-using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 
 public class LobbySessionManager
@@ -256,8 +254,7 @@ public class LobbySessionManager
 
         if (!Managers.Steam.IsInitialized)
         {
-            Debug.LogWarning("[Lobby] Host bootstrap failed: Steam is not initialized.");
-            Managers.Toast.EnqueueMessage("Steam is not initialized.", 3f);
+            Debug.LogWarning("[Lobby] Host bootstrap failed: Steam is not initialized."); Managers.Toast.EnqueueMessage("Steam is not initialized.\nOpen Steam and check steam_appid.txt.", 3f);
             return;
         }
 
@@ -723,7 +720,7 @@ public class LobbySessionManager
     {
         HasLobbyNetworkConnectionFailed = false;
         LastLobbyNetworkError = string.Empty;
-        Debug.Log($"[Lobby] UTP client connected. clientId={clientId}");
+        Debug.Log($"[Lobby] Steam client connected. clientId={clientId}");
     }
 
     private void HandleClientDisconnected(ulong clientId)
@@ -735,16 +732,5 @@ public class LobbySessionManager
             $"Disconnected from Steam lobby host. hostSteamId={_currentHostSteamId}";
 
         Debug.LogWarning($"[Lobby] {LastLobbyNetworkError}");
-    }
-
-    private static bool IsRemoteUnsafeHostAddress(string hostAddress)
-    {
-        if (string.IsNullOrWhiteSpace(hostAddress))
-            return true;
-
-        if (!IPAddress.TryParse(hostAddress, out IPAddress address))
-            return false;
-
-        return IPAddress.IsLoopback(address);
     }
 }
