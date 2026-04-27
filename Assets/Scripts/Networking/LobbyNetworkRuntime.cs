@@ -1,4 +1,5 @@
 using System.Reflection;
+using Netcode.Transports;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
@@ -12,7 +13,6 @@ public static class LobbyNetworkRuntime
     private static readonly uint LobbyPlayerPrefabHash = ComputeStableHash32("TrashMan.LobbyNetworkPlayerPrefab.v1");
 
     private static GameObject s_runtimePlayerPrefab;
-    private static bool s_inputDebugBootLogged;
     private static int s_registeredNetworkManagerInstanceId;
 
     public static bool EnsureSetup()
@@ -20,18 +20,15 @@ public static class LobbyNetworkRuntime
         return EnsureSetup(out _, out _);
     }
 
-    public static bool EnsureSetup(out NetworkManager networkManager, out UnityTransport transport)
+    public static bool EnsureSetup(
+        out NetworkManager networkManager,
+        out SteamNetworkingSocketsTransport transport)
     {
         networkManager = Object.FindAnyObjectByType<NetworkManager>();
-        transport = networkManager != null ? networkManager.GetComponent<UnityTransport>() : null;
+        transport = networkManager != null
+            ? networkManager.GetComponent<SteamNetworkingSocketsTransport>()
+            : null;
 
-        if (!s_inputDebugBootLogged)
-        {
-            s_inputDebugBootLogged = true;
-            Debug.Log($"{InputDebug.Prefix} Boot Debug.isDebugBuild={Debug.isDebugBuild} Enabled={InputDebug.Enabled}");
-        }
-
-        // Keep the NetworkManager under a stable, cross-scene runtime root name.
         if (networkManager != null)
         {
             networkManager.gameObject.name = RuntimeRootName;
@@ -53,9 +50,9 @@ public static class LobbyNetworkRuntime
 
         if (transport == null)
         {
-            transport = networkManager.GetComponent<UnityTransport>();
+            transport = networkManager.GetComponent<SteamNetworkingSocketsTransport>();
             if (transport == null)
-                transport = networkManager.gameObject.AddComponent<UnityTransport>();
+                transport = networkManager.gameObject.AddComponent<SteamNetworkingSocketsTransport>();
         }
 
         GameObject playerPrefab = EnsurePlayerPrefab();
@@ -69,10 +66,6 @@ public static class LobbyNetworkRuntime
             networkManager.NetworkConfig.Prefabs = new NetworkPrefabs();
 
         networkManager.NetworkConfig.NetworkTransport = transport;
-        // The lobby is entered via plain Unity scene loads before NGO connects host/client.
-        // Keeping NGO scene management enabled here can block client synchronization/player spawn
-        // until a disconnect/promotion cycle occurs. GameScene already has a manual ClientRpc fallback,
-        // so the lobby runtime should stay out of NGO scene synchronization.
         networkManager.NetworkConfig.EnableSceneManagement = false;
         networkManager.NetworkConfig.ConnectionApproval = false;
         networkManager.NetworkConfig.ForceSamePrefabs = false;
