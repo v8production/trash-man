@@ -1,7 +1,6 @@
 using System.Reflection;
 using Netcode.Transports;
 using Unity.Netcode;
-using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 
 public static class LobbyNetworkRuntime
@@ -13,7 +12,7 @@ public static class LobbyNetworkRuntime
     private static readonly uint LobbyPlayerPrefabHash = ComputeStableHash32("TrashMan.LobbyNetworkPlayerPrefab.v1");
 
     private static GameObject s_runtimePlayerPrefab;
-    private static int s_registeredNetworkManagerInstanceId;
+    private static EntityId s_registeredNetworkManagerInstanceId;
 
     public static bool EnsureSetup()
     {
@@ -120,21 +119,21 @@ public static class LobbyNetworkRuntime
         if (networkManager == null || prefab == null)
             return;
 
-        int instanceId = networkManager.GetInstanceID();
-        if (instanceId != 0 && s_registeredNetworkManagerInstanceId == instanceId)
+        EntityId instanceId = networkManager.GetEntityId();
+        if (instanceId.IsValid() && s_registeredNetworkManagerInstanceId == instanceId)
             return;
 
         NetworkPrefabs prefabs = networkManager.NetworkConfig != null ? networkManager.NetworkConfig.Prefabs : null;
         if (prefabs != null && IsPrefabAlreadyRegistered(prefabs, prefab))
         {
-            if (instanceId != 0)
+            if (instanceId.IsValid())
                 s_registeredNetworkManagerInstanceId = instanceId;
             return;
         }
 
         networkManager.AddNetworkPrefab(prefab);
 
-        if (instanceId != 0)
+        if (instanceId.IsValid())
             s_registeredNetworkManagerInstanceId = instanceId;
     }
 

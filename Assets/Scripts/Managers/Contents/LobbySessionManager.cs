@@ -6,8 +6,6 @@ using UnityEngine;
 
 public class LobbySessionManager
 {
-    private const string RangerPrefabName = "Ranger(TEMP)";
-    private const string LobbyCameraPrefabName = "Lobby_Camera";
     private const int JoinCodeLength = 6;
     private const string VoiceSecretPrefix = "trash-man-lobby";
     private const string LobbyMetadataJoinCode = "join_code";
@@ -24,7 +22,6 @@ public class LobbySessionManager
     private string _currentVoiceSecret = string.Empty;
     private ulong _currentDiscordLobbyId;
     private float _nextLobbyStateSyncTime;
-    private bool _isUpdatingHostMetadata;
     private ulong _currentHostSteamId;
 
     private static bool s_loggedNetcodeMissing;
@@ -83,7 +80,6 @@ public class LobbySessionManager
         _currentHostSteamId = 0;
         _currentDiscordLobbyId = 0;
         _nextLobbyStateSyncTime = 0f;
-        _isUpdatingHostMetadata = false;
         ResetClientConnectionTracking();
     }
 
@@ -210,7 +206,6 @@ public class LobbySessionManager
         _currentHostSteamId = 0;
         _currentDiscordLobbyId = 0;
         _nextLobbyStateSyncTime = 0f;
-        _isUpdatingHostMetadata = false;
         ResetClientConnectionTracking();
     }
 
@@ -416,65 +411,6 @@ public class LobbySessionManager
             UnityEngine.Object.Destroy(cameras[i].gameObject);
     }
 
-    private RangerController SpawnRangerForLocalUser()
-    {
-        GameObject rangerObject = Managers.Resource.Instantiate(RangerPrefabName);
-        if (rangerObject == null)
-        {
-            Debug.LogError($"Lobby host bootstrap failed: Prefabs/{RangerPrefabName} not found.");
-            return null;
-        }
-
-        RangerController ranger = rangerObject.GetComponent<RangerController>();
-        if (ranger == null)
-        {
-            Debug.LogError("Lobby host bootstrap failed: Ranger prefab is missing RangerController.");
-            return null;
-        }
-
-        _rangersByUserId[Managers.Discord.LocalUserId] = ranger;
-        LobbyScene.RegisterUserObjects(Managers.Discord.LocalUserId, ranger, null);
-        return ranger;
-    }
-
-    private static void SetupLobbyCamera(RangerController ranger)
-    {
-        GameObject cameraObject = Managers.Resource.Instantiate(LobbyCameraPrefabName);
-        if (cameraObject == null)
-        {
-            Debug.LogError($"Lobby host bootstrap failed: Prefabs/{LobbyCameraPrefabName} not found.");
-            return;
-        }
-
-        LobbyCameraController lobbyCamera = cameraObject.GetComponent<LobbyCameraController>();
-        if (lobbyCamera == null)
-        {
-            Debug.LogError("Lobby host bootstrap failed: Lobby_Camera prefab is missing LobbyCameraController.");
-            return;
-        }
-
-        if (ranger != null)
-            lobbyCamera.SetTarget(ranger.transform);
-    }
-
-    private void SetupNicknameForLocalUser(RangerController ranger)
-    {
-        if (ranger == null)
-            return;
-
-        UI_Nickname nicknameUI = Managers.UI.CreateWorldSpaceUI<UI_Nickname>(ranger.transform, nameof(UI_Nickname));
-        if (nicknameUI == null)
-        {
-            Debug.LogError("Lobby host bootstrap failed: UI_Nickname creation returned null.");
-            return;
-        }
-
-        nicknameUI.SetText(Managers.Discord.LocalDisplayName);
-        nicknameUI.SetVoiceChatActive(Managers.Discord.IsLobbyUserVoiceChatActive(Managers.Discord.LocalUserId));
-        _nicknamesByUserId[Managers.Discord.LocalUserId] = nicknameUI;
-        LobbyScene.RegisterUserObjects(Managers.Discord.LocalUserId, ranger, nicknameUI);
-    }
-
     private void HandleLocalDisplayNameChanged(string displayName)
     {
         if (_nicknamesByUserId.TryGetValue(Managers.Discord.LocalUserId, out UI_Nickname nicknameUI) && nicknameUI != null)
@@ -560,54 +496,23 @@ public class LobbySessionManager
             _currentVoiceSecret = metadataVoiceSecret;
     }
 
-    private static string SelectHostUserId(ulong[] memberIds, string preferredHostUserId)
-    {
-        if (!string.IsNullOrWhiteSpace(preferredHostUserId) && ulong.TryParse(preferredHostUserId, out ulong preferredId))
-        {
-            for (int i = 0; i < memberIds.Length; i++)
-            {
-                if (memberIds[i] == preferredId)
-                    return preferredHostUserId;
-            }
-        }
-
-        ulong selected = memberIds[0];
-        for (int i = 1; i < memberIds.Length; i++)
-        {
-            if (memberIds[i] < selected)
-                selected = memberIds[i];
-        }
-
-        return selected.ToString();
-    }
-
-    private void PublishHostMetadataAsOwner()
-    {
-        Debug.LogWarning("[Lobby] Host migration is not supported in Steam transport lobby yet.");
-    }
-
-    private void HandleHostMetadataPublishCompleted(bool success, ulong lobbyId, string error)
-    {
-        _isUpdatingHostMetadata = false;
-
-        if (!success)
-        {
-            Debug.LogWarning($"[Lobby] Failed to publish promoted host metadata: {error}");
-            return;
-        }
-
-        _currentDiscordLobbyId = lobbyId;
-        HostUserId = Managers.Discord.LocalUserId;
-        _nextLobbyStateSyncTime = 0f;
-    }
-
     private bool TryStartSteamHost()
     {
-        if (!TryResolveNetworkObjects(out NetworkManager networkManager, out _))
+        if (!TryResolveNetworkObjects(out NetworkManager networkManager, out SteamNetworkingSocketsTransport steamTransport))
+        {
+            Debug.LogWarning("[Lobby] TryStartSteamHost failed: TryResolveNetworkObjects returned false.");
             return false;
+        }
 
         if (networkManager.IsListening)
+        {
+            if (networkManager.IsHost)
+                return true;
+
             networkManager.Shutdown();
+            Debug.Log("[Lobby] Existing NetworkManager was listening but not host. Shutdown requested before retry.");
+            return false;
+        }
 
         HasLobbyNetworkConnectionFailed = false;
         LastLobbyNetworkError = string.Empty;
@@ -636,7 +541,7 @@ public class LobbySessionManager
 
     private void TryStopNetwork()
     {
-        NetworkManager networkManager = NetworkManager.Singleton;
+        NetworkManager networkManager = UnityEngine.Object.FindAnyObjectByType<NetworkManager>();
         if (networkManager == null)
             return;
 
@@ -660,30 +565,33 @@ public class LobbySessionManager
         out NetworkManager networkManager,
         out SteamNetworkingSocketsTransport steamTransport)
     {
-        networkManager = NetworkManager.Singleton;
-        steamTransport = null;
+        if (!LobbyNetworkRuntime.EnsureSetup(out networkManager, out steamTransport))
+        {
+            if (!s_loggedNetcodeMissing)
+            {
+                Debug.LogWarning("[Lobby] Failed to ensure lobby network runtime.");
+                s_loggedNetcodeMissing = true;
+            }
+
+            return false;
+        }
 
         if (networkManager == null)
         {
             if (!s_loggedNetworkManagerMissing)
             {
-                Debug.LogWarning("[Lobby] NetworkManager.Singleton is missing.");
+                Debug.LogWarning("[Lobby] NetworkManager is missing after runtime setup.");
                 s_loggedNetworkManagerMissing = true;
             }
 
             return false;
         }
 
-        steamTransport = networkManager.NetworkConfig.NetworkTransport as SteamNetworkingSocketsTransport;
-
-        if (steamTransport == null)
-            steamTransport = networkManager.GetComponent<SteamNetworkingSocketsTransport>();
-
         if (steamTransport == null)
         {
             if (!s_loggedTransportMissing)
             {
-                Debug.LogWarning("[Lobby] Steam transport is missing on NetworkManager.");
+                Debug.LogWarning("[Lobby] Steam transport is missing after runtime setup.");
                 s_loggedTransportMissing = true;
             }
 
