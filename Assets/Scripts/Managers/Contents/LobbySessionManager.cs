@@ -49,6 +49,9 @@ public class LobbySessionManager
     public string CurrentVoiceSecret => _currentVoiceSecret;
     public bool HasJoinedLobbySession => _currentDiscordLobbyId != 0;
 
+    public bool HasLobbyNetworkConnectionFailed { get; private set; }
+    public string LastLobbyNetworkError { get; private set; } = string.Empty;
+
     public void Init()
     {
         Managers.Discord.OnLocalDisplayNameChanged -= HandleLocalDisplayNameChanged;
@@ -300,6 +303,12 @@ public class LobbySessionManager
             TryStopUtp();
             IsHosting = false;
             HostUserId = string.Empty;
+        }
+
+        if (IsRemoteUnsafeHostAddress(_currentHostAddress))
+        {
+            Debug.LogWarning($"[Lobby] Host address is not reachable by remote clients: {_currentHostAddress}");
+            Managers.Toast.EnqueueMessage("Lobby host address is local-only. Remote clients may not connect.", 3f);
         }
     }
 
@@ -746,6 +755,9 @@ public class LobbySessionManager
 
     private bool TryStartUtpClient(string hostAddress, ushort port)
     {
+        HasLobbyNetworkConnectionFailed = false;
+        LastLobbyNetworkError = string.Empty;
+
         string targetHost = NormalizeHostAddress(hostAddress);
         if (port == 0 || string.IsNullOrWhiteSpace(targetHost))
         {
@@ -785,7 +797,10 @@ public class LobbySessionManager
             Debug.Log($"[Lobby] StartClient requested. host={targetHost}, port={port}, started={started}");
             if (!started)
                 return false;
-
+            networkManager.OnClientConnectedCallback -= HandleClientConnected;
+            networkManager.OnClientDisconnectCallback -= HandleClientDisconnected;
+            networkManager.OnClientConnectedCallback += HandleClientConnected;
+            networkManager.OnClientDisconnectCallback += HandleClientDisconnected;
             _activeClientHostAddress = targetHost;
             _activeClientPort = port;
             return true;
@@ -810,6 +825,8 @@ public class LobbySessionManager
                 return true;
             }
 
+            networkManager.OnClientConnectedCallback -= HandleClientConnected;
+            networkManager.OnClientDisconnectCallback -= HandleClientDisconnected;
             networkManager.Shutdown();
             ResetClientConnectionTracking();
             return true;
@@ -889,5 +906,48 @@ public class LobbySessionManager
             setConnectionData.Invoke(utpTransport, new object[] { hostAddress, port, "0.0.0.0" });
         else
             setConnectionData.Invoke(utpTransport, new object[] { hostAddress, port });
+    }
+
+    public bool IsLobbyNetworkConnected
+    {
+        get
+        {
+            if (!TryResolveNetworkObjects(out NetworkManager networkManager, out _))
+                return false;
+
+            if (IsHosting)
+                return networkManager.IsHost || networkManager.IsServer;
+
+            return networkManager.IsClient && networkManager.IsConnectedClient;
+        }
+    }
+
+    private void HandleClientConnected(ulong clientId)
+    {
+        HasLobbyNetworkConnectionFailed = false;
+        LastLobbyNetworkError = string.Empty;
+        Debug.Log($"[Lobby] UTP client connected. clientId={clientId}");
+    }
+
+    private void HandleClientDisconnected(ulong clientId)
+    {
+        if (IsHosting) return;
+
+        HasLobbyNetworkConnectionFailed = true;
+        LastLobbyNetworkError =
+            $"Disconnected from lobby host. host={_activeClientHostAddress}, port={_activeClientPort}";
+
+        Debug.LogWarning($"[Lobby] {LastLobbyNetworkError}");
+    }
+
+    private static bool IsRemoteUnsafeHostAddress(string hostAddress)
+    {
+        if (string.IsNullOrWhiteSpace(hostAddress))
+            return true;
+
+        if (!IPAddress.TryParse(hostAddress, out IPAddress address))
+            return false;
+
+        return IPAddress.IsLoopback(address);
     }
 }

@@ -24,6 +24,9 @@ public class LobbyScene : BaseScene
 
     private static readonly Dictionary<string, LobbyUserEntry> s_userEntriesByDiscordUserId = new();
 
+    private const float LobbyJoinTimeoutSeconds = 15f;
+    private float _lobbySetupStartedAt;
+
     private sealed class LobbyUserEntry
     {
         public RangerController Ranger;
@@ -129,7 +132,10 @@ public class LobbyScene : BaseScene
         _isLobbySetupPending = _pendingHostBootstrap || !string.IsNullOrWhiteSpace(_pendingJoinCode);
 
         if (_isLobbySetupPending)
+        {
+            _lobbySetupStartedAt = Time.unscaledTime;
             SetLobbyLoading(true, "Preparing lobby...");
+        }
 
         Managers.Discord.OnAuthStateChanged -= HandleDiscordAuthStateChanged;
         Managers.Discord.OnAuthStateChanged += HandleDiscordAuthStateChanged;
@@ -241,21 +247,41 @@ public class LobbyScene : BaseScene
         if (!_isLobbySetupPending)
             return;
 
-        if (!Managers.LobbySession.HasJoinedLobbySession)
+        if (Managers.LobbySession.HasLobbyNetworkConnectionFailed)
+        {
+            SetLobbyLoading(false);
+            _isLobbySetupPending = false;
+            Managers.Toast.EnqueueMessage("Failed to connect to lobby host.", 3f);
+            Managers.Scene.LoadScene(Define.Scene.Intro);
             return;
+        }
 
-        if (!IsLocalLobbyInteractionReady())
+        bool hasLocalRanger = Managers.LobbySession.TryGetLocalRangerTransform(out _);
+        bool hasCamera = _localLobbyCamera != null;
+
+        if (Managers.LobbySession.HasJoinedLobbySession &&
+            Managers.LobbySession.IsLobbyNetworkConnected &&
+            hasLocalRanger &&
+            hasCamera)
+        {
+            SetLobbyLoading(false);
+            _isLobbySetupPending = false;
             return;
+        }
 
-        SetLobbyLoading(false);
-        Managers.Input.SetMode(Define.InputMode.Player);
+        if (Time.unscaledTime - _lobbySetupStartedAt > LobbyJoinTimeoutSeconds)
+        {
+            SetLobbyLoading(false);
+            _isLobbySetupPending = false;
+            Managers.Toast.EnqueueMessage("Lobby connection timed out.", 3f);
+            Managers.Scene.LoadScene(Define.Scene.Intro);
+        }
     }
 
     private void SetLobbyLoading(bool active, string message = null)
     {
         EnsureLoadingUI();
-        if (_loadingUi == null)
-            return;
+        if (_loadingUi == null) return;
 
         _isLobbySetupPending = active;
         _loadingUi.gameObject.SetActive(active);
@@ -265,6 +291,8 @@ public class LobbyScene : BaseScene
 
         if (active)
             Managers.Input.SetMode(Define.InputMode.UI);
+        else
+            RefreshInputMode();
     }
 
     private void EnsureLobbyMenu()
