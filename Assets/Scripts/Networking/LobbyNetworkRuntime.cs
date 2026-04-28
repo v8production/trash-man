@@ -7,12 +7,36 @@ public static class LobbyNetworkRuntime
 {
     private const string RuntimeRootName = "@NetworkManager";
     private const string NetworkObjectPrefabPath = "Prefabs/@NetworkObject";
-    // Deterministic per-project hash for the runtime-created lobby player prefab.
-    // Must be stable across host/client, and must not collide with any authored NetworkObject prefab hashes.
+
     private static readonly uint LobbyPlayerPrefabHash = ComputeStableHash32("TrashMan.LobbyNetworkPlayerPrefab.v1");
 
     private static GameObject s_runtimePlayerPrefab;
     private static EntityId s_registeredNetworkManagerInstanceId;
+
+    public static void ShutdownRuntime()
+    {
+        try
+        {
+            NetworkManager networkManager = Object.FindAnyObjectByType<NetworkManager>();
+            if (networkManager != null)
+            {
+                if (networkManager.IsListening)
+                    networkManager.Shutdown();
+
+                Object.Destroy(networkManager.gameObject);
+            }
+        }
+        catch
+        {
+            // Intentionally ignore shutdown teardown exceptions.
+        }
+
+        if (s_runtimePlayerPrefab != null)
+            Object.Destroy(s_runtimePlayerPrefab);
+
+        s_runtimePlayerPrefab = null;
+        s_registeredNetworkManagerInstanceId = EntityId.None;
+    }
 
     public static bool EnsureSetup()
     {

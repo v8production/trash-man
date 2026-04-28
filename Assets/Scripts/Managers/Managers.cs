@@ -92,7 +92,7 @@ public class Managers : MonoBehaviour
         Shutdown();
     }
 
-    public static void Clear()
+    public static void Clear(Define.Scene nextScene)
     {
         Sound.Clear();
         Scene.Clear();
@@ -102,13 +102,17 @@ public class Managers : MonoBehaviour
         Outline.Clear();
         Chat.Clear();
         Toast.Clear();
-        LobbySession.Clear();
+        if (nextScene == Define.Scene.Intro)
+            LobbySession.Clear();
+
         Pool.Clear();
         TitanRig.Clear();
         TitanRole.Clear();
-        // Discord.Clear();
-        // Steam.Clear();
+
+        if (nextScene == Define.Scene.Intro)
+            LobbyNetworkRuntime.ShutdownRuntime();
     }
+
     public static void Shutdown()
     {
         Steam.Clear();

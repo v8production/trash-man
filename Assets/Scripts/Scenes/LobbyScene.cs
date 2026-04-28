@@ -670,7 +670,10 @@ public class LobbyScene : BaseScene
     {
         ClearUserObjectRegistry();
         Managers.Discord.OnAuthStateChanged -= HandleDiscordAuthStateChanged;
-        Managers.Discord.EndActiveLobbyVoice();
+
+        // Keep voice alive when transitioning into GameScene.
+        if (Managers.Scene.PendingScene == Define.Scene.Intro)
+            Managers.Discord.EndActiveLobbyVoice();
 
         if (_lobbyMenu != null)
         {

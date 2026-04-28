@@ -54,6 +54,11 @@ public class LobbySessionManager
 
     public void OnUpdate()
     {
+        // Lobby host/client reconciliation should only run while in the LobbyScene.
+        // In GameScene, running this loop can accidentally restart/shutdown UTP.
+        if (Managers.Scene.CurrentScene == null || Managers.Scene.CurrentScene.SceneType != Define.Scene.Lobby)
+            return;
+
         if (_currentDiscordLobbyId == 0)
             return;
 
