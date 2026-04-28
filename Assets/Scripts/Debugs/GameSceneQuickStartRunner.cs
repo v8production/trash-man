@@ -1,14 +1,12 @@
 using System.Collections;
+using Netcode.Transports;
 using Unity.Netcode;
-using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 
 public class GameSceneQuickStartRunner : MonoBehaviour
 {
     [SerializeField] private bool _runOnStart = true;
     [SerializeField] private bool _editorOnly = true;
-    [SerializeField] private string _hostAddress = "127.0.0.1";
-    [SerializeField] private ushort _port = 18000;
     [SerializeField] private float _initialDelaySeconds = 0.1f;
     [SerializeField] private float _retryIntervalSeconds = 0.1f;
     [SerializeField] private int _maxRetryCount = 40;
@@ -36,7 +34,7 @@ public class GameSceneQuickStartRunner : MonoBehaviour
         int retryCount = Mathf.Max(1, _maxRetryCount);
         for (int attempt = 1; attempt <= retryCount; attempt++)
         {
-            if (!LobbyNetworkRuntime.EnsureSetup(out NetworkManager networkManager, out UnityTransport transport)
+            if (!LobbyNetworkRuntime.EnsureSetup(out NetworkManager networkManager, out SteamNetworkingSocketsTransport transport)
                 || networkManager == null
                 || transport == null)
             {
@@ -44,7 +42,7 @@ public class GameSceneQuickStartRunner : MonoBehaviour
                 continue;
             }
 
-            if (!EnsureHostStarted(networkManager, transport, attempt))
+            if (!EnsureHostStarted(networkManager, attempt))
             {
                 yield return WaitRetry();
                 continue;
@@ -71,23 +69,25 @@ public class GameSceneQuickStartRunner : MonoBehaviour
         Debug.LogWarning("[GameQuickStart] Failed to prepare local host and five-role assignment within retry limit.");
     }
 
-    private bool EnsureHostStarted(NetworkManager networkManager, UnityTransport transport, int attempt)
+    private bool EnsureHostStarted(
+        NetworkManager networkManager,
+        int attempt)
     {
+        if (networkManager == null)
+            return false;
+
         if (networkManager.IsListening)
         {
             if (networkManager.IsHost)
                 return true;
 
             networkManager.Shutdown();
-            Log($"Restarting runtime as host. attempt={attempt}");
+            Log($"Restarting runtime as Steam host. attempt={attempt}");
             return false;
         }
 
-        string host = string.IsNullOrWhiteSpace(_hostAddress) ? "127.0.0.1" : _hostAddress.Trim();
-        transport.SetConnectionData(host, _port);
-
         bool started = networkManager.StartHost();
-        Log($"StartHost requested. attempt={attempt}, started={started}, host={host}, port={_port}");
+        Log($"StartHost requested. attempt={attempt}, started={started}, steamId={Managers.Steam.LocalSteamId.m_SteamID}");
         return started;
     }
 

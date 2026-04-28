@@ -31,6 +31,7 @@ public class Managers : MonoBehaviour
     SoundManager _soundManager = new();
     UIManager _uiManager = new();
     DiscordManager _discordManager = new();
+    SteamManager _steamManager = new();
     public static DataManager Data { get { return Instance._dataManager; } }
     public static InputManager Input { get { return Instance._inputManager; } }
     public static PoolManager Pool { get { return Instance._poolManager; } }
@@ -39,19 +40,12 @@ public class Managers : MonoBehaviour
     public static SoundManager Sound { get { return Instance._soundManager; } }
     public static UIManager UI { get { return Instance._uiManager; } }
     public static DiscordManager Discord { get { return Instance._discordManager; } }
+    public static SteamManager Steam { get { return Instance._steamManager; } }
     #endregion
 
     void Start()
     {
         Init();
-    }
-
-    void Update()
-    {
-        Chat.OnUpdate();
-        Toast.OnUpdate();
-        LobbySession.OnUpdate();
-        Discord.OnUpdate();
     }
 
     static void Init()
@@ -80,10 +74,25 @@ public class Managers : MonoBehaviour
             _instance._titanRigManager.Init();
             _instance._titanRoleManager.Init();
             _instance._discordManager.Init();
+            _instance._steamManager.Init();
         }
     }
 
-    public static void Clear()
+    void Update()
+    {
+        Chat.OnUpdate();
+        Toast.OnUpdate();
+        LobbySession.OnUpdate();
+        Discord.OnUpdate();
+        Steam.OnUpdate();
+    }
+
+    private void OnApplicationQuit()
+    {
+        Shutdown();
+    }
+
+    public static void Clear(Define.Scene nextScene)
     {
         Sound.Clear();
         Scene.Clear();
@@ -93,10 +102,20 @@ public class Managers : MonoBehaviour
         Outline.Clear();
         Chat.Clear();
         Toast.Clear();
-        LobbySession.Clear();
+        if (nextScene == Define.Scene.Intro)
+            LobbySession.Clear();
+
         Pool.Clear();
         TitanRig.Clear();
         TitanRole.Clear();
+
+        if (nextScene == Define.Scene.Intro)
+            LobbyNetworkRuntime.ShutdownRuntime();
+    }
+
+    public static void Shutdown()
+    {
+        Steam.Clear();
         Discord.Clear();
     }
 }

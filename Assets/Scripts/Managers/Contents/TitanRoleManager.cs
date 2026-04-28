@@ -30,7 +30,10 @@ public class TitanRoleManager
         LobbyNetworkPlayer[] players = LobbyNetworkPlayer.FindAllSpawnedPlayers();
         if (players == null || players.Length == 0)
         {
-            error = "No lobby players were found.";
+            NetworkManager networkManager = NetworkManager.Singleton;
+            int fallbackCount = UnityEngine.Object.FindObjectsByType<LobbyNetworkPlayer>().Length;
+            string nm = networkManager != null ? $"nm(listening={networkManager.IsListening}, server={networkManager.IsServer}, client={networkManager.IsClient})" : "nm(<null>)";
+            error = $"No lobby players were found. {nm} fallbackFind={fallbackCount}";
             return false;
         }
 

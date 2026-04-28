@@ -6,6 +6,7 @@ public class SceneManagerEx
 {
     private bool _enterLobbyAsHost;
     private string _pendingLobbyJoinCode = string.Empty;
+    public Define.Scene PendingScene { get; private set; } = Define.Scene.Intro;
 
     public void Init()
     {
@@ -51,7 +52,8 @@ public class SceneManagerEx
 
     public void LoadScene(Define.Scene name)
     {
-        Managers.Clear();
+        PendingScene = name;
+        Managers.Clear(name);
         SceneManager.LoadScene(Util.GetEnumName(name));
     }
 

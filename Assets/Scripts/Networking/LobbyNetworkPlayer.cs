@@ -104,6 +104,10 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     {
         base.OnNetworkSpawn();
 
+        // We use Unity scene loads (NGO scene management disabled), so this NetworkObject must survive
+        // the Lobby -> Game transition for role/input routing.
+        DontDestroyOnLoad(gameObject);
+
         _submittedIdentity = false;
 
         // Unity appends "(Clone)" to instantiated prefab names; use stable, readable names in Hierarchy.
@@ -449,7 +453,10 @@ public class LobbyNetworkPlayer : NetworkBehaviour
                 result.Add(player);
             }
 
-            return result.ToArray();
+            // If SpawnManager is present but doesn't yet report player objects (timing / scene load edge),
+            // fall back to a scene search.
+            if (result.Count > 0)
+                return result.ToArray();
         }
 
         return Object.FindObjectsByType<LobbyNetworkPlayer>();
@@ -676,8 +683,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     public void PrepareForGameScene(Transform runtimeRoot)
     {
-        // Keep the network player object alive for role input syncing.
-        DontDestroyOnLoad(gameObject);
+        // Network player object is already in DontDestroyOnLoad.
 
         if (_nicknameUI != null)
             Destroy(_nicknameUI.gameObject);
@@ -693,7 +699,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         // if (runtimeRoot != null)
         //     transform.SetParent(runtimeRoot, true);
 
-        gameObject.hideFlags = HideFlags.HideInHierarchy;
+        // Keep discoverable so role/input routing can find it in GameScene.
+        // (HideInHierarchy can cause FindObjectsByType fallbacks to miss it.)
+        gameObject.hideFlags = HideFlags.None;
     }
 
     public bool TryGetLobbyRangerTransform(out Transform rangerTransform)

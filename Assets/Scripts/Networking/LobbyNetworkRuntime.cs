@@ -1,37 +1,57 @@
 using System.Reflection;
+using Netcode.Transports;
 using Unity.Netcode;
-using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 
 public static class LobbyNetworkRuntime
 {
     private const string RuntimeRootName = "@NetworkManager";
     private const string NetworkObjectPrefabPath = "Prefabs/@NetworkObject";
-    // Deterministic per-project hash for the runtime-created lobby player prefab.
-    // Must be stable across host/client, and must not collide with any authored NetworkObject prefab hashes.
+
     private static readonly uint LobbyPlayerPrefabHash = ComputeStableHash32("TrashMan.LobbyNetworkPlayerPrefab.v1");
 
     private static GameObject s_runtimePlayerPrefab;
-    private static bool s_inputDebugBootLogged;
-    private static int s_registeredNetworkManagerInstanceId;
+    private static EntityId s_registeredNetworkManagerInstanceId;
+
+    public static void ShutdownRuntime()
+    {
+        try
+        {
+            NetworkManager networkManager = Object.FindAnyObjectByType<NetworkManager>();
+            if (networkManager != null)
+            {
+                if (networkManager.IsListening)
+                    networkManager.Shutdown();
+
+                Object.Destroy(networkManager.gameObject);
+            }
+        }
+        catch
+        {
+            // Intentionally ignore shutdown teardown exceptions.
+        }
+
+        if (s_runtimePlayerPrefab != null)
+            Object.Destroy(s_runtimePlayerPrefab);
+
+        s_runtimePlayerPrefab = null;
+        s_registeredNetworkManagerInstanceId = EntityId.None;
+    }
 
     public static bool EnsureSetup()
     {
         return EnsureSetup(out _, out _);
     }
 
-    public static bool EnsureSetup(out NetworkManager networkManager, out UnityTransport transport)
+    public static bool EnsureSetup(
+        out NetworkManager networkManager,
+        out SteamNetworkingSocketsTransport transport)
     {
         networkManager = Object.FindAnyObjectByType<NetworkManager>();
-        transport = networkManager != null ? networkManager.GetComponent<UnityTransport>() : null;
+        transport = networkManager != null
+            ? networkManager.GetComponent<SteamNetworkingSocketsTransport>()
+            : null;
 
-        if (!s_inputDebugBootLogged)
-        {
-            s_inputDebugBootLogged = true;
-            Debug.Log($"{InputDebug.Prefix} Boot Debug.isDebugBuild={Debug.isDebugBuild} Enabled={InputDebug.Enabled}");
-        }
-
-        // Keep the NetworkManager under a stable, cross-scene runtime root name.
         if (networkManager != null)
         {
             networkManager.gameObject.name = RuntimeRootName;
@@ -53,9 +73,9 @@ public static class LobbyNetworkRuntime
 
         if (transport == null)
         {
-            transport = networkManager.GetComponent<UnityTransport>();
+            transport = networkManager.GetComponent<SteamNetworkingSocketsTransport>();
             if (transport == null)
-                transport = networkManager.gameObject.AddComponent<UnityTransport>();
+                transport = networkManager.gameObject.AddComponent<SteamNetworkingSocketsTransport>();
         }
 
         GameObject playerPrefab = EnsurePlayerPrefab();
@@ -69,10 +89,6 @@ public static class LobbyNetworkRuntime
             networkManager.NetworkConfig.Prefabs = new NetworkPrefabs();
 
         networkManager.NetworkConfig.NetworkTransport = transport;
-        // The lobby is entered via plain Unity scene loads before NGO connects host/client.
-        // Keeping NGO scene management enabled here can block client synchronization/player spawn
-        // until a disconnect/promotion cycle occurs. GameScene already has a manual ClientRpc fallback,
-        // so the lobby runtime should stay out of NGO scene synchronization.
         networkManager.NetworkConfig.EnableSceneManagement = false;
         networkManager.NetworkConfig.ConnectionApproval = false;
         networkManager.NetworkConfig.ForceSamePrefabs = false;
@@ -127,21 +143,21 @@ public static class LobbyNetworkRuntime
         if (networkManager == null || prefab == null)
             return;
 
-        int instanceId = networkManager.GetInstanceID();
-        if (instanceId != 0 && s_registeredNetworkManagerInstanceId == instanceId)
+        EntityId instanceId = networkManager.GetEntityId();
+        if (instanceId.IsValid() && s_registeredNetworkManagerInstanceId == instanceId)
             return;
 
         NetworkPrefabs prefabs = networkManager.NetworkConfig != null ? networkManager.NetworkConfig.Prefabs : null;
         if (prefabs != null && IsPrefabAlreadyRegistered(prefabs, prefab))
         {
-            if (instanceId != 0)
+            if (instanceId.IsValid())
                 s_registeredNetworkManagerInstanceId = instanceId;
             return;
         }
 
         networkManager.AddNetworkPrefab(prefab);
 
-        if (instanceId != 0)
+        if (instanceId.IsValid())
             s_registeredNetworkManagerInstanceId = instanceId;
     }
 
