@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 564e523e332435b4a99515082da79d51
+guid: 5b459c6417273734caad41868371afa9
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -41,11 +41,11 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: Attack Rebound
+      name: Attack00_Swing
       takeName: Take 001
       internalID: 1827226128182048838
-      firstFrame: 22
-      lastFrame: 40
+      firstFrame: 18
+      lastFrame: 44
       wrapMode: 0
       orientationOffsetY: 0
       level: 0

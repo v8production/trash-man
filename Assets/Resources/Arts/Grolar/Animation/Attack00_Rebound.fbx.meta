@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 7b4e9435cda1c5d4cbb0dd99e8799283
+guid: 6e7dede44461516419e4d44531e93d15
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -14,11 +14,6 @@ ModelImporter:
       assembly: UnityEngine.CoreModule
       name: Material #341
     second: {fileID: 2100000, guid: 06875e9c2b289774798384ec7ea55377, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Material #67
-    second: {fileID: 2100000, guid: e413ac8be19716345b4a4de89f00c014, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -46,7 +41,7 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: Attack Hit
+      name: Attack00_Rebound
       takeName: Take 001
       internalID: 1827226128182048838
       firstFrame: 22
