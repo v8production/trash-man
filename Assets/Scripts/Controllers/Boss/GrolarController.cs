@@ -13,16 +13,13 @@ public class GrolarController : BossController
 
     private static readonly string[] TempAnimNames =
     {
-        "Idle_00",
-        "Run_00",
-        "Walk_00",
-        "Alert_Roar_00",
-        "Alert_00",
-        "Alert_Idle_00",
-        "Hit_00",
-        "Attack_Hit_00",
-        "Attack_Rebound_00",
-        "Attack_Swing_00",
+        "Run00",
+        "Walk00",
+        "Alert00_Roar",
+        "Hit00",
+        "Attack00_Alert",
+        "Attack00_Swing",
+        "Attack00_Rebound",
     };
 
     private Animator _animator;
