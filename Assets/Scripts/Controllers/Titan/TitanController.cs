@@ -15,6 +15,11 @@ public class TitanController : MonoBehaviour
     [SerializeField] private TitanRightLegRoleController rightLegController;
 
     TitanStat _stat;
+    public TitanStat Stat { get { return _stat; } }
+
+    bool _guard;
+
+    public bool Guard { get { return _guard; } set { _guard = value; } }
 
     private void Awake()
     {

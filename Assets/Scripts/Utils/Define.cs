@@ -68,4 +68,15 @@ public class Define
         LeftLeg = 4,
         RightLeg = 5
     }
+
+    public enum GrolarAnimState
+    {
+        Run00,
+        Walk00,
+        Alert00_Roar,
+        Hit00,
+        Attack00_Alert,
+        Attack00_Swing,
+        Attack00_Rebound
+    }
 }

@@ -271,11 +271,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameCameraController
   _titanTarget: {fileID: 0}
   _bossTarget: {fileID: 0}
-  _titanPivotOffset: {x: 0, y: 0.5, z: 0}
+  _titanPivotOffset: {x: 0, y: 1, z: 0}
   _bossLookOffset: {x: 0, y: 0.5, z: 0}
   _followDistance: 2
-  _heightOffset: 1
-  _lookAtBossWeight: 4
+  _heightOffset: 0
+  _lookAtBossWeight: 0
   _followLerpSpeed: 8
   _rotationLerpSpeed: 10
   _fallbackForward: {x: 0, y: 0, z: 1}

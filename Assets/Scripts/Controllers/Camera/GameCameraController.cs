@@ -8,11 +8,11 @@ public class GameCameraController : MonoBehaviour
     [SerializeField] private BossController _bossTarget;
 
     [Header("Framing")]
-    [SerializeField] private Vector3 _titanPivotOffset = new(0f, 0.2f, 0f);
-    [SerializeField] private Vector3 _bossLookOffset = new(0f, 0.2f, 0f);
-    [SerializeField] private float _followDistance = 1f;
-    [SerializeField] private float _heightOffset = 1f;
-    [SerializeField] private float _lookAtBossWeight = 4f;
+    [SerializeField] private Vector3 _titanPivotOffset = new(0f, 1f, 0f);
+    [SerializeField] private Vector3 _bossLookOffset = new(0f, 0.5f, 0f);
+    [SerializeField] private float _followDistance = 2f;
+    [SerializeField] private float _heightOffset = 0f;
+    [SerializeField] private float _lookAtBossWeight = 0f;
 
     [Header("Smoothing")]
     [SerializeField] private float _followLerpSpeed = 8f;

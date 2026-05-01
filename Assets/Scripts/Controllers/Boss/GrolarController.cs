@@ -3,28 +3,22 @@ using UnityEngine;
 
 public class GrolarController : BossController
 {
-    // TEMP: Debug-only helper to cycle through animation states every few seconds.
-    // Remove this whole region once animation verification is done.
-    [Header("TEMP - Animation Cycle (remove anytime)")]
-    [SerializeField] private bool enableTempAnimCycle = true;
-    [SerializeField, Min(0.1f)] private float tempAnimIntervalSeconds = 3f;
-    [SerializeField] private bool tempUseCrossFade = true;
-    [SerializeField, Min(0f)] private float tempCrossFadeDuration = 0.05f;
-
-    private static readonly string[] TempAnimNames =
-    {
-        "Run00",
-        "Walk00",
-        "Alert00_Roar",
-        "Hit00",
-        "Attack00_Alert",
-        "Attack00_Swing",
-        "Attack00_Rebound",
-    };
-
     private Animator _animator;
-    private Coroutine _tempAnimRoutine;
-    private int _tempAnimIndex;
+
+    protected Define.GrolarAnimState _animState;
+
+    public virtual Define.GrolarAnimState AnimState
+    {
+        get { return _animState; }
+        set
+        {
+            if (Equals(_animState, value))
+                return;
+            _animState = value;
+
+            _animator.CrossFade(_animState.ToString(), 0.1f);
+        }
+    }
     private BossStat _stat;
 
     private void Awake()
@@ -33,77 +27,4 @@ public class GrolarController : BossController
         _stat = gameObject.GetComponent<BossStat>();
     }
 
-    private void OnEnable()
-    {
-        Debug.Log($"[GrolarController][TEMP] OnEnable (enableTempAnimCycle={enableTempAnimCycle})");
-
-        if (enableTempAnimCycle)
-            Temp_StartAnimationCycle();
-    }
-
-    private void OnDisable()
-    {
-        Temp_StopAnimationCycle();
-    }
-
-    [ContextMenu("TEMP/Start Animation Cycle")]
-    private void Temp_StartAnimationCycle()
-    {
-        if (!Application.isPlaying)
-        {
-            Debug.LogWarning("[GrolarController][TEMP] Start Animation Cycle is PlayMode-only.");
-            return;
-        }
-
-        if (_tempAnimRoutine != null)
-            return;
-
-        if (_animator == null)
-            _animator = GetComponentInChildren<Animator>(true);
-
-        if (_animator == null)
-        {
-            Debug.LogWarning("[GrolarController][TEMP] Animator not found. Attach an Animator to this object or its children.");
-            return;
-        }
-
-        _tempAnimRoutine = StartCoroutine(Temp_AnimationCycleRoutine());
-    }
-
-    [ContextMenu("TEMP/Stop Animation Cycle")]
-    private void Temp_StopAnimationCycle()
-    {
-        if (!Application.isPlaying)
-            return;
-
-        if (_tempAnimRoutine == null)
-            return;
-
-        StopCoroutine(_tempAnimRoutine);
-        _tempAnimRoutine = null;
-    }
-
-    private IEnumerator Temp_AnimationCycleRoutine()
-    {
-        _tempAnimIndex = 0;
-
-        while (true)
-        {
-            string animName = TempAnimNames[_tempAnimIndex];
-            Temp_PlayAnimation(animName);
-
-            _tempAnimIndex = (_tempAnimIndex + 1) % TempAnimNames.Length;
-            yield return new WaitForSeconds(tempAnimIntervalSeconds);
-        }
-    }
-
-    private void Temp_PlayAnimation(string stateName)
-    {
-        if (tempUseCrossFade)
-            _animator.CrossFade(stateName, tempCrossFadeDuration);
-        else
-            _animator.Play(stateName, 0, 0f);
-
-        Debug.Log($"[GrolarController][TEMP] Play '{stateName}'");
-    }
 }
