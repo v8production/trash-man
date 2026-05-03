@@ -17,6 +17,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private readonly NetworkVariable<int> _selectedTitanRoleMask = new(0);
     private readonly NetworkVariable<int> _activeTitanRole = new(0);
     private readonly NetworkVariable<TitanRoleInputPayload> _roleInput = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    private readonly NetworkVariable<TitanRigPosePayload> _titanPose = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     private RangerController _lobbyRanger;
     private CharacterController _lobbyRangerCharacterController;
@@ -34,6 +35,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     public bool HasSelectedTitanRole => NormalizeTitanRoleMask(_selectedTitanRoleMask.Value) != 0;
     public int ActiveTitanRoleValue => NormalizeTitanRoleValue(_activeTitanRole.Value);
     public TitanRoleInputPayload CurrentRoleInput => _roleInput.Value;
+    public TitanRigPosePayload CurrentTitanPose => _titanPose.Value;
     public string DisplayName => GetDisplayName();
 
     private float _nextPublishLogTime;
@@ -458,6 +460,52 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         }
 
         return Object.FindObjectsByType<LobbyNetworkPlayer>();
+    }
+
+    public static bool TryPublishServerTitanPose(TitanRigPosePayload posePayload)
+    {
+        LobbyNetworkPlayer publisher = FindServerPosePublisher();
+        if (publisher == null || !publisher.IsServer || !publisher.IsSpawned)
+            return false;
+
+        if (publisher._titanPose.Value.Equals(posePayload))
+            return true;
+
+        publisher._titanPose.Value = posePayload;
+        return true;
+    }
+
+    public static bool TryGetLatestTitanPose(out TitanRigPosePayload posePayload)
+    {
+        posePayload = default;
+
+        LobbyNetworkPlayer publisher = FindServerPosePublisher();
+        if (publisher == null || !publisher.IsSpawned)
+            return false;
+
+        posePayload = publisher._titanPose.Value;
+        return posePayload.IsValid;
+    }
+
+    private static LobbyNetworkPlayer FindServerPosePublisher()
+    {
+        LobbyNetworkPlayer[] players = FindAllSpawnedPlayers();
+        LobbyNetworkPlayer fallback = null;
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || !player.IsSpawned)
+                continue;
+
+            if (fallback == null || player.OwnerClientId < fallback.OwnerClientId)
+                fallback = player;
+
+            if (player.OwnerClientId == NetworkManager.ServerClientId)
+                return player;
+        }
+
+        return fallback;
     }
 
     public static bool RequestLoadGameForAll()

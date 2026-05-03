@@ -387,9 +387,7 @@ public sealed class TitanRigRuntime : MonoBehaviour
             return;
         }
 
-        Transform movementRoot = MovementRoot;
-        movementRoot.position = snapshot.RootPosition;
-        movementRoot.rotation = snapshot.RootRotation;
+        ApplyMovementRootPose(snapshot.RootPosition, snapshot.RootRotation, zeroVelocities: true);
 
         if (snapshot.HasLeftShoulder && leftShoulder != null)
         {

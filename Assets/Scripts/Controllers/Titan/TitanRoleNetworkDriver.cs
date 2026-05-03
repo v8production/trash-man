@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 public class TitanRoleNetworkDriver : MonoBehaviour
@@ -13,6 +14,8 @@ public class TitanRoleNetworkDriver : MonoBehaviour
     [SerializeField] private TitanLeftLegRoleController _leftLegController;
     [SerializeField] private TitanRightLegRoleController _rightLegController;
 
+    private bool _appliedClientPhysicsMode;
+
     private void Awake()
     {
         ResolveControllers();
@@ -21,6 +24,15 @@ public class TitanRoleNetworkDriver : MonoBehaviour
     private void FixedUpdate()
     {
         ResolveControllers();
+
+        if (ShouldApplyServerPoseOnly())
+        {
+            ApplyClientPhysicsMode();
+            ApplyLatestServerPose();
+            return;
+        }
+
+        RestoreServerPhysicsMode();
 
         if (_bodyController == null && _leftArmController == null && _rightArmController == null && _leftLegController == null && _rightLegController == null)
             return;
@@ -44,6 +56,65 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         TickArmRole(false, dt);
         TickLegRole(true, hasLeftLegInput, in leftLegInput, dt);
         TickLegRole(false, hasRightLegInput, in rightLegInput, dt);
+
+        PublishAuthoritativePose();
+    }
+
+    private static bool ShouldApplyServerPoseOnly()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        return networkManager != null
+            && networkManager.IsListening
+            && networkManager.IsClient
+            && !networkManager.IsServer;
+    }
+
+    private void ApplyClientPhysicsMode()
+    {
+        if (_appliedClientPhysicsMode)
+            return;
+
+        Rigidbody movementRigidbody = Managers.TitanRig.MovementRigidbody;
+        if (movementRigidbody != null)
+        {
+            movementRigidbody.linearVelocity = Vector3.zero;
+            movementRigidbody.angularVelocity = Vector3.zero;
+            movementRigidbody.isKinematic = true;
+        }
+
+        _appliedClientPhysicsMode = true;
+    }
+
+    private void RestoreServerPhysicsMode()
+    {
+        if (!_appliedClientPhysicsMode)
+            return;
+
+        Rigidbody movementRigidbody = Managers.TitanRig.MovementRigidbody;
+        if (movementRigidbody != null)
+            movementRigidbody.isKinematic = false;
+
+        _appliedClientPhysicsMode = false;
+    }
+
+    private static void ApplyLatestServerPose()
+    {
+        if (!LobbyNetworkPlayer.TryGetLatestTitanPose(out TitanRigPosePayload posePayload))
+            return;
+
+        Managers.TitanRig.ApplyPoseSnapshot(posePayload.ToSnapshot());
+    }
+
+    private static void PublishAuthoritativePose()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager == null || !networkManager.IsListening || !networkManager.IsServer)
+            return;
+
+        if (!Managers.TitanRig.TryGetPoseSnapshot(out TitanRigPoseSnapshot snapshot))
+            return;
+
+        LobbyNetworkPlayer.TryPublishServerTitanPose(new TitanRigPosePayload(snapshot));
     }
 
     private void TickBodyRole(float dt)
@@ -53,7 +124,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
 
         bool anchorActive = _legAnchorResolver != null && _legAnchorResolver.HasAnyAttachedFoot();
         _bodyController.SetAnchorPhysicsOverride(anchorActive);
-        bool ok = Managers.TitanRole.TryGetRoleInput(Define.TitanRole.Body, out TitanAggregatedInput input);
+        Managers.TitanRole.TryGetRoleInput(Define.TitanRole.Body, out TitanAggregatedInput input);
         _bodyController.SetInputEnabled(true);
         _bodyController.TickRoleInput(input, dt);
         _bodyController.TickPhysics(dt);

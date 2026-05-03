@@ -99,3 +99,153 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
             && RightLegKnee.Equals(other.RightLegKnee);
     }
 }
+
+public struct TitanRigPosePayload : INetworkSerializable, IEquatable<TitanRigPosePayload>
+{
+    public bool IsValid;
+
+    public Vector3 RootPosition;
+    public Quaternion RootRotation;
+
+    public bool HasLeftShoulder;
+    public Quaternion LeftShoulderRotation;
+    public bool HasLeftElbow;
+    public Quaternion LeftElbowRotation;
+
+    public bool HasRightShoulder;
+    public Quaternion RightShoulderRotation;
+    public bool HasRightElbow;
+    public Quaternion RightElbowRotation;
+
+    public bool HasLeftHip;
+    public Quaternion LeftHipRotation;
+    public bool HasLeftKnee;
+    public Quaternion LeftKneeRotation;
+
+    public bool HasRightHip;
+    public Quaternion RightHipRotation;
+    public bool HasRightKnee;
+    public Quaternion RightKneeRotation;
+
+    public bool HasSpine;
+    public Quaternion SpineRotation;
+
+    public TitanRigPosePayload(in TitanRigPoseSnapshot snapshot)
+    {
+        IsValid = true;
+
+        RootPosition = snapshot.RootPosition;
+        RootRotation = snapshot.RootRotation;
+
+        HasLeftShoulder = snapshot.HasLeftShoulder;
+        LeftShoulderRotation = snapshot.LeftShoulderRotation;
+        HasLeftElbow = snapshot.HasLeftElbow;
+        LeftElbowRotation = snapshot.LeftElbowRotation;
+
+        HasRightShoulder = snapshot.HasRightShoulder;
+        RightShoulderRotation = snapshot.RightShoulderRotation;
+        HasRightElbow = snapshot.HasRightElbow;
+        RightElbowRotation = snapshot.RightElbowRotation;
+
+        HasLeftHip = snapshot.HasLeftHip;
+        LeftHipRotation = snapshot.LeftHipRotation;
+        HasLeftKnee = snapshot.HasLeftKnee;
+        LeftKneeRotation = snapshot.LeftKneeRotation;
+
+        HasRightHip = snapshot.HasRightHip;
+        RightHipRotation = snapshot.RightHipRotation;
+        HasRightKnee = snapshot.HasRightKnee;
+        RightKneeRotation = snapshot.RightKneeRotation;
+
+        HasSpine = snapshot.HasSpine;
+        SpineRotation = snapshot.SpineRotation;
+    }
+
+    public TitanRigPoseSnapshot ToSnapshot()
+    {
+        return new TitanRigPoseSnapshot
+        {
+            RootPosition = RootPosition,
+            RootRotation = RootRotation,
+
+            HasLeftShoulder = HasLeftShoulder,
+            LeftShoulderRotation = LeftShoulderRotation,
+            HasLeftElbow = HasLeftElbow,
+            LeftElbowRotation = LeftElbowRotation,
+
+            HasRightShoulder = HasRightShoulder,
+            RightShoulderRotation = RightShoulderRotation,
+            HasRightElbow = HasRightElbow,
+            RightElbowRotation = RightElbowRotation,
+
+            HasLeftHip = HasLeftHip,
+            LeftHipRotation = LeftHipRotation,
+            HasLeftKnee = HasLeftKnee,
+            LeftKneeRotation = LeftKneeRotation,
+
+            HasRightHip = HasRightHip,
+            RightHipRotation = RightHipRotation,
+            HasRightKnee = HasRightKnee,
+            RightKneeRotation = RightKneeRotation,
+
+            HasSpine = HasSpine,
+            SpineRotation = SpineRotation,
+        };
+    }
+
+    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+    {
+        serializer.SerializeValue(ref IsValid);
+
+        serializer.SerializeValue(ref RootPosition);
+        serializer.SerializeValue(ref RootRotation);
+
+        serializer.SerializeValue(ref HasLeftShoulder);
+        serializer.SerializeValue(ref LeftShoulderRotation);
+        serializer.SerializeValue(ref HasLeftElbow);
+        serializer.SerializeValue(ref LeftElbowRotation);
+
+        serializer.SerializeValue(ref HasRightShoulder);
+        serializer.SerializeValue(ref RightShoulderRotation);
+        serializer.SerializeValue(ref HasRightElbow);
+        serializer.SerializeValue(ref RightElbowRotation);
+
+        serializer.SerializeValue(ref HasLeftHip);
+        serializer.SerializeValue(ref LeftHipRotation);
+        serializer.SerializeValue(ref HasLeftKnee);
+        serializer.SerializeValue(ref LeftKneeRotation);
+
+        serializer.SerializeValue(ref HasRightHip);
+        serializer.SerializeValue(ref RightHipRotation);
+        serializer.SerializeValue(ref HasRightKnee);
+        serializer.SerializeValue(ref RightKneeRotation);
+
+        serializer.SerializeValue(ref HasSpine);
+        serializer.SerializeValue(ref SpineRotation);
+    }
+
+    public bool Equals(TitanRigPosePayload other)
+    {
+        return IsValid == other.IsValid
+            && RootPosition.Equals(other.RootPosition)
+            && RootRotation.Equals(other.RootRotation)
+            && HasLeftShoulder == other.HasLeftShoulder
+            && LeftShoulderRotation.Equals(other.LeftShoulderRotation)
+            && HasLeftElbow == other.HasLeftElbow
+            && LeftElbowRotation.Equals(other.LeftElbowRotation)
+            && HasRightShoulder == other.HasRightShoulder
+            && RightShoulderRotation.Equals(other.RightShoulderRotation)
+            && HasRightElbow == other.HasRightElbow
+            && RightElbowRotation.Equals(other.RightElbowRotation)
+            && HasLeftHip == other.HasLeftHip
+            && LeftHipRotation.Equals(other.LeftHipRotation)
+            && HasLeftKnee == other.HasLeftKnee
+            && LeftKneeRotation.Equals(other.LeftKneeRotation)
+            && HasRightHip == other.HasRightHip
+            && RightHipRotation.Equals(other.RightHipRotation)
+            && HasRightKnee == other.HasRightKnee
+            && RightKneeRotation.Equals(other.RightKneeRotation)
+            && HasSpine == other.HasSpine
+            && SpineRotation.Equals(other.SpineRotation);
+    }
+}
