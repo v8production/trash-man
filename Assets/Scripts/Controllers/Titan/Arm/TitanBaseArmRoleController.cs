@@ -13,8 +13,11 @@ public abstract class TitanBaseArmRoleController : TitanBaseController
     [SerializeField] private float elbowSpeed = 120f;
     [SerializeField] private Vector2 elbowPitchLimit = new(-130f, 15f);
 
-    [Header("Idle Return")]
-    [SerializeField] private float idleReturnSpeed = 10f;
+    [Header("Passive Stabilization")]
+    [SerializeField] private float passiveStabilizationSpeed = 3f;
+    [SerializeField] private float passiveShoulderPitchTarget = 35f;
+    [SerializeField] private float passiveShoulderRollTarget = 0f;
+    [SerializeField] private float passiveElbowPitchTarget = -35f;
 
     protected abstract bool IsLeftArm { get; }
 
@@ -96,14 +99,14 @@ public abstract class TitanBaseArmRoleController : TitanBaseController
         }
 
         TitanArmControlState state = Managers.TitanRig.GetArmState(left: IsLeftArm);
-        float blend = 1f - Mathf.Exp(-idleReturnSpeed * deltaTime);
+        float blend = 1f - Mathf.Exp(-passiveStabilizationSpeed * deltaTime);
+        Vector2 resolvedElbowLimit = GetResolvedElbowPitchLimit();
 
-        state.ShoulderRoll = Mathf.Lerp(state.ShoulderRoll, 0f, blend);
-        state.ShoulderPitch = Mathf.Lerp(state.ShoulderPitch, 0f, blend);
-        state.ElbowPitch = Mathf.Lerp(state.ElbowPitch, 0f, blend);
+        state.ShoulderRoll = Mathf.Lerp(state.ShoulderRoll, passiveShoulderRollTarget, blend);
+        state.ShoulderPitch = Mathf.Lerp(state.ShoulderPitch, passiveShoulderPitchTarget, blend);
+        state.ElbowPitch = Mathf.Lerp(state.ElbowPitch, GetResolvedPassiveElbowTarget(resolvedElbowLimit), blend);
 
         state.ShoulderRoll = Mathf.Clamp(state.ShoulderRoll, shoulderRollLimit.x, shoulderRollLimit.y);
-        Vector2 resolvedElbowLimit = GetResolvedElbowPitchLimit();
         state.ElbowPitch = Mathf.Clamp(state.ElbowPitch, resolvedElbowLimit.x, resolvedElbowLimit.y);
 
         Managers.TitanRig.SetArmState(left: IsLeftArm, state);
@@ -116,5 +119,11 @@ public abstract class TitanBaseArmRoleController : TitanBaseController
             return elbowPitchLimit;
 
         return new Vector2(-elbowPitchLimit.y, -elbowPitchLimit.x);
+    }
+
+    private float GetResolvedPassiveElbowTarget(Vector2 resolvedElbowLimit)
+    {
+        float target = IsLeftArm ? passiveElbowPitchTarget : -passiveElbowPitchTarget;
+        return Mathf.Clamp(target, resolvedElbowLimit.x, resolvedElbowLimit.y);
     }
 }

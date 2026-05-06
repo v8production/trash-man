@@ -29,8 +29,12 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
     [SerializeField] private float ankleSpeed = 110f;
     [SerializeField] private Vector2 ankleRollLimit = new(-80f, 80f);
 
-    [Header("Idle Return")]
-    [SerializeField] private float idleReturnSpeed = 12f;
+    [Header("Passive Stabilization")]
+    [SerializeField] private float passiveStabilizationSpeed = 3f;
+    [SerializeField] private float passiveHipYawTarget = 0f;
+    [SerializeField] private float passiveHipRollTarget = 0f;
+    [SerializeField] private float passiveKneeRollTarget = 20f;
+    [SerializeField] private float passiveAnkleRollTarget = 0f;
 
     protected abstract bool IsLeftLeg { get; }
 
@@ -135,12 +139,12 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
 
         TitanLegControlState state = Managers.TitanRig.GetLegState(left: IsLeftLeg);
 
-        float blend = 1f - Mathf.Exp(-idleReturnSpeed * deltaTime);
+        float blend = 1f - Mathf.Exp(-passiveStabilizationSpeed * deltaTime);
 
-        state.HipYaw = Mathf.Lerp(state.HipYaw, 0f, blend);
-        state.HipRoll = Mathf.Lerp(state.HipRoll, 0f, blend);
-        state.KneeRoll = Mathf.Lerp(state.KneeRoll, 0f, blend);
-        state.AnkleRoll = Mathf.Lerp(state.AnkleRoll, 0f, blend);
+        state.HipYaw = Mathf.Lerp(state.HipYaw, passiveHipYawTarget, blend);
+        state.HipRoll = Mathf.Lerp(state.HipRoll, passiveHipRollTarget, blend);
+        state.KneeRoll = Mathf.Lerp(state.KneeRoll, passiveKneeRollTarget, blend);
+        state.AnkleRoll = Mathf.Lerp(state.AnkleRoll, passiveAnkleRollTarget, blend);
 
         state.HipYaw = Mathf.Clamp(state.HipYaw, hipYawLimit.x, hipYawLimit.y);
         state.HipRoll = Mathf.Clamp(state.HipRoll, hipRollLimit.x, hipRollLimit.y);

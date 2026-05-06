@@ -56,6 +56,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         TickArmRole(false, dt);
         TickLegRole(true, hasLeftLegInput, in leftLegInput, dt);
         TickLegRole(false, hasRightLegInput, in rightLegInput, dt);
+        TickPassiveStabilization(hasLeftLegInput, hasRightLegInput, dt);
 
         PublishAuthoritativePose();
     }
@@ -180,6 +181,21 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         {
             controller.TickRoleInput(input, dt);
         }
+    }
+
+    private void TickPassiveStabilization(bool hasLeftLegInput, bool hasRightLegInput, float dt)
+    {
+        if (_leftArmController != null && !Managers.TitanRole.TryGetRoleInput(Define.TitanRole.LeftArm, out _))
+            _leftArmController.TickIdle(dt);
+
+        if (_rightArmController != null && !Managers.TitanRole.TryGetRoleInput(Define.TitanRole.RightArm, out _))
+            _rightArmController.TickIdle(dt);
+
+        if (_leftLegController != null && !hasLeftLegInput)
+            _leftLegController.TickIdle(dt);
+
+        if (_rightLegController != null && !hasRightLegInput)
+            _rightLegController.TickIdle(dt);
     }
 
     private void ResolveControllers()

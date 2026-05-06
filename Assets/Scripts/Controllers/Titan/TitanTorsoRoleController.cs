@@ -30,6 +30,18 @@ public class TitanTorsoRoleController : TitanBaseController
     [SerializeField] private float rollDamping = 6f;
     [SerializeField] private float maxRollAngle = 65f;
     [SerializeField] private float maxBalanceTorque = 240f;
+    [SerializeField] private float fallenAngularDamping = 8f;
+    [SerializeField] private float maxFallenAngularSpeed = 1.5f;
+    [SerializeField] private float footSupportRadius = 0.28f;
+    [SerializeField] private float supportAreaPadding = 0.08f;
+
+    [Header("Body Part Mass")]
+    [SerializeField] private float torsoAndHeadMass = 2f;
+    [SerializeField] private float upperArmMass = 1f;
+    [SerializeField] private float lowerArmMass = 2f;
+    [SerializeField] private float thighMass = 1f;
+    [SerializeField] private float calfMass = 1f;
+    [SerializeField] private float footMass = 1f;
 
     [Header("Aerodynamic Drag Rotation")]
     [SerializeField] private Transform centerOfPressure;
@@ -162,7 +174,7 @@ public class TitanTorsoRoleController : TitanBaseController
 
         if (movementRigidbody != null)
         {
-            ApplyRigidbodyPhysics(movementRoot, leftGrounded, rightGrounded, grounded);
+            ApplyRigidbodyPhysics(movementRoot, leftGrounded, rightGrounded, grounded, deltaTime);
             return;
         }
 
@@ -182,7 +194,7 @@ public class TitanTorsoRoleController : TitanBaseController
         movementRoot.rotation = Quaternion.AngleAxis(yawStep, Vector3.up) * movementRoot.rotation;
     }
 
-    private void ApplyRigidbodyPhysics(Transform movementRoot, bool leftGrounded, bool rightGrounded, bool grounded)
+    private void ApplyRigidbodyPhysics(Transform movementRoot, bool leftGrounded, bool rightGrounded, bool grounded, float deltaTime)
     {
         if (movementRigidbody == null)
         {
@@ -206,43 +218,30 @@ public class TitanTorsoRoleController : TitanBaseController
             movementRigidbody.AddForce(Physics.gravity * (gravityScale - 1f), ForceMode.Acceleration);
         }
 
-        ApplyBalanceTorque(movementRoot, leftGrounded, rightGrounded, grounded);
-        ApplyDragDirectionTorque(movementRoot);
+        bool fallen = IsFallen(movementRoot);
+        ApplyBalanceTorque(movementRoot, leftGrounded, rightGrounded, grounded, fallen, deltaTime);
+
+        if (!fallen)
+            ApplyDragDirectionTorque(movementRoot);
     }
 
-    private void ApplyBalanceTorque(Transform movementRoot, bool leftGrounded, bool rightGrounded, bool grounded)
+    private void ApplyBalanceTorque(Transform movementRoot, bool leftGrounded, bool rightGrounded, bool grounded, bool fallen, float deltaTime)
     {
         if (movementRigidbody == null)
         {
             return;
         }
 
-        Vector3 centerOfMass = movementRigidbody.worldCenterOfMass;
-        Vector3 supportCenter = Vector3.zero;
-        int supports = 0;
-
-        if (leftGrounded && leftFoot != null)
+        if (fallen)
         {
-            supportCenter += leftFoot.position;
-            supports++;
+            DampenFallenSpin(deltaTime);
+            return;
         }
 
-        if (rightGrounded && rightFoot != null)
-        {
-            supportCenter += rightFoot.position;
-            supports++;
-        }
+        Vector3 centerOfMass = CalculateBodyPartCenterOfMass(movementRoot);
+        SupportInfo support = CalculateSupportInfo(movementRoot, centerOfMass, leftGrounded, rightGrounded);
 
-        if (supports > 0)
-        {
-            supportCenter /= supports;
-        }
-        else
-        {
-            supportCenter = movementRigidbody.position;
-        }
-
-        Vector3 planarOffset = Vector3.ProjectOnPlane(centerOfMass - supportCenter, Vector3.up);
+        Vector3 planarOffset = Vector3.ProjectOnPlane(centerOfMass - support.Center, Vector3.up);
         float oneLegFactor = (leftGrounded ^ rightGrounded) ? oneLegInstabilityMultiplier : 1f;
         float comRightBias = Vector3.Dot(planarOffset, movementRoot.right);
         float signedFall = 0f;
@@ -280,6 +279,17 @@ public class TitanTorsoRoleController : TitanBaseController
 
         float angularAcceleration = (signedFall * gravityInfluence) + comInfluence + dampingInfluence + recoverInfluence;
 
+        if (support.IsOutside)
+        {
+            Vector3 fallDirection = Vector3.ProjectOnPlane(centerOfMass - support.ClosestPoint, Vector3.up).normalized;
+            if (fallDirection.sqrMagnitude > 0.0001f)
+            {
+                Vector3 fallAxis = Vector3.Cross(Vector3.up, fallDirection).normalized;
+                float fallAcceleration = Mathf.Clamp(support.OutsideDistance * gravityRollAcceleration * oneLegFactor, 0f, maxBalanceTorque);
+                movementRigidbody.AddTorque(fallAxis * fallAcceleration, ForceMode.Acceleration);
+            }
+        }
+
         if (!grounded)
         {
             angularAcceleration *= 0.6f;
@@ -287,6 +297,152 @@ public class TitanTorsoRoleController : TitanBaseController
 
         angularAcceleration = Mathf.Clamp(angularAcceleration, -maxBalanceTorque, maxBalanceTorque);
         movementRigidbody.AddTorque(movementRoot.forward * angularAcceleration, ForceMode.Acceleration);
+    }
+
+    private bool IsFallen(Transform movementRoot)
+    {
+        return Vector3.Angle(movementRoot.up, Vector3.up) >= maxRollAngle;
+    }
+
+    private void DampenFallenSpin(float deltaTime)
+    {
+        Vector3 angularVelocity = movementRigidbody.angularVelocity;
+        float dampingBlend = 1f - Mathf.Exp(-Mathf.Max(0f, fallenAngularDamping) * Mathf.Max(0f, deltaTime));
+        angularVelocity = Vector3.Lerp(angularVelocity, Vector3.zero, dampingBlend);
+        movementRigidbody.angularVelocity = Vector3.ClampMagnitude(angularVelocity, Mathf.Max(0f, maxFallenAngularSpeed));
+    }
+
+    private Vector3 CalculateBodyPartCenterOfMass(Transform movementRoot)
+    {
+        Vector3 weightedPosition = Vector3.zero;
+        float totalMass = 0f;
+
+        AddMassPoint(ref weightedPosition, ref totalMass, GetTorsoMassPosition(movementRoot), torsoAndHeadMass);
+        AddLimbMass(ref weightedPosition, ref totalMass, Managers.TitanRig.LeftShoulder, Managers.TitanRig.LeftElbow, upperArmMass, lowerArmMass);
+        AddLimbMass(ref weightedPosition, ref totalMass, Managers.TitanRig.RightShoulder, Managers.TitanRig.RightElbow, upperArmMass, lowerArmMass);
+        AddLegMass(ref weightedPosition, ref totalMass, Managers.TitanRig.LeftHip, Managers.TitanRig.LeftKnee, Managers.TitanRig.LeftFoot);
+        AddLegMass(ref weightedPosition, ref totalMass, Managers.TitanRig.RightHip, Managers.TitanRig.RightKnee, Managers.TitanRig.RightFoot);
+
+        return totalMass > 0.0001f ? weightedPosition / totalMass : movementRigidbody.worldCenterOfMass;
+    }
+
+    private Vector3 GetTorsoMassPosition(Transform movementRoot)
+    {
+        Transform spine = Managers.TitanRig.Spine;
+        if (spine != null)
+            return spine.position;
+
+        return movementRoot.position + (Vector3.up * 1.1f);
+    }
+
+    private static void AddLimbMass(ref Vector3 weightedPosition, ref float totalMass, Transform upperJoint, Transform lowerJoint, float upperMass, float lowerMass)
+    {
+        if (upperJoint == null || lowerJoint == null)
+            return;
+
+        Vector3 upperCenter = Vector3.Lerp(upperJoint.position, lowerJoint.position, 0.5f);
+        Vector3 lowerDirection = (lowerJoint.position - upperJoint.position).normalized;
+        Vector3 lowerCenter = lowerJoint.position + lowerDirection * Vector3.Distance(upperJoint.position, lowerJoint.position) * 0.5f;
+
+        AddMassPoint(ref weightedPosition, ref totalMass, upperCenter, upperMass);
+        AddMassPoint(ref weightedPosition, ref totalMass, lowerCenter, lowerMass);
+    }
+
+    private void AddLegMass(ref Vector3 weightedPosition, ref float totalMass, Transform hip, Transform knee, Transform foot)
+    {
+        if (hip != null && knee != null)
+            AddMassPoint(ref weightedPosition, ref totalMass, Vector3.Lerp(hip.position, knee.position, 0.5f), thighMass);
+
+        if (knee != null && foot != null)
+            AddMassPoint(ref weightedPosition, ref totalMass, Vector3.Lerp(knee.position, foot.position, 0.5f), calfMass);
+
+        if (foot != null)
+            AddMassPoint(ref weightedPosition, ref totalMass, foot.position, footMass);
+    }
+
+    private static void AddMassPoint(ref Vector3 weightedPosition, ref float totalMass, Vector3 position, float mass)
+    {
+        float clampedMass = Mathf.Max(0f, mass);
+        if (clampedMass <= 0f)
+            return;
+
+        weightedPosition += position * clampedMass;
+        totalMass += clampedMass;
+    }
+
+    private SupportInfo CalculateSupportInfo(Transform movementRoot, Vector3 centerOfMass, bool leftGrounded, bool rightGrounded)
+    {
+        Vector3 center = movementRigidbody.position;
+        Vector3 closest = center;
+        bool hasLeft = leftGrounded && leftFoot != null;
+        bool hasRight = rightGrounded && rightFoot != null;
+
+        if (hasLeft && hasRight)
+        {
+            center = (leftFoot.position + rightFoot.position) * 0.5f;
+            closest = ClampToSupportBounds(movementRoot, centerOfMass, leftFoot.position, rightFoot.position, out float outsideDistance);
+            return new SupportInfo(center, closest, outsideDistance > 0f, outsideDistance);
+        }
+
+        if (hasLeft || hasRight)
+        {
+            center = hasLeft ? leftFoot.position : rightFoot.position;
+            closest = ClampToSingleFootSupport(centerOfMass, center, out float outsideDistance);
+            return new SupportInfo(center, closest, outsideDistance > 0f, outsideDistance);
+        }
+
+        return new SupportInfo(center, closest, false, 0f);
+    }
+
+    private Vector3 ClampToSupportBounds(Transform movementRoot, Vector3 centerOfMass, Vector3 leftSupport, Vector3 rightSupport, out float outsideDistance)
+    {
+        Vector3 localCom = movementRoot.InverseTransformPoint(centerOfMass);
+        Vector3 localLeft = movementRoot.InverseTransformPoint(leftSupport);
+        Vector3 localRight = movementRoot.InverseTransformPoint(rightSupport);
+        float padding = Mathf.Max(0f, supportAreaPadding);
+        float radius = Mathf.Max(0f, footSupportRadius) + padding;
+
+        float minX = Mathf.Min(localLeft.x, localRight.x) - radius;
+        float maxX = Mathf.Max(localLeft.x, localRight.x) + radius;
+        float minZ = Mathf.Min(localLeft.z, localRight.z) - radius;
+        float maxZ = Mathf.Max(localLeft.z, localRight.z) + radius;
+        float clampedX = Mathf.Clamp(localCom.x, minX, maxX);
+        float clampedZ = Mathf.Clamp(localCom.z, minZ, maxZ);
+        Vector3 localClosest = new(clampedX, localCom.y, clampedZ);
+        Vector3 closest = movementRoot.TransformPoint(localClosest);
+        outsideDistance = Vector3.ProjectOnPlane(centerOfMass - closest, Vector3.up).magnitude;
+        return closest;
+    }
+
+    private Vector3 ClampToSingleFootSupport(Vector3 centerOfMass, Vector3 supportCenter, out float outsideDistance)
+    {
+        Vector3 planarOffset = Vector3.ProjectOnPlane(centerOfMass - supportCenter, Vector3.up);
+        float radius = Mathf.Max(0f, footSupportRadius) + Mathf.Max(0f, supportAreaPadding);
+        if (planarOffset.magnitude <= radius)
+        {
+            outsideDistance = 0f;
+            return centerOfMass;
+        }
+
+        Vector3 closest = supportCenter + planarOffset.normalized * radius;
+        outsideDistance = Vector3.ProjectOnPlane(centerOfMass - closest, Vector3.up).magnitude;
+        return closest;
+    }
+
+    private readonly struct SupportInfo
+    {
+        public readonly Vector3 Center;
+        public readonly Vector3 ClosestPoint;
+        public readonly bool IsOutside;
+        public readonly float OutsideDistance;
+
+        public SupportInfo(Vector3 center, Vector3 closestPoint, bool isOutside, float outsideDistance)
+        {
+            Center = center;
+            ClosestPoint = closestPoint;
+            IsOutside = isOutside;
+            OutsideDistance = outsideDistance;
+        }
     }
 
     private void ApplyDragDirectionTorque(Transform movementRoot)

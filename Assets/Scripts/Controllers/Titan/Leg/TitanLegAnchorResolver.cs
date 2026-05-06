@@ -38,6 +38,7 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
     [SerializeField] private float singleFootYawCorrectionSpeed = 12f;
     [SerializeField] private float singleFootMaxYawCorrectionDegreesPerFrame = 2.5f;
     [SerializeField] private float singleFootYawDeadZoneDegrees = 0.25f;
+    [SerializeField] private float fallenVelocityResetAngle = 65f;
     [SerializeField] private bool zeroTorsoVelocityWhenLocked = true;
 
     private bool wasLocked;
@@ -281,6 +282,7 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
         Vector3 desiredPivot = attachment.AttachedWorldPosition;
         Vector3 currentPivot = attachment.GetCurrentContactPoint();
         Quaternion nextRotation = movableRoot.rotation;
+        bool zeroVelocities = zeroTorsoVelocityWhenLocked || IsRootFallen(movableRoot);
 
         Vector3 currentForward = Vector3.ProjectOnPlane(attachment.FootTransform.forward, Vector3.up);
         Vector3 desiredForward = Vector3.ProjectOnPlane(attachment.AttachedWorldRotation * Vector3.forward, Vector3.up);
@@ -305,7 +307,7 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
                 Quaternion yawRotation = Quaternion.AngleAxis(step, Vector3.up);
                 Vector3 rotatedPosition = desiredPivot + (yawRotation * (movableRoot.position - desiredPivot));
                 nextRotation = yawRotation * nextRotation;
-                Managers.TitanRig.ApplyMovementRootPose(rotatedPosition, nextRotation, zeroTorsoVelocityWhenLocked);
+                Managers.TitanRig.ApplyMovementRootPose(rotatedPosition, nextRotation, zeroVelocities);
                 currentPivot = attachment.GetCurrentContactPoint();
             }
         }
@@ -319,7 +321,12 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
             return;
         }
 
-        Managers.TitanRig.ApplyMovementRootPose(movableRoot.position + translationDelta, movableRoot.rotation, zeroTorsoVelocityWhenLocked);
+        Managers.TitanRig.ApplyMovementRootPose(movableRoot.position + translationDelta, movableRoot.rotation, zeroVelocities);
+    }
+
+    private bool IsRootFallen(Transform movableRoot)
+    {
+        return movableRoot != null && Vector3.Angle(movableRoot.up, Vector3.up) >= fallenVelocityResetAngle;
     }
 
     private void ApplyDualAnchorLock(bool zeroVelocities)
