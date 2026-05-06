@@ -7,10 +7,10 @@ public abstract class TitanBaseArmRoleController : TitanBaseController
     [SerializeField] private bool useScreenCenterAsOrigin = true;
     [SerializeField] private Vector2 mouseOriginPixels = new(960f, 540f);
     [SerializeField] private float shoulderSpeed = 1f;
+    [SerializeField] private Vector2 shoulderRollLimit = new(-15f, 45f);
 
     [Header("Elbow Input")]
     [SerializeField] private float elbowSpeed = 120f;
-    [SerializeField] private Vector2 shoulderRollLimit = new(-15f, 45f);
     [SerializeField] private Vector2 elbowPitchLimit = new(-130f, 15f);
 
     [Header("Idle Return")]

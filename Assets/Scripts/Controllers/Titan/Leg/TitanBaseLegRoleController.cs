@@ -180,7 +180,7 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
 
         targetYaw = Mathf.Clamp(targetYaw, hipYawLimit.x, hipYawLimit.y);
         targetRoll = Mathf.Clamp(targetRoll, hipRollLimit.x, hipRollLimit.y);
-        float kneeInput = IsLeftLeg ? input.LeftLegKnee : input.RightLegKnee;
+        float kneeInput = IsLeftLeg ? -input.LeftLegKnee : -input.RightLegKnee;
 
         return new TitanLegInputCommand
         {
