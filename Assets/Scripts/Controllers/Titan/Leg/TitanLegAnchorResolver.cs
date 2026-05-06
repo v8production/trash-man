@@ -39,6 +39,7 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
     [SerializeField] private float singleFootMaxYawCorrectionDegreesPerFrame = 2.5f;
     [SerializeField] private float singleFootYawDeadZoneDegrees = 0.25f;
     [SerializeField] private float fallenVelocityResetAngle = 65f;
+    [SerializeField] private float anchoredContactTolerance = 0.03f;
     [SerializeField] private bool zeroTorsoVelocityWhenLocked = true;
 
     private bool wasLocked;
@@ -135,9 +136,12 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
         bool isLeft = side == TitanBaseLegRoleController.LegSide.Left;
         TitanLegControlState state = Managers.TitanRig.GetLegState(isLeft);
         bool applied = false;
+        Transform root = Managers.TitanRig.MovementRoot;
 
         if (Mathf.Abs(command.AnkleInput) > 0.001f)
         {
+            TitanLegControlState previousState = state;
+            WorldPose previousRootPose = WorldPose.Capture(root);
             Transform foot = GetFoot(side);
             Transform contactPoint = anchor.BottomProbe;
             Vector3 anchoredContact = anchor.AttachedWorldPosition;
@@ -151,11 +155,15 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
             Managers.TitanRig.SetLegState(isLeft, state);
             Managers.TitanRig.ApplyLegPose(isLeft);
 
-            applied |= RestoreRootToMatchContactAndFootRotation(contactPoint, anchoredContact, foot, anchoredFootRotation);
+            bool restored = RestoreRootToMatchContactAndFootRotation(contactPoint, anchoredContact, foot, anchoredFootRotation);
+            applied |= CommitOrRollbackAnchoredPose(isLeft, previousState, previousRootPose, anchor, restored);
+            state = Managers.TitanRig.GetLegState(isLeft);
         }
 
         if (Mathf.Abs(command.KneeInput) > 0.001f)
         {
+            TitanLegControlState previousState = state;
+            WorldPose previousRootPose = WorldPose.Capture(root);
             Transform knee = GetKnee(side);
             Transform contactPoint = anchor.BottomProbe;
             Vector3 kneePosition = knee != null ? knee.position : Vector3.zero;
@@ -169,7 +177,9 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
             Managers.TitanRig.SetLegState(isLeft, state);
             Managers.TitanRig.ApplyLegPose(isLeft);
 
-            applied |= RestoreRootToMatchTwoPoints(knee, kneePosition, contactPoint, footPosition);
+            bool restored = RestoreRootToMatchTwoPoints(knee, kneePosition, contactPoint, footPosition);
+            applied |= CommitOrRollbackAnchoredPose(isLeft, previousState, previousRootPose, anchor, restored);
+            state = Managers.TitanRig.GetLegState(isLeft);
         }
 
         if (Mathf.Abs(command.HipYawDelta) > 0.001f)
@@ -196,17 +206,50 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
         float rollDelta,
         in TitanLegInputCommand command)
     {
+        Transform root = Managers.TitanRig.MovementRoot;
+        TitanLegControlState previousState = state;
+        WorldPose previousRootPose = WorldPose.Capture(root);
         Transform hip = GetHip(side);
-        Transform knee = GetKnee(side);
+        Transform contactPoint = GetAttachment(side)?.BottomProbe;
         Vector3 hipPosition = hip != null ? hip.position : Vector3.zero;
-        Vector3 kneePosition = knee != null ? knee.position : Vector3.zero;
+        Vector3 footPosition = GetAttachment(side)?.AttachedWorldPosition ?? Vector3.zero;
 
         state.HipYaw = Mathf.Clamp(state.HipYaw + yawDelta, command.HipYawLimit.x, command.HipYawLimit.y);
         state.HipRoll = Mathf.Clamp(state.HipRoll + rollDelta, command.HipRollLimit.x, command.HipRollLimit.y);
         Managers.TitanRig.SetLegState(isLeft, state);
         Managers.TitanRig.ApplyLegPose(isLeft);
 
-        return RestoreRootToMatchTwoPoints(hip, hipPosition, knee, kneePosition);
+        bool restored = RestoreRootToMatchTwoPoints(hip, hipPosition, contactPoint, footPosition);
+        bool committed = CommitOrRollbackAnchoredPose(isLeft, previousState, previousRootPose, GetAttachment(side), restored);
+        state = Managers.TitanRig.GetLegState(isLeft);
+        return committed;
+    }
+
+    private bool CommitOrRollbackAnchoredPose(
+        bool isLeft,
+        TitanLegControlState previousState,
+        WorldPose previousRootPose,
+        FootAttachmentController anchor,
+        bool restored)
+    {
+        if (restored && IsAnchoredContactMaintained(anchor))
+        {
+            return true;
+        }
+
+        Managers.TitanRig.SetLegState(isLeft, previousState);
+        Managers.TitanRig.ApplyLegPose(isLeft);
+        Managers.TitanRig.ApplyMovementRootPose(previousRootPose.Position, previousRootPose.Rotation, zeroVelocities: false);
+        return false;
+    }
+
+    private bool IsAnchoredContactMaintained(FootAttachmentController anchor)
+    {
+        if (anchor == null || !anchor.IsAttached || anchor.BottomProbe == null)
+            return false;
+
+        float tolerance = Mathf.Max(0f, anchoredContactTolerance);
+        return Vector3.Distance(anchor.BottomProbe.position, anchor.AttachedWorldPosition) <= tolerance;
     }
 
     public void StabilizeNow(float deltaTime)
