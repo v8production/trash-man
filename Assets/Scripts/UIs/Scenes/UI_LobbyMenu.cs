@@ -19,7 +19,7 @@ public class UI_LobbyMenu : UI_Scene
         SystemSettings,
         ShowCode,
         InviteRoom,
-        QuitRoom,
+        BackToLobby,
     }
 
     enum Texts
@@ -28,7 +28,7 @@ public class UI_LobbyMenu : UI_Scene
         ShowCode,
         Code,
         InviteRoom,
-        QuitRoom,
+        BackToLobby,
     }
 
     private bool _isCodeVisible;
@@ -43,7 +43,7 @@ public class UI_LobbyMenu : UI_Scene
         GetButton((int)Buttons.SystemSettings).gameObject.BindEvent(OnSystemSettingsButtonClicked);
         GetButton((int)Buttons.ShowCode).gameObject.BindEvent(OnShowCodeButtonClicked);
         GetButton((int)Buttons.InviteRoom).gameObject.BindEvent(OnInviteRoomButtonClicked);
-        GetButton((int)Buttons.QuitRoom).gameObject.BindEvent(OnQuitRoomButtonClicked);
+        GetButton((int)Buttons.BackToLobby).gameObject.BindEvent(OnBackToLobbyButtonClicked);
 
         ApplyJoinCodeState();
     }
@@ -87,7 +87,7 @@ public class UI_LobbyMenu : UI_Scene
         Managers.Toast.EnqueueMessage($"Invite sent. Code: {joinCode}", 2.5f);
     }
 
-    private void OnQuitRoomButtonClicked(PointerEventData eventData)
+    private void OnBackToLobbyButtonClicked(PointerEventData eventData)
     {
         Managers.LobbySession.QuitCurrentRoom();
         Managers.Scene.LoadScene(Define.Scene.Intro);

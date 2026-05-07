@@ -88,7 +88,7 @@ GameObject:
   - component: {fileID: 4780665556423937998}
   - component: {fileID: 7034996496426147148}
   m_Layer: 5
-  m_Name: Temp
+  m_Name: TempButton2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -315,7 +315,7 @@ GameObject:
   - component: {fileID: 975772447434865284}
   - component: {fileID: 7097513151641722621}
   m_Layer: 5
-  m_Name: QuitGame
+  m_Name: BackToLobby
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -368,7 +368,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Quit Game
+  m_text: Back To Lobby
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -589,7 +589,7 @@ GameObject:
   - component: {fileID: 8023629005529274892}
   - component: {fileID: 8996835731834275623}
   m_Layer: 5
-  m_Name: Temp
+  m_Name: TempButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -727,7 +727,7 @@ GameObject:
   - component: {fileID: 2699195876965656815}
   - component: {fileID: 4779555709094003628}
   m_Layer: 5
-  m_Name: QuitGame
+  m_Name: BackToLobby
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -847,7 +847,7 @@ GameObject:
   - component: {fileID: 6104875868291504504}
   - component: {fileID: 8053722753242645566}
   m_Layer: 5
-  m_Name: Temp
+  m_Name: TempButton2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -985,7 +985,7 @@ GameObject:
   - component: {fileID: 7982649578902880915}
   - component: {fileID: 8431291333725056678}
   m_Layer: 5
-  m_Name: Temp
+  m_Name: TempButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

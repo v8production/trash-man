@@ -16,7 +16,7 @@ public class UI_GameMenu : UI_Scene
         SystemSettings,
         TempButton,
         TempButton2,
-        QuitGame,
+        BackToLobby,
     }
 
     enum Texts
@@ -24,7 +24,7 @@ public class UI_GameMenu : UI_Scene
         SystemSettings,
         TempButton,
         TempButton2,
-        QuitGame,
+        BackToLobby,
     }
 
     public override void Init()
@@ -37,7 +37,7 @@ public class UI_GameMenu : UI_Scene
         GetButton((int)Buttons.SystemSettings).gameObject.BindEvent(OnSystemSettingsButtonClicked);
         GetButton((int)Buttons.TempButton).gameObject.BindEvent(OnTempButtonClicked);
         GetButton((int)Buttons.TempButton2).gameObject.BindEvent(OnTempButtonClicked);
-        GetButton((int)Buttons.QuitGame).gameObject.BindEvent(OnQuitGameButtonClicked);
+        GetButton((int)Buttons.BackToLobby).gameObject.BindEvent(OnBackToLobbyButtonClicked);
     }
 
     private void OnDestroy()
@@ -57,7 +57,7 @@ public class UI_GameMenu : UI_Scene
     {
     }
 
-    private void OnQuitGameButtonClicked(PointerEventData eventData)
+    private void OnBackToLobbyButtonClicked(PointerEventData eventData)
     {
         Managers.LobbySession.QuitCurrentRoom();
         Managers.Scene.LoadScene(Define.Scene.Intro);
