@@ -3,7 +3,7 @@ using UnityEngine;
 public sealed class TitanDrillController : MonoBehaviour
 {
     [SerializeField] private float spinDegreesPerSecond = 1440f;
-    [SerializeField] private Vector3 localSpinAxis = Vector3.forward;
+    [SerializeField] private Vector3 localSpinAxis = Vector3.right;
 
     private TitanController titanController;
     private Quaternion drillBaseLocalRotation;

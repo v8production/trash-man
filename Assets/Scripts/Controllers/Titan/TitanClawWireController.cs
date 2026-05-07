@@ -20,6 +20,9 @@ public sealed class TitanClawWireController : MonoBehaviour
     private Material _wireMaterial;
     private TitanStat _attackerStat;
     private bool _hitBossThisLaunch;
+    private Vector3 _launchStartPosition;
+    private Quaternion _launchStartRotation;
+    private Vector3 _launchDirection;
 
     public TitanClawWirePhase Phase => _phase;
     public float CurrentLength => _currentLength;
@@ -35,6 +38,7 @@ public sealed class TitanClawWireController : MonoBehaviour
         _currentLength = 0f;
         _attackerStat = attacker as TitanStat;
         _hitBossThisLaunch = false;
+        CacheLaunchPose();
         UpdateVisuals();
         return true;
     }
@@ -118,17 +122,16 @@ public sealed class TitanClawWireController : MonoBehaviour
 
     private Vector3 ResolveClawPosition()
     {
-        Transform anchor = ResolveAnchor();
-        return anchor.position + (ResolveLaunchDirection(anchor) * _currentLength);
+        return ResolveLaunchStartPosition() + (ResolveLaunchDirection() * _currentLength);
     }
 
     private void UpdateVisuals()
     {
         EnsureVisuals();
 
-        Transform anchor = ResolveAnchor();
-        Vector3 start = anchor.position;
-        Vector3 end = start + (ResolveLaunchDirection(anchor) * _currentLength);
+        Vector3 start = ResolveLaunchStartPosition();
+        Vector3 direction = ResolveLaunchDirection();
+        Vector3 end = start + (direction * _currentLength);
         bool visible = _phase != TitanClawWirePhase.Idle || _currentLength > 0.001f;
 
         if (_clawVisual != null)
@@ -136,7 +139,7 @@ public sealed class TitanClawWireController : MonoBehaviour
             if (visible)
             {
                 _clawVisual.position = end;
-                _clawVisual.rotation = Quaternion.LookRotation(ResolveLaunchDirection(anchor), Vector3.up);
+                _clawVisual.rotation = _launchStartRotation;
             }
             else
             {
@@ -198,11 +201,51 @@ public sealed class TitanClawWireController : MonoBehaviour
         return anchor != null ? anchor : Managers.TitanRig.MovementRoot;
     }
 
-    private static Vector3 ResolveLaunchDirection(Transform anchor)
+    private void CacheLaunchPose()
     {
-        Vector3 direction = Vector3.ProjectOnPlane(anchor.forward, Vector3.up);
+        EnsureVisuals();
+
+        Transform claw = _clawVisual != null ? _clawVisual : Managers.TitanRig.Claw;
+        if (claw != null)
+        {
+            _launchStartPosition = claw.position;
+            _launchStartRotation = claw.rotation;
+            _launchDirection = ResolveTransformXAxis(claw);
+            return;
+        }
+
+        Transform anchor = ResolveAnchor();
+        _launchStartPosition = anchor.position;
+        _launchStartRotation = anchor.rotation;
+        _launchDirection = ResolveTransformXAxis(anchor);
+    }
+
+    private Vector3 ResolveLaunchStartPosition()
+    {
+        if (_phase != TitanClawWirePhase.Idle || _currentLength > 0.001f)
+            return _launchStartPosition;
+
+        Transform claw = Managers.TitanRig.Claw;
+        return claw != null ? claw.position : ResolveAnchor().position;
+    }
+
+    private Vector3 ResolveLaunchDirection()
+    {
+        if (_launchDirection.sqrMagnitude >= 0.0001f)
+            return _launchDirection.normalized;
+
+        Transform claw = Managers.TitanRig.Claw;
+        if (claw != null)
+            return ResolveTransformXAxis(claw);
+
+        return ResolveTransformXAxis(ResolveAnchor());
+    }
+
+    private static Vector3 ResolveTransformXAxis(Transform source)
+    {
+        Vector3 direction = -source.right;
         if (direction.sqrMagnitude < 0.0001f)
-            direction = Vector3.ProjectOnPlane(Managers.TitanRig.MovementRoot.forward, Vector3.up);
+            direction = -Managers.TitanRig.MovementRoot.right;
 
         if (direction.sqrMagnitude < 0.0001f)
             return Vector3.forward;
