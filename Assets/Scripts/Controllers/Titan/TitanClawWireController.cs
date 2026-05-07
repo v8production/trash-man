@@ -2,27 +2,45 @@ using UnityEngine;
 
 public sealed class TitanClawWireController : MonoBehaviour
 {
+    private const string ClawPrefabName = "Claw";
     private const float MaxWireLength = 3f;
     private const float LaunchDuration = 0.1f;
     private const float RetractDuration = 3f;
+    private const float LaunchSpeed = 30f;
+    private const float Gravity = -9.81f;
     private const float ClawHitRadius = 0.18f;
     private const float WireWidth = 0.035f;
+    private const int WireSegmentCount = 12;
+    private const int WireConstraintIterations = 4;
+    private const float WireDamping = 0.995f;
 
     private TitanClawWirePhase _phase;
     private float _phaseTime;
     private float _currentLength;
-    private Transform _clawVisual;
+    private Transform _clawMount;
     private Transform _clawOriginalParent;
     private Vector3 _clawOriginalLocalPosition;
     private Quaternion _clawOriginalLocalRotation;
+    private Vector3 _clawOriginalLocalScale;
     private bool _hasClawOriginalPose;
+    private Renderer[] _mountedClawRenderers;
+    private bool[] _mountedClawRendererStates;
+    private Collider[] _mountedClawColliders;
+    private bool[] _mountedClawColliderStates;
+    private GameObject _spawnedClaw;
+    private Transform _spawnedClawTransform;
     private LineRenderer _wireRenderer;
     private Material _wireMaterial;
+    private readonly Vector3[] _wirePositions = new Vector3[WireSegmentCount];
+    private readonly Vector3[] _wirePreviousPositions = new Vector3[WireSegmentCount];
+    private bool _wireInitialized;
     private TitanStat _attackerStat;
     private bool _hitBossThisLaunch;
     private Vector3 _launchStartPosition;
     private Quaternion _launchStartRotation;
     private Vector3 _launchDirection;
+    private Vector3 _retractStartPosition;
+    private Quaternion _retractStartRotation;
 
     public TitanClawWirePhase Phase => _phase;
     public float CurrentLength => _currentLength;
@@ -33,12 +51,19 @@ public sealed class TitanClawWireController : MonoBehaviour
         if (!CanLaunch)
             return false;
 
+        EnsureClawMount();
+        if (_clawMount == null)
+            return false;
+
         _phase = TitanClawWirePhase.Launching;
         _phaseTime = 0f;
         _currentLength = 0f;
         _attackerStat = attacker as TitanStat;
         _hitBossThisLaunch = false;
         CacheLaunchPose();
+        HideMountedClaw();
+        SpawnClawPrefab(_launchStartPosition, _launchStartRotation);
+        InitializeWire(_launchStartPosition, _launchStartPosition);
         UpdateVisuals();
         return true;
     }
@@ -52,35 +77,19 @@ public sealed class TitanClawWireController : MonoBehaviour
             return;
         }
 
-        _phaseTime += Mathf.Max(0f, deltaTime);
+        float dt = Mathf.Max(0f, deltaTime);
+        _phaseTime += dt;
 
         if (_phase == TitanClawWirePhase.Launching)
         {
-            float ratio = Mathf.Clamp01(_phaseTime / LaunchDuration);
-            _currentLength = MaxWireLength * ratio;
-
-            if (ratio >= 1f)
-            {
-                _phase = TitanClawWirePhase.Retracting;
-                _phaseTime = 0f;
-                _currentLength = MaxWireLength;
-            }
+            SimulateLaunchingClaw(dt);
         }
         else if (_phase == TitanClawWirePhase.Retracting)
         {
-            float ratio = Mathf.Clamp01(_phaseTime / RetractDuration);
-            _currentLength = Mathf.Lerp(MaxWireLength, 0f, ratio);
-
-            if (ratio >= 1f)
-            {
-                _phase = TitanClawWirePhase.Idle;
-                _phaseTime = 0f;
-                _currentLength = 0f;
-            }
+            SimulateRetractingClaw();
         }
 
         UpdateVisuals();
-        TryApplyClawAttack();
     }
 
     public TitanClawWireSnapshot GetSnapshot()
@@ -89,6 +98,8 @@ public sealed class TitanClawWireController : MonoBehaviour
         {
             Phase = _phase,
             CurrentLength = _currentLength,
+            ClawPosition = ResolveClawPosition(),
+            ClawRotation = ResolveClawRotation(),
         };
     }
 
@@ -98,15 +109,116 @@ public sealed class TitanClawWireController : MonoBehaviour
         _currentLength = Mathf.Clamp(snapshot.CurrentLength, 0f, MaxWireLength);
         _phaseTime = 0f;
         _hitBossThisLaunch = _phase == TitanClawWirePhase.Idle || _hitBossThisLaunch;
+
+        if (_phase == TitanClawWirePhase.Idle)
+        {
+            RestoreMountedClaw();
+            DestroySpawnedClaw();
+        }
+        else
+        {
+            EnsureClawMount();
+            if (_clawMount != null)
+                HideMountedClaw();
+
+            SpawnClawPrefab(snapshot.ClawPosition, snapshot.ClawRotation);
+        }
+
+        SetSpawnedClawPose(snapshot.ClawPosition, snapshot.ClawRotation);
         UpdateVisuals();
     }
 
-    private void TryApplyClawAttack()
+    private void SimulateLaunchingClaw(float dt)
     {
-        if (_hitBossThisLaunch || _phase == TitanClawWirePhase.Idle || _attackerStat == null)
+        if (_spawnedClawTransform == null)
+            SpawnClawPrefab(_launchStartPosition, _launchStartRotation);
+
+        Vector3 previousPosition = ResolveClawPosition();
+        Vector3 gravityOffset = Vector3.up * (0.5f * Gravity * _phaseTime * _phaseTime);
+        Vector3 nextPosition = _launchStartPosition + (_launchDirection * LaunchSpeed * _phaseTime) + gravityOffset;
+        Vector3 anchor = ResolveWireAnchorPosition();
+        Vector3 offset = nextPosition - anchor;
+        float distance = offset.magnitude;
+
+        if (distance >= MaxWireLength || _phaseTime >= LaunchDuration)
+        {
+            Vector3 direction = distance > 0.0001f ? offset / distance : _launchDirection;
+            nextPosition = anchor + direction * MaxWireLength;
+            _currentLength = MaxWireLength;
+            SetSpawnedClawPose(nextPosition, ResolveClawRotation());
+            TryApplyClawAttack(previousPosition, nextPosition);
+            EnterRetracting();
+            return;
+        }
+
+        _currentLength = distance;
+        SetSpawnedClawPose(nextPosition, ResolveClawRotation());
+        TryApplyClawAttack(previousPosition, nextPosition);
+    }
+
+    private void EnterRetracting()
+    {
+        _phase = TitanClawWirePhase.Retracting;
+        _phaseTime = 0f;
+        _retractStartPosition = ResolveClawPosition();
+        _retractStartRotation = ResolveClawRotation();
+    }
+
+    private void SimulateRetractingClaw()
+    {
+        float ratio = Mathf.Clamp01(_phaseTime / RetractDuration);
+        Vector3 anchor = ResolveWireAnchorPosition();
+        Vector3 nextPosition = Vector3.Lerp(_retractStartPosition, anchor, ratio);
+        Quaternion nextRotation = Quaternion.Slerp(_retractStartRotation, _launchStartRotation, ratio);
+        _currentLength = Vector3.Distance(anchor, nextPosition);
+        SetSpawnedClawPose(nextPosition, nextRotation);
+
+        if (ratio >= 1f)
+        {
+            _phase = TitanClawWirePhase.Idle;
+            _phaseTime = 0f;
+            _currentLength = 0f;
+            RestoreMountedClaw();
+            DestroySpawnedClaw();
+        }
+    }
+
+    private void TryApplyClawAttack(Vector3 from, Vector3 to)
+    {
+        if (_hitBossThisLaunch || _phase != TitanClawWirePhase.Launching || _attackerStat == null)
             return;
 
-        Vector3 clawPosition = ResolveClawPosition();
+        if (TryFindBossHit(from, to, out BossController hitBoss))
+        {
+            hitBoss.ReceiveClawAttach(_attackerStat);
+            _hitBossThisLaunch = true;
+        }
+    }
+
+    private static bool TryFindBossHit(Vector3 from, Vector3 to, out BossController hitBoss)
+    {
+        Vector3 delta = to - from;
+        float distance = delta.magnitude;
+        if (distance > 0.0001f)
+        {
+            Ray ray = new(from, delta / distance);
+            RaycastHit[] hits = Physics.SphereCastAll(ray, ClawHitRadius, distance);
+            for (int i = 0; i < hits.Length; i++)
+            {
+                Collider hitCollider = hits[i].collider;
+                if (hitCollider == null)
+                    continue;
+
+                BossController boss = hitCollider.GetComponentInParent<BossController>();
+                if (boss != null)
+                {
+                    hitBoss = boss;
+                    return true;
+                }
+            }
+        }
+
+        Vector3 clawPosition = to;
         BossController[] bosses = Object.FindObjectsByType<BossController>();
         for (int i = 0; i < bosses.Length; i++)
         {
@@ -114,85 +226,234 @@ public sealed class TitanClawWireController : MonoBehaviour
             if (boss == null || !boss.IsWithinHitRadius(clawPosition, ClawHitRadius))
                 continue;
 
-            boss.ReceiveAttack(_attackerStat);
-            _hitBossThisLaunch = true;
-            return;
+            hitBoss = boss;
+            return true;
         }
-    }
 
-    private Vector3 ResolveClawPosition()
-    {
-        return ResolveLaunchStartPosition() + (ResolveLaunchDirection() * _currentLength);
+        hitBoss = null;
+        return false;
     }
 
     private void UpdateVisuals()
     {
-        EnsureVisuals();
+        EnsureWireRenderer();
 
-        Vector3 start = ResolveLaunchStartPosition();
-        Vector3 direction = ResolveLaunchDirection();
-        Vector3 end = start + (direction * _currentLength);
-        bool visible = _phase != TitanClawWirePhase.Idle || _currentLength > 0.001f;
-
-        if (_clawVisual != null)
-        {
-            if (visible)
-            {
-                _clawVisual.position = end;
-                _clawVisual.rotation = _launchStartRotation;
-            }
-            else
-            {
-                RestoreClawVisualPose();
-            }
-        }
-
+        bool visible = _phase != TitanClawWirePhase.Idle;
         _wireRenderer.enabled = visible;
-        _wireRenderer.SetPosition(0, start);
-        _wireRenderer.SetPosition(1, end);
-    }
-
-    private void EnsureVisuals()
-    {
-        if (_clawVisual == null)
-        {
-            _clawVisual = Managers.TitanRig.Claw;
-            if (_clawVisual != null)
-            {
-                _clawOriginalParent = _clawVisual.parent;
-                _clawOriginalLocalPosition = _clawVisual.localPosition;
-                _clawOriginalLocalRotation = _clawVisual.localRotation;
-                _hasClawOriginalPose = true;
-            }
-        }
-
-        if (_wireRenderer == null)
-        {
-            GameObject wire = new("RightClaw_WireRenderer");
-            wire.transform.SetParent(transform, worldPositionStays: true);
-            _wireRenderer = wire.AddComponent<LineRenderer>();
-            _wireRenderer.positionCount = 2;
-            _wireRenderer.useWorldSpace = true;
-            _wireRenderer.startWidth = WireWidth;
-            _wireRenderer.endWidth = WireWidth;
-            _wireRenderer.numCapVertices = 4;
-
-            _wireMaterial = new Material(Shader.Find("Sprites/Default"));
-            _wireMaterial.color = Color.yellow;
-            _wireRenderer.material = _wireMaterial;
-        }
-    }
-
-    private void RestoreClawVisualPose()
-    {
-        if (!_hasClawOriginalPose || _clawVisual == null)
+        if (!visible)
             return;
 
-        if (_clawVisual.parent != _clawOriginalParent)
-            _clawVisual.SetParent(_clawOriginalParent, worldPositionStays: false);
+        SimulateWire(Time.deltaTime);
+        _wireRenderer.positionCount = WireSegmentCount;
+        _wireRenderer.SetPositions(_wirePositions);
+    }
 
-        _clawVisual.localPosition = _clawOriginalLocalPosition;
-        _clawVisual.localRotation = _clawOriginalLocalRotation;
+    private void SimulateWire(float deltaTime)
+    {
+        Vector3 start = ResolveWireAnchorPosition();
+        Vector3 end = ResolveClawPosition();
+
+        if (!_wireInitialized)
+            InitializeWire(start, end);
+
+        float dt = Mathf.Max(0f, deltaTime);
+        for (int i = 1; i < WireSegmentCount - 1; i++)
+        {
+            Vector3 current = _wirePositions[i];
+            Vector3 velocity = (current - _wirePreviousPositions[i]) * WireDamping;
+            _wirePreviousPositions[i] = current;
+            _wirePositions[i] = current + velocity + Vector3.up * (Gravity * dt * dt);
+        }
+
+        _wirePositions[0] = start;
+        _wirePositions[^1] = end;
+        float segmentLength = Mathf.Max(Vector3.Distance(start, end), 0.001f) / (WireSegmentCount - 1);
+
+        for (int iteration = 0; iteration < WireConstraintIterations; iteration++)
+        {
+            _wirePositions[0] = start;
+            _wirePositions[^1] = end;
+
+            for (int i = 0; i < WireSegmentCount - 1; i++)
+                ConstrainWireSegment(i, i + 1, segmentLength);
+        }
+    }
+
+    private void ConstrainWireSegment(int a, int b, float segmentLength)
+    {
+        Vector3 delta = _wirePositions[b] - _wirePositions[a];
+        float distance = delta.magnitude;
+        if (distance < 0.0001f)
+            return;
+
+        Vector3 correction = delta.normalized * (distance - segmentLength);
+        bool aFixed = a == 0;
+        bool bFixed = b == WireSegmentCount - 1;
+
+        if (!aFixed && !bFixed)
+        {
+            _wirePositions[a] += correction * 0.5f;
+            _wirePositions[b] -= correction * 0.5f;
+        }
+        else if (aFixed && !bFixed)
+        {
+            _wirePositions[b] -= correction;
+        }
+        else if (!aFixed)
+        {
+            _wirePositions[a] += correction;
+        }
+    }
+
+    private void InitializeWire(Vector3 start, Vector3 end)
+    {
+        for (int i = 0; i < WireSegmentCount; i++)
+        {
+            float ratio = i / (float)(WireSegmentCount - 1);
+            Vector3 position = Vector3.Lerp(start, end, ratio);
+            _wirePositions[i] = position;
+            _wirePreviousPositions[i] = position;
+        }
+
+        _wireInitialized = true;
+    }
+
+    private void EnsureClawMount()
+    {
+        if (_clawMount != null)
+            return;
+
+        _clawMount = Managers.TitanRig.Claw;
+        if (_clawMount == null)
+            return;
+
+        _clawOriginalParent = _clawMount.parent;
+        _clawOriginalLocalPosition = _clawMount.localPosition;
+        _clawOriginalLocalRotation = _clawMount.localRotation;
+        _clawOriginalLocalScale = _clawMount.localScale;
+        CacheMountedClawVisibilityTargets();
+        _hasClawOriginalPose = true;
+    }
+
+    private void CacheMountedClawVisibilityTargets()
+    {
+        _mountedClawRenderers = _clawMount.GetComponentsInChildren<Renderer>(true);
+        _mountedClawRendererStates = new bool[_mountedClawRenderers.Length];
+        for (int i = 0; i < _mountedClawRenderers.Length; i++)
+            _mountedClawRendererStates[i] = _mountedClawRenderers[i].enabled;
+
+        _mountedClawColliders = _clawMount.GetComponentsInChildren<Collider>(true);
+        _mountedClawColliderStates = new bool[_mountedClawColliders.Length];
+        for (int i = 0; i < _mountedClawColliders.Length; i++)
+            _mountedClawColliderStates[i] = _mountedClawColliders[i].enabled;
+    }
+
+    private void CacheLaunchPose()
+    {
+        _launchStartPosition = _clawMount.position;
+        _launchStartRotation = _clawMount.rotation;
+        _launchDirection = ResolveLaunchDirection(_clawMount);
+    }
+
+    private void HideMountedClaw()
+    {
+        if (_clawMount == null)
+            return;
+
+        for (int i = 0; i < _mountedClawRenderers.Length; i++)
+            _mountedClawRenderers[i].enabled = false;
+
+        for (int i = 0; i < _mountedClawColliders.Length; i++)
+            _mountedClawColliders[i].enabled = false;
+
+        _clawMount.localScale = Vector3.zero;
+    }
+
+    private void RestoreMountedClaw()
+    {
+        if (!_hasClawOriginalPose || _clawMount == null)
+            return;
+
+        _clawMount.localPosition = _clawOriginalLocalPosition;
+        _clawMount.localRotation = _clawOriginalLocalRotation;
+        _clawMount.localScale = _clawOriginalLocalScale;
+
+        for (int i = 0; i < _mountedClawRenderers.Length; i++)
+            _mountedClawRenderers[i].enabled = _mountedClawRendererStates[i];
+
+        for (int i = 0; i < _mountedClawColliders.Length; i++)
+            _mountedClawColliders[i].enabled = _mountedClawColliderStates[i];
+    }
+
+    private void SpawnClawPrefab(Vector3 position, Quaternion rotation)
+    {
+        if (_spawnedClaw != null)
+        {
+            SetSpawnedClawPose(position, rotation);
+            return;
+        }
+
+        _spawnedClaw = Managers.Resource.Instantiate(ClawPrefabName);
+        if (_spawnedClaw == null)
+            return;
+
+        _spawnedClawTransform = _spawnedClaw.transform;
+        SetSpawnedClawPose(position, rotation);
+    }
+
+    private void DestroySpawnedClaw()
+    {
+        if (_spawnedClaw != null)
+            Managers.Resource.Destory(_spawnedClaw);
+
+        _spawnedClaw = null;
+        _spawnedClawTransform = null;
+        _wireInitialized = false;
+    }
+
+    private void SetSpawnedClawPose(Vector3 position, Quaternion rotation)
+    {
+        if (_spawnedClawTransform == null)
+            return;
+
+        _spawnedClawTransform.SetPositionAndRotation(position, rotation);
+    }
+
+    private void EnsureWireRenderer()
+    {
+        if (_wireRenderer != null)
+            return;
+
+        GameObject wire = new("RightClaw_WireRenderer");
+        wire.transform.SetParent(transform, worldPositionStays: true);
+        _wireRenderer = wire.AddComponent<LineRenderer>();
+        _wireRenderer.positionCount = WireSegmentCount;
+        _wireRenderer.useWorldSpace = true;
+        _wireRenderer.startWidth = WireWidth;
+        _wireRenderer.endWidth = WireWidth;
+        _wireRenderer.numCapVertices = 4;
+        _wireMaterial = new Material(Shader.Find("Sprites/Default"));
+        _wireMaterial.color = Color.yellow;
+        _wireRenderer.material = _wireMaterial;
+    }
+
+    private Vector3 ResolveWireAnchorPosition()
+    {
+        if (_hasClawOriginalPose && _clawOriginalParent != null)
+            return _clawOriginalParent.TransformPoint(_clawOriginalLocalPosition);
+
+        Transform anchor = ResolveAnchor();
+        return anchor != null ? anchor.position : _launchStartPosition;
+    }
+
+    private Vector3 ResolveClawPosition()
+    {
+        return _spawnedClawTransform != null ? _spawnedClawTransform.position : _launchStartPosition;
+    }
+
+    private Quaternion ResolveClawRotation()
+    {
+        return _spawnedClawTransform != null ? _spawnedClawTransform.rotation : _launchStartRotation;
     }
 
     private static Transform ResolveAnchor()
@@ -201,47 +462,7 @@ public sealed class TitanClawWireController : MonoBehaviour
         return anchor != null ? anchor : Managers.TitanRig.MovementRoot;
     }
 
-    private void CacheLaunchPose()
-    {
-        EnsureVisuals();
-
-        Transform claw = _clawVisual != null ? _clawVisual : Managers.TitanRig.Claw;
-        if (claw != null)
-        {
-            _launchStartPosition = claw.position;
-            _launchStartRotation = claw.rotation;
-            _launchDirection = ResolveTransformXAxis(claw);
-            return;
-        }
-
-        Transform anchor = ResolveAnchor();
-        _launchStartPosition = anchor.position;
-        _launchStartRotation = anchor.rotation;
-        _launchDirection = ResolveTransformXAxis(anchor);
-    }
-
-    private Vector3 ResolveLaunchStartPosition()
-    {
-        if (_phase != TitanClawWirePhase.Idle || _currentLength > 0.001f)
-            return _launchStartPosition;
-
-        Transform claw = Managers.TitanRig.Claw;
-        return claw != null ? claw.position : ResolveAnchor().position;
-    }
-
-    private Vector3 ResolveLaunchDirection()
-    {
-        if (_launchDirection.sqrMagnitude >= 0.0001f)
-            return _launchDirection.normalized;
-
-        Transform claw = Managers.TitanRig.Claw;
-        if (claw != null)
-            return ResolveTransformXAxis(claw);
-
-        return ResolveTransformXAxis(ResolveAnchor());
-    }
-
-    private static Vector3 ResolveTransformXAxis(Transform source)
+    private static Vector3 ResolveLaunchDirection(Transform source)
     {
         Vector3 direction = -source.right;
         if (direction.sqrMagnitude < 0.0001f)
@@ -265,4 +486,6 @@ public struct TitanClawWireSnapshot
 {
     public TitanClawWirePhase Phase;
     public float CurrentLength;
+    public Vector3 ClawPosition;
+    public Quaternion ClawRotation;
 }

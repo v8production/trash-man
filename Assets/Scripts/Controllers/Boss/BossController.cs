@@ -12,11 +12,24 @@ public class BossController : MonoBehaviour
     {
         _stat = gameObject.GetorAddComponent<BossStat>();
         _hitColliders = GetComponentsInChildren<Collider>();
+        if (_hitColliders == null || _hitColliders.Length == 0)
+        {
+            CapsuleCollider hitCollider = gameObject.AddComponent<CapsuleCollider>();
+            hitCollider.center = new Vector3(0f, 0.9f, 0f);
+            hitCollider.radius = 0.6f;
+            hitCollider.height = 1.8f;
+            _hitColliders = new Collider[] { hitCollider };
+        }
     }
 
     public void ReceiveAttack(Stat attacker)
     {
         _stat.OnAttacked(attacker);
+    }
+
+    public void ReceiveClawAttach(Stat attacker)
+    {
+        _stat.OnAttach(attacker);
     }
 
     public bool IsWithinHitRadius(Vector3 origin, float radius)

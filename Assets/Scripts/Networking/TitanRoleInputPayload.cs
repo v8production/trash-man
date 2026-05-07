@@ -317,6 +317,8 @@ public struct TitanAbilityStatePayload : INetworkSerializable, IEquatable<TitanA
     public int RightClawLaunchCount;
     public TitanClawWirePhase RightClawPhase;
     public float RightClawWireLength;
+    public Vector3 RightClawPosition;
+    public Quaternion RightClawRotation;
 
     public TitanAbilityStatePayload(TitanController titanController)
     {
@@ -328,6 +330,8 @@ public struct TitanAbilityStatePayload : INetworkSerializable, IEquatable<TitanA
             : default;
         RightClawPhase = clawSnapshot.Phase;
         RightClawWireLength = clawSnapshot.CurrentLength;
+        RightClawPosition = clawSnapshot.ClawPosition;
+        RightClawRotation = clawSnapshot.ClawRotation;
     }
 
     public void ApplyTo(TitanController titanController)
@@ -341,6 +345,8 @@ public struct TitanAbilityStatePayload : INetworkSerializable, IEquatable<TitanA
             {
                 Phase = RightClawPhase,
                 CurrentLength = RightClawWireLength,
+                ClawPosition = RightClawPosition,
+                ClawRotation = RightClawRotation,
             });
         }
     }
@@ -352,6 +358,8 @@ public struct TitanAbilityStatePayload : INetworkSerializable, IEquatable<TitanA
         serializer.SerializeValue(ref RightClawLaunchCount);
         serializer.SerializeValue(ref RightClawPhase);
         serializer.SerializeValue(ref RightClawWireLength);
+        serializer.SerializeValue(ref RightClawPosition);
+        serializer.SerializeValue(ref RightClawRotation);
     }
 
     public bool Equals(TitanAbilityStatePayload other)
@@ -360,6 +368,8 @@ public struct TitanAbilityStatePayload : INetworkSerializable, IEquatable<TitanA
             && LeftDrillActive == other.LeftDrillActive
             && RightClawLaunchCount == other.RightClawLaunchCount
             && RightClawPhase == other.RightClawPhase
-            && RightClawWireLength.Equals(other.RightClawWireLength);
+            && RightClawWireLength.Equals(other.RightClawWireLength)
+            && RightClawPosition.Equals(other.RightClawPosition)
+            && RightClawRotation.Equals(other.RightClawRotation);
     }
 }

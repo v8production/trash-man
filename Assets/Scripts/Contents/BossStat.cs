@@ -15,4 +15,9 @@ public class BossStat : Stat
         Debug.Log("Grolar Dead");
         base.OnDead(attacker);
     }
+
+    public virtual void OnAttach(Stat attacker)
+    {
+        OnAttacked(attacker);
+    }
 }
