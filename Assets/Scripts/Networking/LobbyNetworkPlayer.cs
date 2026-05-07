@@ -46,6 +46,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private const float PublishLogIntervalSeconds = 0.50f;
     private const float AttachInputBufferSeconds = 0.20f;
     private float _attachInputBufferRemaining;
+    private uint _torsoDrillPressCounter;
+    private uint _torsoShieldPressCounter;
+    private uint _torsoClawPressCounter;
 
     private void Awake()
     {
@@ -393,11 +396,35 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         }
 
         currentInput.RightMouseAttachBuffered = currentInput.RightMouseHeld || _attachInputBufferRemaining > 0f;
+        StampTorsoPressCounters(ref currentInput, activeRole == (int)Define.TitanRole.Torso);
         TitanRoleInputPayload payload = new(currentInput);
         if (_roleInput.Value.Equals(payload))
             return;
 
         SubmitRoleInputServerRpc(payload);
+    }
+
+    private void StampTorsoPressCounters(ref TitanAggregatedInput input, bool isTorsoActive)
+    {
+        if (!isTorsoActive)
+        {
+            input.TorsoDrillPressedThisFrame = false;
+            input.TorsoShieldPressedThisFrame = false;
+            input.TorsoClawPressedThisFrame = false;
+        }
+
+        if (isTorsoActive && input.TorsoDrillPressedThisFrame)
+            _torsoDrillPressCounter++;
+
+        if (isTorsoActive && input.TorsoShieldPressedThisFrame)
+            _torsoShieldPressCounter++;
+
+        if (isTorsoActive && input.TorsoClawPressedThisFrame)
+            _torsoClawPressCounter++;
+
+        input.TorsoDrillPressCounter = _torsoDrillPressCounter;
+        input.TorsoShieldPressCounter = _torsoShieldPressCounter;
+        input.TorsoClawPressCounter = _torsoClawPressCounter;
     }
 
     public static LobbyNetworkPlayer FindLocalOwnedPlayer()

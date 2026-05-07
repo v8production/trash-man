@@ -19,6 +19,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
     public bool TorsoDrillPressedThisFrame;
     public bool TorsoShieldPressedThisFrame;
     public bool TorsoClawPressedThisFrame;
+    public uint TorsoDrillPressCounter;
+    public uint TorsoShieldPressCounter;
+    public uint TorsoClawPressCounter;
 
     public float LeftArmElbow;
     public float RightArmElbow;
@@ -43,6 +46,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
         TorsoDrillPressedThisFrame = input.TorsoDrillPressedThisFrame;
         TorsoShieldPressedThisFrame = input.TorsoShieldPressedThisFrame;
         TorsoClawPressedThisFrame = input.TorsoClawPressedThisFrame;
+        TorsoDrillPressCounter = input.TorsoDrillPressCounter;
+        TorsoShieldPressCounter = input.TorsoShieldPressCounter;
+        TorsoClawPressCounter = input.TorsoClawPressCounter;
         LeftArmElbow = input.LeftArmElbow;
         RightArmElbow = input.RightArmElbow;
         LeftLegKnee = input.LeftLegKnee;
@@ -67,6 +73,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
             TorsoDrillPressedThisFrame = TorsoDrillPressedThisFrame,
             TorsoShieldPressedThisFrame = TorsoShieldPressedThisFrame,
             TorsoClawPressedThisFrame = TorsoClawPressedThisFrame,
+            TorsoDrillPressCounter = TorsoDrillPressCounter,
+            TorsoShieldPressCounter = TorsoShieldPressCounter,
+            TorsoClawPressCounter = TorsoClawPressCounter,
             LeftArmElbow = LeftArmElbow,
             RightArmElbow = RightArmElbow,
             LeftLegKnee = LeftLegKnee,
@@ -92,6 +101,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
         serializer.SerializeValue(ref TorsoDrillPressedThisFrame);
         serializer.SerializeValue(ref TorsoShieldPressedThisFrame);
         serializer.SerializeValue(ref TorsoClawPressedThisFrame);
+        serializer.SerializeValue(ref TorsoDrillPressCounter);
+        serializer.SerializeValue(ref TorsoShieldPressCounter);
+        serializer.SerializeValue(ref TorsoClawPressCounter);
         serializer.SerializeValue(ref LeftArmElbow);
         serializer.SerializeValue(ref RightArmElbow);
         serializer.SerializeValue(ref LeftLegKnee);
@@ -116,6 +128,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
             && TorsoDrillPressedThisFrame == other.TorsoDrillPressedThisFrame
             && TorsoShieldPressedThisFrame == other.TorsoShieldPressedThisFrame
             && TorsoClawPressedThisFrame == other.TorsoClawPressedThisFrame
+            && TorsoDrillPressCounter == other.TorsoDrillPressCounter
+            && TorsoShieldPressCounter == other.TorsoShieldPressCounter
+            && TorsoClawPressCounter == other.TorsoClawPressCounter
             && LeftArmElbow.Equals(other.LeftArmElbow)
             && RightArmElbow.Equals(other.RightArmElbow)
             && LeftLegKnee.Equals(other.LeftLegKnee)

@@ -77,6 +77,9 @@ public class TitanTorsoRoleController : TitanBaseController
     private float nextDrillHitTime;
     private float drillActiveTimeRemaining;
     private float shieldActiveTimeRemaining;
+    private uint lastHandledDrillPressCounter;
+    private uint lastHandledShieldPressCounter;
+    private uint lastHandledClawPressCounter;
 
     public override Define.TitanRole Role => Define.TitanRole.Torso;
 
@@ -145,10 +148,10 @@ public class TitanTorsoRoleController : TitanBaseController
     {
         titanStat.RecoverGauge(deltaTime);
 
-        if (input.TorsoDrillPressedThisFrame && titanStat.TrySpendGauge(DrillGaugeCost))
+        if (TryConsumePress(input.TorsoDrillPressCounter, ref lastHandledDrillPressCounter) && titanStat.TrySpendGauge(DrillGaugeCost))
             drillActiveTimeRemaining = DrillActiveDurationSeconds;
 
-        if (input.TorsoShieldPressedThisFrame && titanStat.TrySpendGauge(ShieldGaugeCost))
+        if (TryConsumePress(input.TorsoShieldPressCounter, ref lastHandledShieldPressCounter) && titanStat.TrySpendGauge(ShieldGaugeCost))
             shieldActiveTimeRemaining = ShieldActiveDurationSeconds;
 
         if (drillActiveTimeRemaining > 0f)
@@ -166,8 +169,17 @@ public class TitanTorsoRoleController : TitanBaseController
         if (drillActive)
             TryApplyDrillAttack();
 
-        if (input.TorsoClawPressedThisFrame && titanController.CanLaunchRightClaw && titanStat.TrySpendGauge(ClawLaunchGaugeCost))
+        if (TryConsumePress(input.TorsoClawPressCounter, ref lastHandledClawPressCounter) && titanController.CanLaunchRightClaw && titanStat.TrySpendGauge(ClawLaunchGaugeCost))
             titanController.NotifyRightClawLaunched();
+    }
+
+    private static bool TryConsumePress(uint pressCounter, ref uint lastHandledPressCounter)
+    {
+        if (pressCounter == 0 || pressCounter == lastHandledPressCounter)
+            return false;
+
+        lastHandledPressCounter = pressCounter;
+        return true;
     }
 
     private void TryApplyDrillAttack()
