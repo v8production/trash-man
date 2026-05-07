@@ -13,6 +13,9 @@ public struct TitanAggregatedInput
     public float TorsoStrafe;
     public float TorsoTurn;
     public float TorsoWaist;
+    public bool TorsoDrillPressedThisFrame;
+    public bool TorsoShieldPressedThisFrame;
+    public bool TorsoClawPressedThisFrame;
 
     public float LeftArmElbow;
     public float RightArmElbow;

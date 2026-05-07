@@ -89,6 +89,9 @@ public class InputManager
         input.TorsoStrafe = GetAxis(Key.RightArrow, Key.LeftArrow);
         input.TorsoTurn = GetAxis(Key.Period, Key.Comma);
         input.TorsoWaist = GetAxis(Key.D, Key.A);
+        input.TorsoDrillPressedThisFrame = WasPressedThisFrame(Key.Q);
+        input.TorsoShieldPressedThisFrame = WasPressedThisFrame(Key.W);
+        input.TorsoClawPressedThisFrame = WasPressedThisFrame(Key.E);
 
         float ws = GetAxis(Key.W, Key.S);
         bool shiftHeld = IsShiftHeld();
@@ -210,6 +213,11 @@ public class InputManager
     private bool WasPressedThisFrame(Key key)
     {
         return Keyboard.current != null && Keyboard.current[key].wasPressedThisFrame;
+    }
+
+    private bool IsPressed(Key key)
+    {
+        return Keyboard.current != null && Keyboard.current[key].isPressed;
     }
 
     private void MaybeLogTitanInput(in TitanAggregatedInput input)

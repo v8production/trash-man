@@ -16,6 +16,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
     public float TorsoStrafe;
     public float TorsoTurn;
     public float TorsoWaist;
+    public bool TorsoDrillPressedThisFrame;
+    public bool TorsoShieldPressedThisFrame;
+    public bool TorsoClawPressedThisFrame;
 
     public float LeftArmElbow;
     public float RightArmElbow;
@@ -37,6 +40,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
         TorsoStrafe = input.TorsoStrafe;
         TorsoTurn = input.TorsoTurn;
         TorsoWaist = input.TorsoWaist;
+        TorsoDrillPressedThisFrame = input.TorsoDrillPressedThisFrame;
+        TorsoShieldPressedThisFrame = input.TorsoShieldPressedThisFrame;
+        TorsoClawPressedThisFrame = input.TorsoClawPressedThisFrame;
         LeftArmElbow = input.LeftArmElbow;
         RightArmElbow = input.RightArmElbow;
         LeftLegKnee = input.LeftLegKnee;
@@ -58,6 +64,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
             TorsoStrafe = TorsoStrafe,
             TorsoTurn = TorsoTurn,
             TorsoWaist = TorsoWaist,
+            TorsoDrillPressedThisFrame = TorsoDrillPressedThisFrame,
+            TorsoShieldPressedThisFrame = TorsoShieldPressedThisFrame,
+            TorsoClawPressedThisFrame = TorsoClawPressedThisFrame,
             LeftArmElbow = LeftArmElbow,
             RightArmElbow = RightArmElbow,
             LeftLegKnee = LeftLegKnee,
@@ -80,6 +89,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
         serializer.SerializeValue(ref TorsoStrafe);
         serializer.SerializeValue(ref TorsoTurn);
         serializer.SerializeValue(ref TorsoWaist);
+        serializer.SerializeValue(ref TorsoDrillPressedThisFrame);
+        serializer.SerializeValue(ref TorsoShieldPressedThisFrame);
+        serializer.SerializeValue(ref TorsoClawPressedThisFrame);
         serializer.SerializeValue(ref LeftArmElbow);
         serializer.SerializeValue(ref RightArmElbow);
         serializer.SerializeValue(ref LeftLegKnee);
@@ -101,6 +113,9 @@ public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRole
             && TorsoStrafe.Equals(other.TorsoStrafe)
             && TorsoTurn.Equals(other.TorsoTurn)
             && TorsoWaist.Equals(other.TorsoWaist)
+            && TorsoDrillPressedThisFrame == other.TorsoDrillPressedThisFrame
+            && TorsoShieldPressedThisFrame == other.TorsoShieldPressedThisFrame
+            && TorsoClawPressedThisFrame == other.TorsoClawPressedThisFrame
             && LeftArmElbow.Equals(other.LeftArmElbow)
             && RightArmElbow.Equals(other.RightArmElbow)
             && LeftLegKnee.Equals(other.LeftLegKnee)
@@ -277,5 +292,59 @@ public struct TitanRigPosePayload : INetworkSerializable, IEquatable<TitanRigPos
             && RightFootRotation.Equals(other.RightFootRotation)
             && HasSpine == other.HasSpine
             && SpineRotation.Equals(other.SpineRotation);
+    }
+}
+
+public struct TitanAbilityStatePayload : INetworkSerializable, IEquatable<TitanAbilityStatePayload>
+{
+    public bool Guard;
+    public bool LeftDrillActive;
+    public int RightClawLaunchCount;
+    public TitanClawWirePhase RightClawPhase;
+    public float RightClawWireLength;
+
+    public TitanAbilityStatePayload(TitanController titanController)
+    {
+        Guard = titanController.Guard;
+        LeftDrillActive = titanController.LeftDrillActive;
+        RightClawLaunchCount = titanController.RightClawLaunchCount;
+        TitanClawWireSnapshot clawSnapshot = titanController.RightClawWire != null
+            ? titanController.RightClawWire.GetSnapshot()
+            : default;
+        RightClawPhase = clawSnapshot.Phase;
+        RightClawWireLength = clawSnapshot.CurrentLength;
+    }
+
+    public void ApplyTo(TitanController titanController)
+    {
+        titanController.Guard = Guard;
+        titanController.LeftDrillActive = LeftDrillActive;
+        titanController.SetRightClawLaunchCount(RightClawLaunchCount);
+        if (titanController.RightClawWire != null)
+        {
+            titanController.RightClawWire.ApplySnapshot(new TitanClawWireSnapshot
+            {
+                Phase = RightClawPhase,
+                CurrentLength = RightClawWireLength,
+            });
+        }
+    }
+
+    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+    {
+        serializer.SerializeValue(ref Guard);
+        serializer.SerializeValue(ref LeftDrillActive);
+        serializer.SerializeValue(ref RightClawLaunchCount);
+        serializer.SerializeValue(ref RightClawPhase);
+        serializer.SerializeValue(ref RightClawWireLength);
+    }
+
+    public bool Equals(TitanAbilityStatePayload other)
+    {
+        return Guard == other.Guard
+            && LeftDrillActive == other.LeftDrillActive
+            && RightClawLaunchCount == other.RightClawLaunchCount
+            && RightClawPhase == other.RightClawPhase
+            && RightClawWireLength.Equals(other.RightClawWireLength);
     }
 }

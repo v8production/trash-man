@@ -16,6 +16,8 @@ public sealed class TitanRigRuntime : MonoBehaviour
     [SerializeField] private Transform rightKnee;
     [SerializeField] private Transform rightFoot;
     [SerializeField] private Transform spine;
+    [SerializeField] private Transform drill;
+    [SerializeField] private Transform claw;
 
     [Header("Torso")]
     [SerializeField] private float waistYaw;
@@ -75,6 +77,8 @@ public sealed class TitanRigRuntime : MonoBehaviour
     public Transform RightHip => rightHip;
     public Transform RightKnee => rightKnee;
     public Transform RightFoot => rightFoot;
+    public Transform Drill => drill;
+    public Transform Claw => claw;
     public Rigidbody MovementRigidbody
     {
         get
@@ -144,7 +148,7 @@ public sealed class TitanRigRuntime : MonoBehaviour
         if (hasAnyDrivenBone && !loggedResolvedBones)
         {
             loggedResolvedBones = true;
-            Debug.Log($"[TitanRigManager] Resolved bones - LS:{NameOrNone(leftShoulder)} LE:{NameOrNone(leftElbow)} RS:{NameOrNone(rightShoulder)} RE:{NameOrNone(rightElbow)} LH:{NameOrNone(leftHip)} LK:{NameOrNone(leftKnee)} LF:{NameOrNone(leftFoot)} RH:{NameOrNone(rightHip)} RK:{NameOrNone(rightKnee)} RF:{NameOrNone(rightFoot)} SP:{NameOrNone(spine)}", this);
+            Debug.Log($"[TitanRigManager] Resolved bones - LS:{NameOrNone(leftShoulder)} LE:{NameOrNone(leftElbow)} RS:{NameOrNone(rightShoulder)} RE:{NameOrNone(rightElbow)} LH:{NameOrNone(leftHip)} LK:{NameOrNone(leftKnee)} LF:{NameOrNone(leftFoot)} RH:{NameOrNone(rightHip)} RK:{NameOrNone(rightKnee)} RF:{NameOrNone(rightFoot)} SP:{NameOrNone(spine)} DR:{NameOrNone(drill)} CL:{NameOrNone(claw)}", this);
         }
 
         return hasAnyDrivenBone;
@@ -567,6 +571,9 @@ public sealed class TitanRigRuntime : MonoBehaviour
             "mixamorigUpperChest", "mixamorigChest", "mixamorigSpine",
             "J_Bip_C_Chest", "J_Bip_C_Spine", "Bip001 Spine1", "Bip001 Spine");
 
+        drill ??= FindChildByNames(searchRoot, "Drill_bone");
+        claw ??= FindChildByNames(searchRoot, "R_Clamp_Center");
+
         leftShoulder ??= FindByKeywords(searchRoot, true, "shoulder", "upperarm", "arm", "clavicle");
         leftElbow ??= FindByKeywords(leftShoulder != null ? leftShoulder : searchRoot, true, "lowerarm", "forearm", "elbow");
         rightShoulder ??= FindByKeywords(searchRoot, false, "shoulder", "upperarm", "arm", "clavicle");
@@ -926,6 +933,8 @@ public sealed class TitanRigRuntime : MonoBehaviour
             signature = (signature * 23) + GetId(rightKnee);
             signature = (signature * 23) + GetId(rightFoot);
             signature = (signature * 23) + GetId(spine);
+            signature = (signature * 23) + GetId(drill);
+            signature = (signature * 23) + GetId(claw);
             return signature;
         }
     }

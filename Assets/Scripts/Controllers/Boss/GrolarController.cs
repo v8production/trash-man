@@ -31,7 +31,6 @@ public class GrolarController : BossController
                 _animator.CrossFade(_animState.ToString(), fade);
         }
     }
-    private BossStat _stat;
 
     [Header("Animation Blend")]
     [SerializeField] private float _locomotionCrossFade = 0.20f;
@@ -84,10 +83,11 @@ public class GrolarController : BossController
         return state == Define.GrolarAnimState.Run00 || state == Define.GrolarAnimState.Walk00;
     }
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
+
         _animator = GetComponentInChildren<Animator>(true);
-        _stat = gameObject.GetComponent<BossStat>();
 
         if (_animator != null)
         {

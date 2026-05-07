@@ -13,6 +13,8 @@ public class TitanRoleNetworkDriver : MonoBehaviour
     [SerializeField] private TitanRightArmRoleController _rightArmController;
     [SerializeField] private TitanLeftLegRoleController _leftLegController;
     [SerializeField] private TitanRightLegRoleController _rightLegController;
+    [SerializeField] private TitanStat _titanStat;
+    [SerializeField] private TitanController _titanController;
 
     private bool _appliedClientPhysicsMode;
 
@@ -29,6 +31,8 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         {
             ApplyClientPhysicsMode();
             ApplyLatestServerPose();
+            ApplyLatestServerGauge();
+            ApplyLatestServerAbilityState();
             return;
         }
 
@@ -57,8 +61,11 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         TickLegRole(true, hasLeftLegInput, in leftLegInput, dt);
         TickLegRole(false, hasRightLegInput, in rightLegInput, dt);
         TickPassiveStabilization(hasLeftLegInput, hasRightLegInput, dt);
+        TickClawWire(dt);
 
         PublishAuthoritativePose();
+        PublishAuthoritativeGauge();
+        PublishAuthoritativeAbilityState();
     }
 
     private static bool ShouldApplyServerPoseOnly()
@@ -106,6 +113,28 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         Managers.TitanRig.ApplyPoseSnapshot(posePayload.ToSnapshot());
     }
 
+    private void ApplyLatestServerGauge()
+    {
+        if (_titanStat == null)
+            return;
+
+        if (!LobbyNetworkPlayer.TryGetLatestTitanGauge(out int gauge))
+            return;
+
+        _titanStat.Gauge = gauge;
+    }
+
+    private void ApplyLatestServerAbilityState()
+    {
+        if (_titanController == null)
+            return;
+
+        if (!LobbyNetworkPlayer.TryGetLatestTitanAbilityState(out TitanAbilityStatePayload abilityState))
+            return;
+
+        abilityState.ApplyTo(_titanController);
+    }
+
     private static void PublishAuthoritativePose()
     {
         NetworkManager networkManager = NetworkManager.Singleton;
@@ -116,6 +145,38 @@ public class TitanRoleNetworkDriver : MonoBehaviour
             return;
 
         LobbyNetworkPlayer.TryPublishServerTitanPose(new TitanRigPosePayload(snapshot));
+    }
+
+    private void PublishAuthoritativeGauge()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager == null || !networkManager.IsListening || !networkManager.IsServer)
+            return;
+
+        if (_titanStat == null)
+            return;
+
+        LobbyNetworkPlayer.TryPublishServerTitanGauge(_titanStat.Gauge);
+    }
+
+    private void PublishAuthoritativeAbilityState()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager == null || !networkManager.IsListening || !networkManager.IsServer)
+            return;
+
+        if (_titanController == null)
+            return;
+
+        LobbyNetworkPlayer.TryPublishServerTitanAbilityState(new TitanAbilityStatePayload(_titanController));
+    }
+
+    private void TickClawWire(float dt)
+    {
+        if (_titanController == null || _titanController.RightClawWire == null)
+            return;
+
+        _titanController.RightClawWire.TickServer(dt);
     }
 
     private void TickTorsoRole(float dt)
@@ -206,6 +267,8 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         _rightArmController ??= GetComponent<TitanRightArmRoleController>();
         _leftLegController ??= GetComponent<TitanLeftLegRoleController>();
         _rightLegController ??= GetComponent<TitanRightLegRoleController>();
+        _titanStat ??= GetComponent<TitanStat>();
+        _titanController ??= GetComponent<TitanController>();
     }
 
 }

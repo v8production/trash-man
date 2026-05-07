@@ -339,6 +339,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -4034773895529732109, guid: 7bd5342e1d2f38c4d823edf668badc2a, type: 3}
   m_PrefabInstance: {fileID: 5778304239401060129}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &2837293012224873735 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8597582661956850214, guid: 7bd5342e1d2f38c4d823edf668badc2a, type: 3}
+  m_PrefabInstance: {fileID: 5778304239401060129}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2845316045806497764 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -627057214806185787, guid: 7bd5342e1d2f38c4d823edf668badc2a, type: 3}
@@ -517,6 +522,11 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.22, y: 0.24, z: 0.3}
   m_Center: {x: -0.07, y: -0.04, z: 0}
+--- !u!4 &5581465763592126272 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2109356557816559713, guid: 7bd5342e1d2f38c4d823edf668badc2a, type: 3}
+  m_PrefabInstance: {fileID: 5778304239401060129}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &5886878031583713009 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -9114496787053588016, guid: 7bd5342e1d2f38c4d823edf668badc2a, type: 3}
@@ -596,6 +606,8 @@ MonoBehaviour:
   rightArmController: {fileID: 3344556677889901005}
   leftLegController: {fileID: 3344556677889901006}
   rightLegController: {fileID: 3344556677889901007}
+  leftDrillController: {fileID: 0}
+  rightClawWireController: {fileID: 0}
 --- !u!114 &205533375885368703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -614,6 +626,8 @@ MonoBehaviour:
   _rightArmController: {fileID: 3344556677889901005}
   _leftLegController: {fileID: 3344556677889901006}
   _rightLegController: {fileID: 3344556677889901007}
+  _titanStat: {fileID: 0}
+  _titanController: {fileID: 0}
 --- !u!114 &3344556677889901002
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -638,6 +652,8 @@ MonoBehaviour:
   rightKnee: {fileID: 6782418227976457030}
   rightFoot: {fileID: 4006448067675433985}
   spine: {fileID: 5886878031583713009}
+  drill: {fileID: 2837293012224873735}
+  claw: {fileID: 5581465763592126272}
   waistYaw: 0
   leftArm:
     ShoulderRoll: 0
@@ -651,10 +667,12 @@ MonoBehaviour:
     HipYaw: 0
     HipRoll: 0
     KneeRoll: 0
+    AnkleRoll: 0
   rightLeg:
     HipYaw: 0
     HipRoll: 0
     KneeRoll: 0
+    AnkleRoll: 0
 --- !u!114 &3344556677889901003
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -689,6 +707,19 @@ MonoBehaviour:
   rollDamping: 6
   maxRollAngle: 65
   maxBalanceTorque: 240
+  singleFootUnstableAngle: 28
+  unstableAngularDamping: 10
+  maxUnstableAngularSpeed: 1
+  fallenAngularDamping: 8
+  maxFallenAngularSpeed: 1.5
+  footSupportRadius: 0.28
+  supportAreaPadding: 0.08
+  torsoAndHeadMass: 2
+  upperArmMass: 1
+  lowerArmMass: 2
+  thighMass: 1
+  calfMass: 1
+  footMass: 1
   centerOfPressure: {fileID: 0}
   centerOfPressureLocalOffset: {x: 0, y: 1.1, z: -0.6}
   dragTorqueScale: 0.03
@@ -712,10 +743,13 @@ MonoBehaviour:
   useScreenCenterAsOrigin: 1
   mouseOriginPixels: {x: 960, y: 540}
   shoulderSpeed: 1
-  elbowSpeed: 120
   shoulderRollLimit: {x: -15, y: 45}
+  elbowSpeed: 120
   elbowPitchLimit: {x: -130, y: 15}
-  idleReturnSpeed: 10
+  passiveStabilizationSpeed: 3
+  passiveShoulderPitchTarget: 35
+  passiveShoulderRollTarget: 0
+  passiveElbowPitchTarget: -35
 --- !u!114 &3344556677889901005
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -732,10 +766,13 @@ MonoBehaviour:
   useScreenCenterAsOrigin: 1
   mouseOriginPixels: {x: 960, y: 540}
   shoulderSpeed: 1
-  elbowSpeed: 120
   shoulderRollLimit: {x: -15, y: 45}
+  elbowSpeed: 120
   elbowPitchLimit: {x: -130, y: 15}
-  idleReturnSpeed: 10
+  passiveStabilizationSpeed: 3
+  passiveShoulderPitchTarget: 35
+  passiveShoulderRollTarget: 0
+  passiveElbowPitchTarget: -35
 --- !u!114 &3344556677889901006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -757,7 +794,13 @@ MonoBehaviour:
   hipSpeed: 2
   kneeSpeed: 110
   kneeRollLimit: {x: -5, y: 125}
-  idleReturnSpeed: 12
+  ankleSpeed: 110
+  ankleRollLimit: {x: -80, y: 80}
+  passiveStabilizationSpeed: 3
+  passiveHipYawTarget: 0
+  passiveHipRollTarget: 0
+  passiveKneeRollTarget: 20
+  passiveAnkleRollTarget: 0
 --- !u!114 &3344556677889901007
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -779,7 +822,13 @@ MonoBehaviour:
   hipSpeed: 2
   kneeSpeed: 110
   kneeRollLimit: {x: -5, y: 125}
-  idleReturnSpeed: 12
+  ankleSpeed: 110
+  ankleRollLimit: {x: -80, y: 80}
+  passiveStabilizationSpeed: 3
+  passiveHipYawTarget: 0
+  passiveHipRollTarget: 0
+  passiveKneeRollTarget: 20
+  passiveAnkleRollTarget: 0
 --- !u!114 &8941766507078927944
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -794,13 +843,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TitanLegAnchorResolver
   leftFootAttachment: {fileID: 4379125399005193119}
   rightFootAttachment: {fileID: 758194761437020032}
-  preserveAnchoredThighWorldPose: 1
-  inverseYawScale: 1
-  inverseRollScale: 0.75
   singleFootYawCorrectionScale: 1
   singleFootYawCorrectionSpeed: 12
   singleFootMaxYawCorrectionDegreesPerFrame: 2.5
   singleFootYawDeadZoneDegrees: 0.25
+  fallenVelocityResetAngle: 65
+  anchoredContactTolerance: 0.03
   zeroTorsoVelocityWhenLocked: 1
 --- !u!114 &4379125399005193119
 MonoBehaviour:

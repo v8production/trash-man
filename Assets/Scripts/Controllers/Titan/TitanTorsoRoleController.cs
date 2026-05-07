@@ -2,6 +2,13 @@ using UnityEngine;
 
 public class TitanTorsoRoleController : TitanBaseController
 {
+    private const float DrillGaugeCost = 100f;
+    private const float ShieldGaugeCost = 100f;
+    private const float DrillActiveDurationSeconds = 1f;
+    private const float ShieldActiveDurationSeconds = 1f;
+    private const float ClawLaunchGaugeCost = 100f;
+    private const float DrillHitRadius = 0.3f;
+    private const float DrillHitIntervalSeconds = 0.25f;
 
     [Header("Torso Input")]
     [SerializeField] private float moveSpeed = 3.5f;
@@ -65,12 +72,19 @@ public class TitanTorsoRoleController : TitanBaseController
     private float turnInput;
     private bool inputEnabled = true;
     private bool anchorPhysicsOverride;
+    private TitanController titanController;
+    private TitanStat titanStat;
+    private float nextDrillHitTime;
+    private float drillActiveTimeRemaining;
+    private float shieldActiveTimeRemaining;
 
     public override Define.TitanRole Role => Define.TitanRole.Torso;
 
     protected override void Awake()
     {
         base.Awake();
+        titanController = GetComponent<TitanController>();
+        titanStat = GetComponent<TitanStat>();
         Transform movementRoot = Managers.TitanRig.MovementRoot;
         movementRigidbody = movementRoot.GetComponent<Rigidbody>();
         if (movementRigidbody == null)
@@ -124,6 +138,65 @@ public class TitanTorsoRoleController : TitanBaseController
         strafeInput = input.TorsoStrafe;
         turnInput = input.TorsoTurn;
         UpdateWaistRotation(input.TorsoWaist, deltaTime);
+        UpdateSpecialAbilities(input, deltaTime);
+    }
+
+    private void UpdateSpecialAbilities(in TitanAggregatedInput input, float deltaTime)
+    {
+        titanStat.RecoverGauge(deltaTime);
+
+        if (input.TorsoDrillPressedThisFrame && titanStat.TrySpendGauge(DrillGaugeCost))
+            drillActiveTimeRemaining = DrillActiveDurationSeconds;
+
+        if (input.TorsoShieldPressedThisFrame && titanStat.TrySpendGauge(ShieldGaugeCost))
+            shieldActiveTimeRemaining = ShieldActiveDurationSeconds;
+
+        if (drillActiveTimeRemaining > 0f)
+            drillActiveTimeRemaining = Mathf.Max(0f, drillActiveTimeRemaining - deltaTime);
+
+        if (shieldActiveTimeRemaining > 0f)
+            shieldActiveTimeRemaining = Mathf.Max(0f, shieldActiveTimeRemaining - deltaTime);
+
+        bool drillActive = drillActiveTimeRemaining > 0f;
+        bool shieldActive = shieldActiveTimeRemaining > 0f;
+
+        titanController.LeftDrillActive = drillActive;
+        titanController.Guard = shieldActive;
+
+        if (drillActive)
+            TryApplyDrillAttack();
+
+        if (input.TorsoClawPressedThisFrame && titanController.CanLaunchRightClaw && titanStat.TrySpendGauge(ClawLaunchGaugeCost))
+            titanController.NotifyRightClawLaunched();
+    }
+
+    private void TryApplyDrillAttack()
+    {
+        if (Time.time < nextDrillHitTime)
+            return;
+
+        Vector3 drillPosition = ResolveDrillPosition();
+        BossController[] bosses = Object.FindObjectsByType<BossController>();
+        for (int i = 0; i < bosses.Length; i++)
+        {
+            BossController boss = bosses[i];
+            if (boss == null || !boss.IsWithinHitRadius(drillPosition, DrillHitRadius))
+                continue;
+
+            boss.ReceiveAttack(titanStat);
+            nextDrillHitTime = Time.time + DrillHitIntervalSeconds;
+            return;
+        }
+    }
+
+    private static Vector3 ResolveDrillPosition()
+    {
+        Transform anchor = Managers.TitanRig.LeftElbow;
+        if (anchor != null)
+            return anchor.position;
+
+        Transform movementRoot = Managers.TitanRig.MovementRoot;
+        return movementRoot.position + movementRoot.forward * 0.5f;
     }
 
     public void TickPhysics(float deltaTime)
