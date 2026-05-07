@@ -30,6 +30,9 @@ public class TitanTorsoRoleController : TitanBaseController
     [SerializeField] private float rollDamping = 6f;
     [SerializeField] private float maxRollAngle = 65f;
     [SerializeField] private float maxBalanceTorque = 240f;
+    [SerializeField] private float singleFootUnstableAngle = 28f;
+    [SerializeField] private float unstableAngularDamping = 10f;
+    [SerializeField] private float maxUnstableAngularSpeed = 1.0f;
     [SerializeField] private float fallenAngularDamping = 8f;
     [SerializeField] private float maxFallenAngularSpeed = 1.5f;
     [SerializeField] private float footSupportRadius = 0.28f;
@@ -219,13 +222,14 @@ public class TitanTorsoRoleController : TitanBaseController
         }
 
         bool fallen = IsFallen(movementRoot);
-        ApplyBalanceTorque(movementRoot, leftGrounded, rightGrounded, grounded, fallen, deltaTime);
+        bool singleFootUnstable = IsSingleFootUnstable(movementRoot, leftGrounded, rightGrounded);
+        ApplyBalanceTorque(movementRoot, leftGrounded, rightGrounded, grounded, fallen, singleFootUnstable, deltaTime);
 
-        if (!fallen)
+        if (!fallen && !singleFootUnstable)
             ApplyDragDirectionTorque(movementRoot);
     }
 
-    private void ApplyBalanceTorque(Transform movementRoot, bool leftGrounded, bool rightGrounded, bool grounded, bool fallen, float deltaTime)
+    private void ApplyBalanceTorque(Transform movementRoot, bool leftGrounded, bool rightGrounded, bool grounded, bool fallen, bool singleFootUnstable, float deltaTime)
     {
         if (movementRigidbody == null)
         {
@@ -235,6 +239,12 @@ public class TitanTorsoRoleController : TitanBaseController
         if (fallen)
         {
             DampenFallenSpin(deltaTime);
+            return;
+        }
+
+        if (singleFootUnstable)
+        {
+            DampenUnstableSpin(deltaTime);
             return;
         }
 
@@ -304,12 +314,30 @@ public class TitanTorsoRoleController : TitanBaseController
         return Vector3.Angle(movementRoot.up, Vector3.up) >= maxRollAngle;
     }
 
+    private bool IsSingleFootUnstable(Transform movementRoot, bool leftGrounded, bool rightGrounded)
+    {
+        if (!(leftGrounded ^ rightGrounded))
+            return false;
+
+        return Vector3.Angle(movementRoot.up, Vector3.up) >= singleFootUnstableAngle;
+    }
+
     private void DampenFallenSpin(float deltaTime)
     {
+        DampenAngularVelocity(deltaTime, fallenAngularDamping, maxFallenAngularSpeed);
+    }
+
+    private void DampenUnstableSpin(float deltaTime)
+    {
+        DampenAngularVelocity(deltaTime, unstableAngularDamping, maxUnstableAngularSpeed);
+    }
+
+    private void DampenAngularVelocity(float deltaTime, float damping, float maxAngularSpeed)
+    {
         Vector3 angularVelocity = movementRigidbody.angularVelocity;
-        float dampingBlend = 1f - Mathf.Exp(-Mathf.Max(0f, fallenAngularDamping) * Mathf.Max(0f, deltaTime));
+        float dampingBlend = 1f - Mathf.Exp(-Mathf.Max(0f, damping) * Mathf.Max(0f, deltaTime));
         angularVelocity = Vector3.Lerp(angularVelocity, Vector3.zero, dampingBlend);
-        movementRigidbody.angularVelocity = Vector3.ClampMagnitude(angularVelocity, Mathf.Max(0f, maxFallenAngularSpeed));
+        movementRigidbody.angularVelocity = Vector3.ClampMagnitude(angularVelocity, Mathf.Max(0f, maxAngularSpeed));
     }
 
     private Vector3 CalculateBodyPartCenterOfMass(Transform movementRoot)
