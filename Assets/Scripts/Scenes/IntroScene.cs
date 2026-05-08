@@ -4,14 +4,9 @@ public class IntroScene : BaseScene
     {
         base.Init();
         SceneType = Define.Scene.Intro;
-        LoadManagers();
+        _ = Managers.Input;
         Managers.UI.ShowSceneUI<UI_Intro>(nameof(UI_Intro));
         Managers.Input.SetMode(Define.InputMode.UI);
-    }
-
-    private static void LoadManagers()
-    {
-        _ = Managers.Input;
     }
 
     public override void Clear()

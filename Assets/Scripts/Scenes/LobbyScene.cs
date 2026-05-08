@@ -119,7 +119,10 @@ public class LobbyScene : BaseScene
     {
         base.Init();
         SceneType = Define.Scene.Lobby;
-        LoadManagers();
+
+        _ = Managers.Input;
+        Managers.LobbySession.Init();
+
         LogLobbyVoice("LobbyScene initialized.");
         Managers.Input.SetMode(Define.InputMode.Player);
         EnsureLobbyMenu();
@@ -175,12 +178,6 @@ public class LobbyScene : BaseScene
             _roleSelectMenu.RoleSelected -= HandleRoleSelected;
             _roleSelectMenu.Closed -= HandleRoleSelectMenuClosed;
         }
-    }
-
-    private static void LoadManagers()
-    {
-        _ = Managers.Input;
-        Managers.LobbySession.Init();
     }
 
     private void HandleDiscordAuthStateChanged()
@@ -281,7 +278,6 @@ public class LobbyScene : BaseScene
     private void SetLobbyLoading(bool active, string message = null)
     {
         EnsureLoadingUI();
-        if (_loadingUi == null) return;
 
         _isLobbySetupPending = active;
         _loadingUi.gameObject.SetActive(active);
@@ -301,8 +297,7 @@ public class LobbyScene : BaseScene
             return;
 
         _lobbyMenu = Managers.UI.ShowSceneUI<UI_LobbyMenu>(nameof(UI_LobbyMenu));
-        if (_lobbyMenu != null)
-            _lobbyMenu.gameObject.SetActive(false);
+        _lobbyMenu.gameObject.SetActive(false);
     }
 
     private void EnsureLoadingUI()
@@ -311,8 +306,7 @@ public class LobbyScene : BaseScene
             return;
 
         _loadingUi = Managers.UI.ShowSceneUI<UI_Loading>(nameof(UI_Loading));
-        if (_loadingUi != null)
-            _loadingUi.gameObject.SetActive(false);
+        _loadingUi.gameObject.SetActive(false);
     }
 
     private void EnsureScreenHostStartButton()
@@ -321,11 +315,6 @@ public class LobbyScene : BaseScene
             return;
 
         _screenHostStartButton = Managers.UI.CreateWorldSpaceUI<UI_HostStartButton>(null, ScreenHostStartButtonName);
-        if (_screenHostStartButton == null)
-        {
-            Debug.LogWarning("[Lobby] Failed to load UI_HostStartButton prefab from Resources/Prefabs/UIs/WorldSpace.");
-            return;
-        }
 
         ApplyFixedScreenButtonTransform(_screenHostStartButton.transform, s_hostStartButtonWorldPosition);
         _screenHostStartButton.transform.SetParent(null, true);
@@ -340,11 +329,6 @@ public class LobbyScene : BaseScene
             return;
 
         _screenRoleSelectButton = Managers.UI.CreateWorldSpaceUI<UI_RoleSelectButton>(null, ScreenRoleSelectButtonName);
-        if (_screenRoleSelectButton == null)
-        {
-            Debug.LogWarning("[Lobby] Failed to load UI_RoleSelectButton prefab from Resources/Prefabs/UIs/WorldSpace.");
-            return;
-        }
 
         ApplyFixedScreenButtonTransform(_screenRoleSelectButton.transform, s_roleSelectButtonWorldPosition);
         _screenRoleSelectButton.transform.SetParent(null, true);
@@ -364,9 +348,6 @@ public class LobbyScene : BaseScene
 
     private static void ApplyFixedScreenButtonTransform(Transform targetTransform, Vector3 worldPosition)
     {
-        if (targetTransform == null)
-            return;
-
         targetTransform.SetPositionAndRotation(worldPosition, s_screenButtonWorldRotation);
     }
 
@@ -418,8 +399,6 @@ public class LobbyScene : BaseScene
             return;
 
         _roleSelectMenu = Managers.UI.ShowSceneUI<UI_RoleSelectMenu>(nameof(UI_RoleSelectMenu));
-        if (_roleSelectMenu == null)
-            return;
 
         _roleSelectMenu.RoleSelected -= HandleRoleSelected;
         _roleSelectMenu.RoleSelected += HandleRoleSelected;
@@ -431,8 +410,6 @@ public class LobbyScene : BaseScene
     private void ShowRoleSelectMenu()
     {
         EnsureRoleSelectMenu();
-        if (_roleSelectMenu == null)
-            return;
 
         _roleSelectMenu.gameObject.SetActive(true);
         _roleSelectMenu.RefreshRoleNicknames();
@@ -454,21 +431,13 @@ public class LobbyScene : BaseScene
         if (!Managers.LobbySession.HasJoinedLobbySession)
             return;
 
-        if (_localLobbyCamera == null)
-            _localLobbyCamera = FindAnyObjectByType<LobbyCameraController>();
-
         if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform localRanger) || localRanger == null)
             return;
 
         if (_localLobbyCamera == null)
         {
             GameObject cameraObject = Managers.Resource.Instantiate(LobbyCameraPrefabName);
-            if (cameraObject == null)
-                return;
-
             _localLobbyCamera = cameraObject.GetComponent<LobbyCameraController>();
-            if (_localLobbyCamera == null)
-                return;
         }
 
         _localLobbyCamera.SetTarget(localRanger);
