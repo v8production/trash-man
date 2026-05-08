@@ -152,7 +152,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LobbyCameraController
   _target: {fileID: 0}
   _pivotOffset: {x: 0, y: 1.6, z: 0}
-  _distance: 5.5
+  _distance: 3
   _mouseSensitivity: 0.12
   _followLerpSpeed: 12
   _minPitch: -20

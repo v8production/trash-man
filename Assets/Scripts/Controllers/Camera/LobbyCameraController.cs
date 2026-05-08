@@ -4,7 +4,7 @@ public class LobbyCameraController : MonoBehaviour
 {
     [SerializeField] private Transform _target;
     [SerializeField] private Vector3 _pivotOffset = new(0f, 1.6f, 0f);
-    [SerializeField] private float _distance = 5.5f;
+    [SerializeField] private float _distance = 3f;
     [SerializeField] private float _mouseSensitivity = 0.12f;
     [SerializeField] private float _followLerpSpeed = 12f;
     [SerializeField] private float _minPitch = -20f;
