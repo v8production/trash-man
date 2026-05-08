@@ -1,11 +1,9 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
-public sealed class FootAttachmentController : MonoBehaviour
+public class FootAttachmentController : MonoBehaviour
 {
     private const string LogPrefix = "[TitanFootAttachment]";
-
-    [Header("Role")]
-    [SerializeField] private TitanBaseLegRoleController.LegSide side;
 
     [Header("Foot References")]
     [SerializeField] private Transform footTransform;
@@ -20,10 +18,7 @@ public sealed class FootAttachmentController : MonoBehaviour
     [SerializeField] private bool drawDebugGizmos;
     [SerializeField] private bool logAttachDetachTransitions = true;
 
-    [Header("Filtering")]
-    [Tooltip("Colliders under this root are ignored for ground hits (prevents self-hit when using Default layer).")]
-    [SerializeField] private Transform characterRoot;
-
+    protected TitanBaseLegRoleController.LegSide side;
     private bool attachHeld;
     private bool isAttached;
     private Vector3 attachedWorldPosition;
@@ -96,7 +91,7 @@ public sealed class FootAttachmentController : MonoBehaviour
             return false;
         }
 
-        Transform root = characterRoot != null ? characterRoot : transform.root;
+        Transform root = transform.root;
         float bestDist = float.PositiveInfinity;
         int bestIndex = -1;
         for (int i = 0; i < hits.Length; i++)

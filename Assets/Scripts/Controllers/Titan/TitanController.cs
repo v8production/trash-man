@@ -1,20 +1,19 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class TitanController : MonoBehaviour
 {
-    [Header("Auto Attach")]
-    [SerializeField] private bool attachControllersOnAwake = true;
 
     [Header("References")]
-    [SerializeField] private TitanRigRuntime rigRuntime;
-    [SerializeField] private TitanLegAnchorResolver legAnchorResolver;
-    [SerializeField] private TitanTorsoRoleController torsoController;
-    [SerializeField] private TitanLeftArmRoleController leftArmController;
-    [SerializeField] private TitanRightArmRoleController rightArmController;
-    [SerializeField] private TitanLeftLegRoleController leftLegController;
-    [SerializeField] private TitanRightLegRoleController rightLegController;
-    [SerializeField] private TitanDrillController leftDrillController;
-    [SerializeField] private TitanClawWireController rightClawWireController;
+    private TitanRigRuntime rigRuntime;
+    private TitanLegAnchorResolver legAnchorResolver;
+    private TitanTorsoRoleController torsoController;
+    private TitanLeftArmRoleController leftArmController;
+    private TitanRightArmRoleController rightArmController;
+    private TitanLeftLegRoleController leftLegController;
+    private TitanRightLegRoleController rightLegController;
+    private TitanDrillController leftDrillController;
+    private TitanClawWireController rightClawWireController;
 
     TitanStat _stat;
     public TitanStat Stat { get { return _stat; } }
@@ -28,7 +27,7 @@ public class TitanController : MonoBehaviour
     public int RightClawLaunchCount { get { return _rightClawLaunchCount; } }
     public TitanClawWireController RightClawWire => rightClawWireController;
 
-    public bool CanLaunchRightClaw => rightClawWireController != null && rightClawWireController.CanLaunch;
+    public bool CanLaunchRightClaw => rightClawWireController.CanLaunch;
 
     public void NotifyRightClawLaunched()
     {
@@ -43,59 +42,17 @@ public class TitanController : MonoBehaviour
 
     private void Awake()
     {
-        if (attachControllersOnAwake)
-        {
-            EnsureInitialized();
-        }
-        _stat = gameObject.GetComponent<TitanStat>();
-        leftDrillController ??= GetComponent<TitanDrillController>();
-        leftDrillController ??= gameObject.AddComponent<TitanDrillController>();
-        rightClawWireController ??= GetComponent<TitanClawWireController>();
-        rightClawWireController ??= gameObject.AddComponent<TitanClawWireController>();
-    }
+        rigRuntime = gameObject.GetOrAddComponent<TitanRigRuntime>();
+        Managers.TitanRig.Bind(rigRuntime);
 
-    public void EnsureInitialized()
-    {
-        rigRuntime = RequireComponent(rigRuntime);
-        if (rigRuntime != null)
-            Managers.TitanRig.Bind(rigRuntime);
-
-        legAnchorResolver = RequireComponent(legAnchorResolver);
-        torsoController = RequireComponent(torsoController);
-        leftArmController = RequireComponent(leftArmController);
-        rightArmController = RequireComponent(rightArmController);
-        leftLegController = RequireComponent(leftLegController);
-        rightLegController = RequireComponent(rightLegController);
-        leftDrillController = RequireOrAddComponent(leftDrillController);
-        rightClawWireController = RequireOrAddComponent(rightClawWireController);
-    }
-
-    private T RequireOrAddComponent<T>(T existing) where T : Component
-    {
-        if (existing != null)
-            return existing;
-
-        T found = GetComponent<T>();
-        if (found != null)
-            return found;
-
-        return gameObject.AddComponent<T>();
-    }
-
-    private T RequireComponent<T>(T existing) where T : Component
-    {
-        if (existing != null)
-        {
-            return existing;
-        }
-
-        T found = GetComponent<T>();
-        if (found != null)
-        {
-            return found;
-        }
-
-        Debug.LogError($"[TitanController] Missing required component '{typeof(T).Name}' on '{gameObject.name}'. Add it to the Titan prefab.", this);
-        return null;
+        _stat = gameObject.GetOrAddComponent<TitanStat>();
+        legAnchorResolver = gameObject.GetOrAddComponent<TitanLegAnchorResolver>();
+        torsoController = gameObject.GetOrAddComponent<TitanTorsoRoleController>();
+        leftArmController = gameObject.GetOrAddComponent<TitanLeftArmRoleController>();
+        rightArmController = gameObject.GetOrAddComponent<TitanRightArmRoleController>();
+        leftLegController = gameObject.GetOrAddComponent<TitanLeftLegRoleController>();
+        rightLegController = gameObject.GetOrAddComponent<TitanRightLegRoleController>();
+        leftDrillController = gameObject.GetOrAddComponent<TitanDrillController>();
+        rightClawWireController = gameObject.GetOrAddComponent<TitanClawWireController>();
     }
 }

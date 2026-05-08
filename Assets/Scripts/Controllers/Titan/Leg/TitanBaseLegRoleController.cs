@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 public abstract class TitanBaseLegRoleController : TitanBaseController
@@ -8,8 +9,7 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
         Right,
     }
 
-    [Header("Input")]
-    [SerializeField] private TitanLegAnchorResolver legAnchorResolver;
+    private TitanLegAnchorResolver legAnchorResolver;
 
     [Header("Hip Mouse Mapping")]
     [SerializeField] private float hipRadiusPixels = 260f;
@@ -49,7 +49,7 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
     protected override void Awake()
     {
         base.Awake();
-        ResolveDependencies();
+        legAnchorResolver = gameObject.GetOrAddComponent<TitanLegAnchorResolver>();
     }
 
     public override void TickRoleInput(in TitanAggregatedInput input, float deltaTime)
@@ -58,8 +58,6 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
         {
             return;
         }
-
-        ResolveDependencies();
 
         TitanLegControlState state = Managers.TitanRig.GetLegState(left: IsLeftLeg);
 
@@ -115,8 +113,7 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
 
     public void TickAttachInput(in TitanAggregatedInput input)
     {
-        ResolveDependencies();
-        legAnchorResolver?.UpdateAttachState(
+        legAnchorResolver.UpdateAttachState(
             IsLeftLeg ? LegSide.Left : LegSide.Right,
             input.RightMouseHeld || input.RightMouseAttachBuffered
         );
@@ -129,10 +126,7 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
             return;
         }
 
-        ResolveDependencies();
-
-        if (legAnchorResolver != null &&
-            legAnchorResolver.IsFootAttached(IsLeftLeg ? LegSide.Left : LegSide.Right))
+        if (legAnchorResolver.IsFootAttached(IsLeftLeg ? LegSide.Left : LegSide.Right))
         {
             return;
         }
@@ -153,11 +147,6 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
 
         Managers.TitanRig.SetLegState(left: IsLeftLeg, state);
         Managers.TitanRig.ApplyLegPose(left: IsLeftLeg);
-    }
-
-    private void ResolveDependencies()
-    {
-        legAnchorResolver ??= GetComponent<TitanLegAnchorResolver>();
     }
 
     private TitanLegInputCommand EvaluateLegInput(in TitanAggregatedInput input, float sensitivity)

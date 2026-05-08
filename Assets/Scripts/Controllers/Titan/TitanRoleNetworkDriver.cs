@@ -1,4 +1,5 @@
 using Unity.Netcode;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class TitanRoleNetworkDriver : MonoBehaviour
@@ -6,27 +7,31 @@ public class TitanRoleNetworkDriver : MonoBehaviour
     private float _nextDebugLogTime;
     private const float DebugLogIntervalSeconds = 0.50f;
     private bool _shouldLogThisFrame;
-    [Header("Role Controllers")]
-    [SerializeField] private TitanTorsoRoleController _torsoController;
-    [SerializeField] private TitanLegAnchorResolver _legAnchorResolver;
-    [SerializeField] private TitanLeftArmRoleController _leftArmController;
-    [SerializeField] private TitanRightArmRoleController _rightArmController;
-    [SerializeField] private TitanLeftLegRoleController _leftLegController;
-    [SerializeField] private TitanRightLegRoleController _rightLegController;
-    [SerializeField] private TitanStat _titanStat;
-    [SerializeField] private TitanController _titanController;
+    private TitanTorsoRoleController _torsoController;
+    private TitanLegAnchorResolver _legAnchorResolver;
+    private TitanLeftArmRoleController _leftArmController;
+    private TitanRightArmRoleController _rightArmController;
+    private TitanLeftLegRoleController _leftLegController;
+    private TitanRightLegRoleController _rightLegController;
+    private TitanStat _titanStat;
+    private TitanController _titanController;
 
     private bool _appliedClientPhysicsMode;
 
     private void Awake()
     {
-        ResolveControllers();
+        _torsoController = gameObject.GetOrAddComponent<TitanTorsoRoleController>();
+        _legAnchorResolver = gameObject.GetOrAddComponent<TitanLegAnchorResolver>();
+        _leftArmController = gameObject.GetOrAddComponent<TitanLeftArmRoleController>();
+        _rightArmController = gameObject.GetOrAddComponent<TitanRightArmRoleController>();
+        _leftLegController = gameObject.GetOrAddComponent<TitanLeftLegRoleController>();
+        _rightLegController = gameObject.GetOrAddComponent<TitanRightLegRoleController>();
+        _titanStat = gameObject.GetOrAddComponent<TitanStat>();
+        _titanController = gameObject.GetOrAddComponent<TitanController>();
     }
 
     private void FixedUpdate()
     {
-        ResolveControllers();
-
         if (ShouldApplyServerPoseOnly())
         {
             ApplyClientPhysicsMode();
@@ -37,9 +42,6 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         }
 
         RestoreServerPhysicsMode();
-
-        if (_torsoController == null && _leftArmController == null && _rightArmController == null && _leftLegController == null && _rightLegController == null)
-            return;
 
         _shouldLogThisFrame = InputDebug.Enabled && Time.unscaledTime >= _nextDebugLogTime;
         if (_shouldLogThisFrame)
@@ -257,18 +259,6 @@ public class TitanRoleNetworkDriver : MonoBehaviour
 
         if (_rightLegController != null && !hasRightLegInput)
             _rightLegController.TickIdle(dt);
-    }
-
-    private void ResolveControllers()
-    {
-        _torsoController ??= GetComponent<TitanTorsoRoleController>();
-        _legAnchorResolver ??= GetComponent<TitanLegAnchorResolver>();
-        _leftArmController ??= GetComponent<TitanLeftArmRoleController>();
-        _rightArmController ??= GetComponent<TitanRightArmRoleController>();
-        _leftLegController ??= GetComponent<TitanLeftLegRoleController>();
-        _rightLegController ??= GetComponent<TitanRightLegRoleController>();
-        _titanStat ??= GetComponent<TitanStat>();
-        _titanController ??= GetComponent<TitanController>();
     }
 
 }

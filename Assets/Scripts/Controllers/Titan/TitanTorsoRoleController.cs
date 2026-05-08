@@ -1,4 +1,5 @@
 using UnityEngine;
+using Unity.VisualScripting;
 
 public class TitanTorsoRoleController : TitanBaseController
 {
@@ -86,8 +87,8 @@ public class TitanTorsoRoleController : TitanBaseController
     protected override void Awake()
     {
         base.Awake();
-        titanController = GetComponent<TitanController>();
-        titanStat = GetComponent<TitanStat>();
+        titanController = gameObject.GetOrAddComponent<TitanController>();
+        titanStat = gameObject.GetOrAddComponent<TitanStat>();
         Transform movementRoot = Managers.TitanRig.MovementRoot;
         movementRigidbody = movementRoot.GetComponent<Rigidbody>();
         if (movementRigidbody == null)

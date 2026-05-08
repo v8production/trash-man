@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 public sealed class TitanDrillController : MonoBehaviour
@@ -12,12 +13,12 @@ public sealed class TitanDrillController : MonoBehaviour
 
     private void Awake()
     {
-        titanController = GetComponent<TitanController>();
+        titanController = gameObject.GetOrAddComponent<TitanController>();
     }
 
     private void Update()
     {
-        bool active = titanController != null && titanController.LeftDrillActive;
+        bool active = titanController.LeftDrillActive;
         if (!active)
             return;
 

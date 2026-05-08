@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 public sealed class TitanLegAnchorResolver : MonoBehaviour
@@ -29,9 +30,8 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
 
     }
 
-    [Header("Attachments")]
-    [SerializeField] private FootAttachmentController leftFootAttachment;
-    [SerializeField] private FootAttachmentController rightFootAttachment;
+    private TitanLeftFootAttachmentController leftFootAttachment;
+    private TitanRightFootAttachmentController rightFootAttachment;
 
     [Header("Anchor Stabilization")]
     [SerializeField] private float singleFootYawCorrectionScale = 1f;
@@ -49,13 +49,12 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
 
     private void Awake()
     {
-        ResolveReferences();
+        leftFootAttachment = gameObject.GetOrAddComponent<TitanLeftFootAttachmentController>();
+        rightFootAttachment = gameObject.GetOrAddComponent<TitanRightFootAttachmentController>();
     }
 
     private void LateUpdate()
     {
-        ResolveReferences();
-
         bool skipStabilization = _skipAnchorStabilizationThisFrame;
         _skipAnchorStabilizationThisFrame = false;
 
@@ -92,8 +91,6 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
 
     public bool TryApplyAnchoredMovement(TitanBaseLegRoleController.LegSide side, in TitanLegInputCommand command, in TitanLegControlState currentState, float deltaTime)
     {
-        ResolveReferences();
-
         AnchorMode mode = GetAnchorMode();
         if (mode == AnchorMode.Locked)
         {
@@ -109,7 +106,7 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
 
         Transform movableRoot = Managers.TitanRig.MovementRoot;
         FootAttachmentController anchor = GetAttachment(side);
-        if (movableRoot == null || anchor == null || !anchor.IsAttached)
+        if (movableRoot == null || !anchor.IsAttached)
         {
             return false;
         }
@@ -120,15 +117,13 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
 
     public void ApplyAnchoredLegCommand(TitanBaseLegRoleController.LegSide side, in TitanLegInputCommand command, float deltaTime)
     {
-        ResolveReferences();
-
         if (!Managers.TitanRig.EnsureReady())
         {
             return;
         }
 
         FootAttachmentController anchor = GetAttachment(side);
-        if (anchor == null || !anchor.IsAttached)
+        if (!anchor.IsAttached)
         {
             return;
         }
@@ -495,34 +490,6 @@ public sealed class TitanLegAnchorResolver : MonoBehaviour
 
     public bool IsFootAttached(TitanBaseLegRoleController.LegSide side)
     {
-        FootAttachmentController attachment = side == TitanBaseLegRoleController.LegSide.Left
-            ? leftFootAttachment
-            : rightFootAttachment;
-
-        return attachment != null && attachment.IsAttached;
-    }
-
-    private void ResolveReferences()
-    {
-        if (leftFootAttachment == null || rightFootAttachment == null)
-        {
-            FootAttachmentController[] attachments = GetComponents<FootAttachmentController>();
-            for (int i = 0; i < attachments.Length; i++)
-            {
-                FootAttachmentController attachment = attachments[i];
-                if (attachment == null)
-                {
-                    continue;
-                }
-
-                if (attachment.Side == TitanBaseLegRoleController.LegSide.Left)
-                {
-                    leftFootAttachment ??= attachment;
-                    continue;
-                }
-
-                rightFootAttachment ??= attachment;
-            }
-        }
+        return GetAttachment(side).IsAttached;
     }
 }

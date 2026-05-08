@@ -599,15 +599,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TitanController
   attachControllersOnAwake: 1
-  rigRuntime: {fileID: 3344556677889901002}
-  legAnchorResolver: {fileID: 8941766507078927944}
-  torsoController: {fileID: 3344556677889901003}
-  leftArmController: {fileID: 3344556677889901004}
-  rightArmController: {fileID: 3344556677889901005}
-  leftLegController: {fileID: 3344556677889901006}
-  rightLegController: {fileID: 3344556677889901007}
-  leftDrillController: {fileID: 0}
-  rightClawWireController: {fileID: 0}
 --- !u!114 &205533375885368703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -620,14 +611,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95961ef3b977512027eaab6c83fac161, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TitanRoleNetworkDriver
-  _torsoController: {fileID: 3344556677889901003}
-  _legAnchorResolver: {fileID: 8941766507078927944}
-  _leftArmController: {fileID: 3344556677889901004}
-  _rightArmController: {fileID: 3344556677889901005}
-  _leftLegController: {fileID: 3344556677889901006}
-  _rightLegController: {fileID: 3344556677889901007}
-  _titanStat: {fileID: 0}
-  _titanController: {fileID: 0}
 --- !u!114 &3344556677889901002
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -785,7 +768,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ead31b4de2d97c4685766d42b8a2643, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TitanLeftLegRoleController
-  legAnchorResolver: {fileID: 8941766507078927944}
   hipRadiusPixels: 260
   useScreenCenterAsOrigin: 1
   mouseOriginPixels: {x: 960, y: 540}
@@ -813,7 +795,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 68f3bad04f0a451438fc898d3de6ec25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TitanRightLegRoleController
-  legAnchorResolver: {fileID: 8941766507078927944}
   hipRadiusPixels: 260
   useScreenCenterAsOrigin: 1
   mouseOriginPixels: {x: 960, y: 540}
@@ -841,8 +822,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e1bd17e69197b5741a9b925eadeab0f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TitanLegAnchorResolver
-  leftFootAttachment: {fileID: 4379125399005193119}
-  rightFootAttachment: {fileID: 758194761437020032}
   singleFootYawCorrectionScale: 1
   singleFootYawCorrectionSpeed: 12
   singleFootMaxYawCorrectionDegreesPerFrame: 2.5
@@ -859,9 +838,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 6697346080426654320}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5fb8978dfc5afef4e9e326ac54985326, type: 3}
+  m_Script: {fileID: 11500000, guid: a7864ea2554c9d9468e48984beb11adc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FootAttachmentController
+  m_EditorClassIdentifier: Assembly-CSharp::TitanLeftFootAttachmentController
   side: 0
   footTransform: {fileID: 6989488937968845983}
   bottomProbe: {fileID: 7994426978885428570}
@@ -884,9 +863,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 6697346080426654320}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5fb8978dfc5afef4e9e326ac54985326, type: 3}
+  m_Script: {fileID: 11500000, guid: 82b1ce25f4e101a468b26793af7133b9, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FootAttachmentController
+  m_EditorClassIdentifier: Assembly-CSharp::TitanRightFootAttachmentController
   side: 1
   footTransform: {fileID: 4006448067675433985}
   bottomProbe: {fileID: 2576084941873172364}
