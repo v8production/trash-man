@@ -79,4 +79,12 @@ public class Define
         Attack00_Swing,
         Attack00_Rebound
     }
+
+    public enum RangerAnimState
+    {
+        Idle_00,
+        Run_00,
+        Walk_00,
+        Wave_00,
+    }
 }

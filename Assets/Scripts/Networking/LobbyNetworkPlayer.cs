@@ -8,7 +8,7 @@ using System.Collections.Generic;
 public class LobbyNetworkPlayer : NetworkBehaviour
 {
     private const string LobbyCameraPrefabName = "Lobby_Camera";
-    private const string LobbyRangerPrefabName = "Ranger(TEMP)";
+    private const string LobbyRangerPrefabName = "Ranger";
     private const int FirstTitanRoleValue = (int)Define.TitanRole.Torso;
     private const int LastTitanRoleValue = (int)Define.TitanRole.RightLeg;
 
@@ -733,7 +733,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         {
             _remoteHasLastPosition = true;
             _remoteLastPosition = currentPos;
-            _remoteAnimator.CrossFade("idle", 0.05f);
+            _remoteAnimator.CrossFade(Define.RangerAnimState.Idle_00.ToString(), 0.05f);
             _remoteWasWalking = false;
             return;
         }
@@ -747,7 +747,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         _remoteWasWalking = walking;
-        _remoteAnimator.CrossFade(walking ? "walk" : "idle", 0.10f);
+        _remoteAnimator.CrossFade(walking ? Define.RangerAnimState.Walk_00.ToString() : Define.RangerAnimState.Idle_00.ToString(), 0.10f);
     }
 
     private void EnsureLocalCamera()

@@ -20,25 +20,19 @@ public class RangerController : MonoBehaviour
     private bool _initialized;
 
     Animator Anim;
-    private LocomotionState _animState;
-    public LocomotionState AnimState
+    private Define.RangerAnimState _animState;
+    public Define.RangerAnimState AnimState
     {
         get { return _animState; }
         set
         {
-            if (EqualityComparer<LocomotionState>.Default.Equals(_animState, value))
+            if (EqualityComparer<Define.RangerAnimState>.Default.Equals(_animState, value))
                 return;
             _animState = value;
 
             if (Anim != null)
                 Anim.CrossFade(_animState.ToString(), 0.1f);
         }
-    }
-
-    public enum LocomotionState
-    {
-        idle,
-        walk
     }
 
     private void Awake()
@@ -58,7 +52,7 @@ public class RangerController : MonoBehaviour
         if (playerMap != null)
             _moveAction = playerMap.FindAction(moveActionName, false);
 
-        AnimState = LocomotionState.idle;
+        AnimState = Define.RangerAnimState.Idle_00;
         _initialized = true;
     }
 
@@ -81,7 +75,7 @@ public class RangerController : MonoBehaviour
 
         UpdateRotation(moveDirection);
 
-        AnimState = _moveInput.sqrMagnitude > 0.0001f ? LocomotionState.walk : LocomotionState.idle;
+        AnimState = _moveInput.sqrMagnitude > 0.0001f ? Define.RangerAnimState.Walk_00 : Define.RangerAnimState.Idle_00;
     }
 
     private void UpdateInput()
