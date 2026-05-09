@@ -53,6 +53,7 @@ public class RangerController : MonoBehaviour
             _moveAction = playerMap.FindAction(moveActionName, false);
 
         AnimState = Define.RangerAnimState.Idle_00;
+        RangerFaceTextureStore.ApplyTo(gameObject);
         _initialized = true;
     }
 

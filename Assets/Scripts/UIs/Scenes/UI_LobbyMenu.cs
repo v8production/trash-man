@@ -17,6 +17,7 @@ public class UI_LobbyMenu : UI_Scene
     enum Buttons
     {
         SystemSettings,
+        DrawFace,
         ShowCode,
         InviteRoom,
         BackToLobby,
@@ -25,6 +26,7 @@ public class UI_LobbyMenu : UI_Scene
     enum Texts
     {
         SystemSettings,
+        DrawFace,
         ShowCode,
         Code,
         InviteRoom,
@@ -32,6 +34,7 @@ public class UI_LobbyMenu : UI_Scene
     }
 
     private bool _isCodeVisible;
+    private UI_DrawFace _drawFace;
 
     public override void Init()
     {
@@ -41,6 +44,7 @@ public class UI_LobbyMenu : UI_Scene
         Bind<TextMeshProUGUI>(typeof(Texts));
 
         GetButton((int)Buttons.SystemSettings).gameObject.BindEvent(OnSystemSettingsButtonClicked);
+        GetButton((int)Buttons.DrawFace).gameObject.BindEvent(OnDrawFaceButtonClicked);
         GetButton((int)Buttons.ShowCode).gameObject.BindEvent(OnShowCodeButtonClicked);
         GetButton((int)Buttons.InviteRoom).gameObject.BindEvent(OnInviteRoomButtonClicked);
         GetButton((int)Buttons.BackToLobby).gameObject.BindEvent(OnBackToLobbyButtonClicked);
@@ -50,6 +54,12 @@ public class UI_LobbyMenu : UI_Scene
 
     private void OnDestroy()
     {
+        if (_drawFace != null)
+        {
+            _drawFace.Closed -= HandleDrawFaceClosed;
+            Managers.Resource.Destory(_drawFace.gameObject);
+            _drawFace = null;
+        }
     }
 
     private void OnEnable()
@@ -60,6 +70,32 @@ public class UI_LobbyMenu : UI_Scene
     private void OnSystemSettingsButtonClicked(PointerEventData eventData)
     {
         Managers.Toast.EnqueueMessage("System settings UI is not ready yet.", 2.5f);
+    }
+
+    private void OnDrawFaceButtonClicked(PointerEventData eventData)
+    {
+        EnsureDrawFaceUI();
+        _drawFace.gameObject.SetActive(true);
+        gameObject.SetActive(false);
+    }
+
+    private void EnsureDrawFaceUI()
+    {
+        if (_drawFace != null)
+            return;
+
+        _drawFace = Managers.UI.ShowSceneUI<UI_DrawFace>(nameof(UI_DrawFace));
+        _drawFace.Closed -= HandleDrawFaceClosed;
+        _drawFace.Closed += HandleDrawFaceClosed;
+        _drawFace.gameObject.SetActive(false);
+    }
+
+    private void HandleDrawFaceClosed()
+    {
+        if (_drawFace != null)
+            _drawFace.gameObject.SetActive(false);
+
+        gameObject.SetActive(true);
     }
 
     private void OnShowCodeButtonClicked(PointerEventData eventData)
