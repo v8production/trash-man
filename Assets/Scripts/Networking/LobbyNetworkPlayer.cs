@@ -16,6 +16,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private readonly NetworkVariable<FixedString64Bytes> _displayName = new(new FixedString64Bytes("Player"));
     private readonly NetworkVariable<int> _selectedTitanRoleMask = new(0);
     private readonly NetworkVariable<int> _activeTitanRole = new(0);
+    // Packed RGBA (0xRRGGBBAA) for compatibility with NGO primitive NetworkVariable types.
+    private readonly NetworkVariable<int> _rangerColorRgba = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanRoleInputPayload> _roleInput = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanRigPosePayload> _titanPose = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> _titanGauge = new(100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -25,6 +27,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private CharacterController _lobbyRangerCharacterController;
     private UI_Nickname _nicknameUI;
     private LobbyCameraController _localCamera;
+
+    private MaterialPropertyBlock _rangerColorPropertyBlock;
 
     private Animator _remoteAnimator;
     private Vector3 _remoteLastPosition;
@@ -130,6 +134,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _displayName.OnValueChanged += HandleIdentityChanged;
         _selectedTitanRoleMask.OnValueChanged += HandleSelectedRoleChanged;
         _activeTitanRole.OnValueChanged += HandleActiveRoleChanged;
+        _rangerColorRgba.OnValueChanged += HandleRangerColorChanged;
 
         if (isLobbyScene)
         {
@@ -137,6 +142,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             ApplyOwnershipState();
             EnsureNicknameUI();
             RefreshIdentityPresentation();
+
+            ApplyRangerColorPresentation();
 
             // Ensure an initial, deterministic spawn position is applied on the server.
             // This avoids a frame of (0,0,0) before the first NetworkTransform tick.
@@ -179,6 +186,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _displayName.OnValueChanged -= HandleIdentityChanged;
         _selectedTitanRoleMask.OnValueChanged -= HandleSelectedRoleChanged;
         _activeTitanRole.OnValueChanged -= HandleActiveRoleChanged;
+        _rangerColorRgba.OnValueChanged -= HandleRangerColorChanged;
 
         string lobbyUserId = GetLobbyUserId();
         if (!string.IsNullOrWhiteSpace(lobbyUserId))
@@ -213,6 +221,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _selectedTitanRoleMask.Value = NormalizeTitanRoleMask(titanRoleMask);
 
         int normalizedMask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
+        _rangerColorRgba.Value = ResolveRangerColorRgbaFromRoleMask(normalizedMask);
+
         int activeRoleValue = NormalizeTitanRoleValue(_activeTitanRole.Value);
         if (normalizedMask == 0)
         {
@@ -622,6 +632,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private void HandleSelectedRoleChanged(int previousValue, int newValue)
     {
         RefreshRoleSelectionPresentation();
+        ApplyRangerColorPresentation();
     }
 
     private void HandleActiveRoleChanged(int previousValue, int newValue)
@@ -643,6 +654,11 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         _attachInputBufferRemaining = 0f;
         Managers.Input.ResetTitanMouseBaseline();
+    }
+
+    private void HandleRangerColorChanged(int previousValue, int newValue)
+    {
+        ApplyRangerColorPresentation();
     }
 
     private void UpdateRuntimeObjectName()
@@ -691,10 +707,105 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         ApplyOwnershipState();
         UpdateLobbyRangerName();
 
+        ApplyRangerColorPresentation();
+
         // On the owner, drive the network player object's transform from the visible lobby ranger.
         // This is what remote clients will replicate and follow.
         if (IsOwner)
             transform.SetPositionAndRotation(initial, Quaternion.identity);
+    }
+
+    private void ApplyRangerColorPresentation()
+    {
+        if (_lobbyRanger == null)
+            return;
+
+        int roleMask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
+        bool shouldApplyOverride = roleMask != 0;
+
+        Renderer[] renderers = _lobbyRanger.GetComponentsInChildren<Renderer>(true);
+        if (renderers == null || renderers.Length == 0)
+            return;
+
+        if (_rangerColorPropertyBlock == null)
+            _rangerColorPropertyBlock = new MaterialPropertyBlock();
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+                continue;
+
+            // Apply only to the material slot that uses Ranger Color_Mat.
+            Material[] sharedMaterials = renderer.sharedMaterials;
+            if (sharedMaterials == null || sharedMaterials.Length == 0)
+                continue;
+
+            int targetMaterialIndex = -1;
+            for (int m = 0; m < sharedMaterials.Length; m++)
+            {
+                Material mat = sharedMaterials[m];
+                if (mat != null && mat.name == "Ranger Color_Mat")
+                {
+                    targetMaterialIndex = m;
+                    break;
+                }
+            }
+
+            if (targetMaterialIndex < 0)
+                continue;
+
+            if (!shouldApplyOverride)
+            {
+                // No selection: remove overrides so the material's own Color field is used.
+                renderer.SetPropertyBlock(null, targetMaterialIndex);
+                continue;
+            }
+
+            // Set ONLY the "Color" property on Ranger Color_Mat.
+            Color color = RgbaToColor(_rangerColorRgba.Value);
+            renderer.GetPropertyBlock(_rangerColorPropertyBlock, targetMaterialIndex);
+            _rangerColorPropertyBlock.SetColor("_Color", color);
+            renderer.SetPropertyBlock(_rangerColorPropertyBlock, targetMaterialIndex);
+        }
+    }
+
+    private static int ResolveRangerColorRgbaFromRoleMask(int normalizedMask)
+    {
+        // No selection: keep the prefab material's default color.
+        if (normalizedMask == 0)
+            return 0;
+
+        // Priority: Red > Blue > Green > Yellow > Black
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.Torso)) != 0)
+            return PackRgba(220, 20, 60, 255); // Red (#DC143C)
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.RightLeg)) != 0)
+            return PackRgba(0, 102, 255, 255); // Blue (#0066FF)
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.LeftLeg)) != 0)
+            return PackRgba(0, 170, 60, 255); // Green (#00AA3C)
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.RightArm)) != 0)
+            return PackRgba(255, 215, 0, 255); // Yellow (#FFD700)
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.LeftArm)) != 0)
+            return PackRgba(30, 30, 35, 255); // Black (#1E1E23)
+
+        return 0;
+    }
+
+    private static int PackRgba(byte r, byte g, byte b, byte a)
+    {
+        return (r << 24) | (g << 16) | (b << 8) | a;
+    }
+
+    private static Color RgbaToColor(int rgba)
+    {
+        if (rgba == 0)
+            return default;
+
+        float r = ((rgba >> 24) & 0xFF) / 255f;
+        float g = ((rgba >> 16) & 0xFF) / 255f;
+        float b = ((rgba >> 8) & 0xFF) / 255f;
+        float a = (rgba & 0xFF) / 255f;
+        return new Color(r, g, b, a);
     }
 
     private void SyncLobbyRangerTransform()
