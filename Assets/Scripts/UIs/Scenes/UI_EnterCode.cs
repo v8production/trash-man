@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public class UI_EnterCode : UI_Scene
 {
-    private const int RequiredCodeLength = 6;
+    private const int MaxCodeLength = 20;
 
     enum Images
     {
@@ -37,7 +37,7 @@ public class UI_EnterCode : UI_Scene
         _enterCodeInput = Get<TMP_InputField>((int)InputFields.EnterCode);
 
         if (_enterCodeInput != null)
-            _enterCodeInput.characterLimit = RequiredCodeLength;
+            _enterCodeInput.characterLimit = MaxCodeLength;
     }
 
     private void Update()
@@ -50,9 +50,9 @@ public class UI_EnterCode : UI_Scene
     {
         string rawInput = _enterCodeInput != null ? _enterCodeInput.text : string.Empty;
         string normalizedCode = Util.NormalizeLobbyJoinCode(rawInput);
-        if (string.IsNullOrWhiteSpace(normalizedCode) || normalizedCode.Length != RequiredCodeLength)
+        if (string.IsNullOrWhiteSpace(normalizedCode))
         {
-            Managers.Toast.EnqueueMessage("Please enter a valid 6-digit code.", 2f);
+            Managers.Toast.EnqueueMessage("Please enter a valid host Steam ID.", 2f);
             return;
         }
 

@@ -1,18 +1,25 @@
-using System;
 using UnityEngine;
 
 public class Util
 {
-    private const ulong DiscordApplicationId = 1491669821924970607;
-    private const int LobbyJoinCodeLength = 6;
+    private const int MaxLobbyJoinCodeLength = 20;
 
     public static string NormalizeLobbyJoinCode(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return string.Empty;
 
-        string trimmed = value.Trim().ToUpperInvariant();
-        return trimmed.Length == LobbyJoinCodeLength ? trimmed : string.Empty;
+        string trimmed = value.Trim();
+        if (trimmed.Length == 0 || trimmed.Length > MaxLobbyJoinCodeLength)
+            return string.Empty;
+
+        for (int i = 0; i < trimmed.Length; i++)
+        {
+            if (!char.IsDigit(trimmed[i]))
+                return string.Empty;
+        }
+
+        return trimmed;
     }
 
     public static T GetorAddComponent<T>(GameObject go) where T : Component
@@ -70,12 +77,6 @@ public class Util
     public static bool IsValid(GameObject go)
     {
         return go != null && go.activeSelf;
-    }
-
-    public static bool TryGetDiscordApplicationId(out ulong applicationId)
-    {
-        applicationId = DiscordApplicationId;
-        return applicationId != 0;
     }
 
 }

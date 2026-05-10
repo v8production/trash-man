@@ -9,6 +9,8 @@ public class SteamManager
     public bool IsInitialized => _initialized;
     public string LastInitError { get; private set; } = string.Empty;
     public CSteamID LocalSteamId => _initialized ? SteamUser.GetSteamID() : CSteamID.Nil;
+    public string LocalUserId => LocalSteamId.m_SteamID != 0 ? LocalSteamId.m_SteamID.ToString() : string.Empty;
+    public string LocalDisplayName => _initialized ? SteamFriends.GetPersonaName() : "Player";
 
     public void Init()
     {

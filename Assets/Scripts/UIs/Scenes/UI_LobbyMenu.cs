@@ -113,21 +113,15 @@ public class UI_LobbyMenu : UI_Menu
 
     private void OnInviteRoomButtonClicked(PointerEventData eventData)
     {
-        if (!Managers.Discord.IsLinked)
-        {
-            Managers.Toast.EnqueueMessage("Connect Discord before inviting a friend.", 2.5f);
-            return;
-        }
-
         string joinCode = Managers.LobbySession.CurrentJoinCode;
         if (string.IsNullOrWhiteSpace(joinCode))
         {
-            Managers.Toast.EnqueueMessage("Lobby code is not ready yet.", 2.5f);
+            Managers.Toast.EnqueueMessage("Host Steam ID is not ready yet.", 2.5f);
             return;
         }
 
-        Managers.Discord.RequestLobbyInvite(joinCode);
-        Managers.Toast.EnqueueMessage($"Invite sent. Code: {joinCode}", 2.5f);
+        GUIUtility.systemCopyBuffer = joinCode;
+        Managers.Toast.EnqueueMessage($"Host Steam ID copied: {joinCode}", 2.5f);
     }
 
     private void OnBackToLobbyButtonClicked(PointerEventData eventData)

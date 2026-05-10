@@ -12,7 +12,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private const int FirstTitanRoleValue = (int)Define.TitanRole.Torso;
     private const int LastTitanRoleValue = (int)Define.TitanRole.RightLeg;
 
-    private readonly NetworkVariable<FixedString64Bytes> _discordUserId = new(default);
+    private readonly NetworkVariable<FixedString64Bytes> _userId = new(default);
     private readonly NetworkVariable<FixedString64Bytes> _displayName = new(new FixedString64Bytes("Player"));
     private readonly NetworkVariable<int> _selectedTitanRoleMask = new(0);
     private readonly NetworkVariable<int> _activeTitanRole = new(0);
@@ -105,7 +105,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             if (!_submittedIdentity)
             {
                 _submittedIdentity = true;
-                SubmitIdentityServerRpc(Managers.Discord.LocalUserId, Managers.Discord.LocalDisplayName);
+                SubmitIdentityServerRpc(Managers.Steam.LocalUserId, Managers.Steam.LocalDisplayName);
             }
         }
 
@@ -130,7 +130,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         bool isLobbyScene = Managers.Scene.CurrentScene != null && Managers.Scene.CurrentScene.SceneType == Define.Scene.Lobby;
 
         gameObject.hideFlags = HideFlags.None;
-        _discordUserId.OnValueChanged += HandleIdentityChanged;
+        _userId.OnValueChanged += HandleIdentityChanged;
         _displayName.OnValueChanged += HandleIdentityChanged;
         _selectedTitanRoleMask.OnValueChanged += HandleSelectedRoleChanged;
         _activeTitanRole.OnValueChanged += HandleActiveRoleChanged;
@@ -169,12 +169,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             if (isLobbyScene)
             {
                 EnsureLocalCamera();
-                SubmitIdentityServerRpc(Managers.Discord.LocalUserId, Managers.Discord.LocalDisplayName);
+                SubmitIdentityServerRpc(Managers.Steam.LocalUserId, Managers.Steam.LocalDisplayName);
                 _submittedIdentity = true;
             }
             else if (isGameScene)
             {
-                SubmitIdentityServerRpc(Managers.Discord.LocalUserId, Managers.Discord.LocalDisplayName);
+                SubmitIdentityServerRpc(Managers.Steam.LocalUserId, Managers.Steam.LocalDisplayName);
                 _submittedIdentity = true;
             }
         }
@@ -182,7 +182,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
-        _discordUserId.OnValueChanged -= HandleIdentityChanged;
+        _userId.OnValueChanged -= HandleIdentityChanged;
         _displayName.OnValueChanged -= HandleIdentityChanged;
         _selectedTitanRoleMask.OnValueChanged -= HandleSelectedRoleChanged;
         _activeTitanRole.OnValueChanged -= HandleActiveRoleChanged;
@@ -208,9 +208,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     }
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
-    private void SubmitIdentityServerRpc(FixedString64Bytes discordUserId, FixedString64Bytes displayName)
+    private void SubmitIdentityServerRpc(FixedString64Bytes userId, FixedString64Bytes displayName)
     {
-        _discordUserId.Value = discordUserId;
+        _userId.Value = userId;
         _displayName.Value = displayName;
     }
 
@@ -902,8 +902,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _nicknameUI = Managers.UI.CreateWorldSpaceUI<UI_Nickname>(_lobbyRanger.transform);
         if (_nicknameUI == null)
             return;
-
-        _nicknameUI.SetVoiceChatActive(Managers.Discord.IsLobbyUserVoiceChatActive(GetLobbyUserId()));
     }
 
     private void RefreshIdentityPresentation()
@@ -911,7 +909,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (_nicknameUI != null)
         {
             _nicknameUI.SetText(GetDisplayName());
-            _nicknameUI.SetVoiceChatActive(Managers.Discord.IsLobbyUserVoiceChatActive(GetLobbyUserId()));
         }
 
         string lobbyUserId = GetLobbyUserId();
@@ -966,11 +963,11 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     private string GetLobbyUserId()
     {
-        string syncedUserId = _discordUserId.Value.ToString();
+        string syncedUserId = _userId.Value.ToString();
         if (!string.IsNullOrWhiteSpace(syncedUserId))
             return syncedUserId;
 
-        return IsOwner ? Managers.Discord.LocalUserId : string.Empty;
+        return IsOwner ? Managers.Steam.LocalUserId : string.Empty;
     }
 
     private string GetDisplayName()
@@ -979,7 +976,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (!string.IsNullOrWhiteSpace(syncedDisplayName))
             return syncedDisplayName;
 
-        return IsOwner ? Managers.Discord.LocalDisplayName : $"Player {OwnerClientId}";
+        return IsOwner ? Managers.Steam.LocalDisplayName : $"Player {OwnerClientId}";
     }
 
     private Vector3 GetInitialSpawnPosition()

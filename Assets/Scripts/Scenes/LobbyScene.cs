@@ -22,7 +22,7 @@ public class LobbyScene : BaseScene
     private static readonly Vector3 s_roleSelectButtonWorldPosition = new(1.49f, 1.8f, -1.5f);
     private static readonly Quaternion s_screenButtonWorldRotation = Quaternion.Euler(0f, -90f, 0f);
 
-    private static readonly Dictionary<string, LobbyUserEntry> s_userEntriesByDiscordUserId = new();
+    private static readonly Dictionary<string, LobbyUserEntry> s_userEntriesByUserId = new();
 
     private const float LobbyJoinTimeoutSeconds = 15f;
     private float _lobbySetupStartedAt;
@@ -39,10 +39,10 @@ public class LobbyScene : BaseScene
         if (string.IsNullOrWhiteSpace(userId))
             return;
 
-        if (!s_userEntriesByDiscordUserId.TryGetValue(userId, out LobbyUserEntry entry) || entry == null)
+        if (!s_userEntriesByUserId.TryGetValue(userId, out LobbyUserEntry entry) || entry == null)
         {
             entry = new LobbyUserEntry();
-            s_userEntriesByDiscordUserId[userId] = entry;
+            s_userEntriesByUserId[userId] = entry;
         }
 
         if (ranger != null)
@@ -57,10 +57,10 @@ public class LobbyScene : BaseScene
         if (string.IsNullOrWhiteSpace(userId))
             return;
 
-        if (!s_userEntriesByDiscordUserId.TryGetValue(userId, out LobbyUserEntry entry) || entry == null)
+        if (!s_userEntriesByUserId.TryGetValue(userId, out LobbyUserEntry entry) || entry == null)
         {
             entry = new LobbyUserEntry();
-            s_userEntriesByDiscordUserId[userId] = entry;
+            s_userEntriesByUserId[userId] = entry;
         }
 
         entry.SelectedRoleMask = NormalizeRoleMask(selectedRoleMask);
@@ -73,7 +73,7 @@ public class LobbyScene : BaseScene
         if (string.IsNullOrWhiteSpace(userId))
             return false;
 
-        if (!s_userEntriesByDiscordUserId.TryGetValue(userId, out LobbyUserEntry entry) || entry == null)
+        if (!s_userEntriesByUserId.TryGetValue(userId, out LobbyUserEntry entry) || entry == null)
             return false;
 
         roleMask = NormalizeRoleMask(entry.SelectedRoleMask);
@@ -85,7 +85,7 @@ public class LobbyScene : BaseScene
         if (string.IsNullOrWhiteSpace(userId))
             return;
 
-        if (!s_userEntriesByDiscordUserId.TryGetValue(userId, out LobbyUserEntry entry) || entry == null)
+        if (!s_userEntriesByUserId.TryGetValue(userId, out LobbyUserEntry entry) || entry == null)
             return;
 
         if (ranger != null && entry.Ranger == ranger)
@@ -95,7 +95,7 @@ public class LobbyScene : BaseScene
             entry.Nickname = null;
 
         if (entry.Ranger == null && entry.Nickname == null)
-            s_userEntriesByDiscordUserId.Remove(userId);
+            s_userEntriesByUserId.Remove(userId);
     }
 
     public static bool TrySetNicknameSpeakerActive(string userId, bool isVoiceChatActive)
@@ -103,7 +103,7 @@ public class LobbyScene : BaseScene
         if (string.IsNullOrWhiteSpace(userId))
             return false;
 
-        if (!s_userEntriesByDiscordUserId.TryGetValue(userId, out LobbyUserEntry entry) || entry == null || entry.Nickname == null)
+        if (!s_userEntriesByUserId.TryGetValue(userId, out LobbyUserEntry entry) || entry == null || entry.Nickname == null)
             return false;
 
         entry.Nickname.SetActive(isVoiceChatActive);
@@ -112,7 +112,7 @@ public class LobbyScene : BaseScene
 
     public static void ClearUserObjectRegistry()
     {
-        s_userEntriesByDiscordUserId.Clear();
+        s_userEntriesByUserId.Clear();
     }
 
     protected override void Init()
@@ -123,7 +123,7 @@ public class LobbyScene : BaseScene
         _ = Managers.Input;
         Managers.LobbySession.Init();
 
-        LogLobbyVoice("LobbyScene initialized.");
+        Debug.Log("[Lobby] LobbyScene initialized.");
         Managers.Input.SetMode(Define.InputMode.Player);
         EnsureLobbyMenu();
         EnsureLoadingUI();
@@ -140,10 +140,7 @@ public class LobbyScene : BaseScene
             SetLobbyLoading(true, "Preparing lobby...");
         }
 
-        Managers.Discord.OnAuthStateChanged -= HandleDiscordAuthStateChanged;
-        Managers.Discord.OnAuthStateChanged += HandleDiscordAuthStateChanged;
         ProcessPendingLobbyRequest();
-        TryAutoConnectLobbyVoice();
     }
 
     private void Update()
@@ -162,7 +159,6 @@ public class LobbyScene : BaseScene
 
     private void OnDestroy()
     {
-        Managers.Discord.OnAuthStateChanged -= HandleDiscordAuthStateChanged;
 
         if (_screenHostStartButton != null)
             _screenHostStartButton.StartButtonClicked -= HandleHostStartButtonClicked;
@@ -177,26 +173,8 @@ public class LobbyScene : BaseScene
         }
     }
 
-    private void HandleDiscordAuthStateChanged()
-    {
-        LogLobbyVoice($"Discord auth state changed. linked={Managers.Discord.IsLinked}, connecting={Managers.Discord.IsConnecting}, lastError={Managers.Discord.LastAuthError}");
-        ProcessPendingLobbyRequest();
-        TryAutoConnectLobbyVoice();
-    }
-
     private void ProcessPendingLobbyRequest()
     {
-        if (!Managers.Discord.IsLinked)
-        {
-            if (_pendingHostBootstrap || !string.IsNullOrWhiteSpace(_pendingJoinCode))
-            {
-                LogLobbyVoice("Pending lobby request is waiting for Discord link readiness.");
-                SetLobbyLoading(true, "Linking Discord...");
-            }
-
-            return;
-        }
-
         if (_pendingHostBootstrap)
         {
             SetLobbyLoading(true, "Creating lobby...");
@@ -480,7 +458,7 @@ public class LobbyScene : BaseScene
     private static bool AreAllLobbyUsersReadyForGame(out string missingUserId)
     {
         missingUserId = string.Empty;
-        if (s_userEntriesByDiscordUserId.Count == 0)
+        if (s_userEntriesByUserId.Count == 0)
         {
             missingUserId = "No lobby users";
             return false;
@@ -489,7 +467,7 @@ public class LobbyScene : BaseScene
         Dictionary<int, string> ownerByRoleValue = new();
         int combinedRoleMask = 0;
 
-        foreach (KeyValuePair<string, LobbyUserEntry> pair in s_userEntriesByDiscordUserId)
+        foreach (KeyValuePair<string, LobbyUserEntry> pair in s_userEntriesByUserId)
         {
             string userId = pair.Key;
             LobbyUserEntry entry = pair.Value;
@@ -587,66 +565,9 @@ public class LobbyScene : BaseScene
         return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
     }
 
-    private void TryAutoConnectLobbyVoice()
-    {
-        LogLobbyVoice($"TryAutoConnectLobbyVoice called. linked={Managers.Discord.IsLinked}, connecting={Managers.Discord.IsConnecting}");
-
-        if (!Managers.Discord.IsLinked)
-        {
-            if (Managers.Discord.IsConnecting)
-            {
-                LogLobbyVoice("Auto-connect skipped because Discord is currently connecting.");
-                return;
-            }
-
-            bool hasAppId = Util.TryGetDiscordApplicationId(out ulong appId);
-            LogLobbyVoice($"Resolved Discord application id. hasValue={hasAppId}");
-            if (!hasAppId)
-            {
-                Debug.LogWarning("LobbyScene: Discord auto-connect skipped - Discord application id is not configured.");
-                return;
-            }
-
-            LogLobbyVoice($"Requesting Discord connect with appId={appId}.");
-            Managers.Discord.Connect(appId, string.Empty);
-            return;
-        }
-
-        string lobbyVoiceSecret = GetLobbyVoiceSecret();
-        LogLobbyVoice($"Discord already linked. Ensuring lobby voice connection. secretLen={lobbyVoiceSecret.Length}");
-        Managers.Discord.EnsureLobbyVoiceConnected(lobbyVoiceSecret);
-    }
-
-    private static string GetLobbyVoiceSecret()
-    {
-        string activeVoiceSecret = Managers.LobbySession.CurrentVoiceSecret;
-        if (!string.IsNullOrWhiteSpace(activeVoiceSecret))
-            return activeVoiceSecret;
-
-        string joinCode = Managers.LobbySession.CurrentJoinCode;
-        if (!string.IsNullOrWhiteSpace(joinCode))
-            return $"trash-man-lobby-{joinCode.Trim().ToLowerInvariant()}";
-
-        string localUserId = Managers.Discord.LocalUserId;
-        if (!string.IsNullOrWhiteSpace(localUserId))
-            return $"trash-man-lobby-{localUserId.Trim().ToLowerInvariant()}";
-
-        return "trash-man-lobby";
-    }
-
-    private static void LogLobbyVoice(string message)
-    {
-        Debug.Log($"[LobbyVoice] {message}");
-    }
-
     public override void Clear()
     {
         ClearUserObjectRegistry();
-        Managers.Discord.OnAuthStateChanged -= HandleDiscordAuthStateChanged;
-
-        // Keep voice alive when transitioning into GameScene.
-        if (Managers.Scene.PendingScene == Define.Scene.Intro)
-            Managers.Discord.EndActiveLobbyVoice();
 
         if (_lobbyMenu != null)
         {

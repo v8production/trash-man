@@ -7,12 +7,6 @@
       "dependencies": {},
       "hash": "5cea8f048cc16f3575fabcf03af3ebafbc390499"
     },
-    "com.discord.partnersdk": {
-      "version": "file:com.discord.partnersdk",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {}
-    },
     "com.rlabrecque.steamworks.net": {
       "version": "https://github.com/rlabrecque/Steamworks.NET.git?path=/com.rlabrecque.steamworks.net",
       "depth": 0,

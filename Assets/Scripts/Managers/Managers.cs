@@ -30,7 +30,6 @@ public class Managers : MonoBehaviour
     SceneManagerEx _sceneManager = new();
     SoundManager _soundManager = new();
     UIManager _uiManager = new();
-    DiscordManager _discordManager = new();
     SteamManager _steamManager = new();
     public static DataManager Data { get { return Instance._dataManager; } }
     public static InputManager Input { get { return Instance._inputManager; } }
@@ -39,7 +38,6 @@ public class Managers : MonoBehaviour
     public static SceneManagerEx Scene { get { return Instance._sceneManager; } }
     public static SoundManager Sound { get { return Instance._soundManager; } }
     public static UIManager UI { get { return Instance._uiManager; } }
-    public static DiscordManager Discord { get { return Instance._discordManager; } }
     public static SteamManager Steam { get { return Instance._steamManager; } }
     #endregion
 
@@ -73,7 +71,6 @@ public class Managers : MonoBehaviour
             _instance._soundManager.Init();
             _instance._titanRigManager.Init();
             _instance._titanRoleManager.Init();
-            _instance._discordManager.Init();
             _instance._steamManager.Init();
         }
     }
@@ -83,7 +80,6 @@ public class Managers : MonoBehaviour
         Chat.OnUpdate();
         Toast.OnUpdate();
         LobbySession.OnUpdate();
-        Discord.OnUpdate();
         Steam.OnUpdate();
     }
 
@@ -116,6 +112,5 @@ public class Managers : MonoBehaviour
     public static void Shutdown()
     {
         Steam.Clear();
-        Discord.Clear();
     }
 }
