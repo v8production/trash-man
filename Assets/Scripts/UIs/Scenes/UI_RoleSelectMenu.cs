@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class UI_RoleSelectMenu : UI_Scene
+public class UI_RoleSelectMenu : UI_Menu
 {
     private const int CanvasOrder = 10;
     private const float NicknameRefreshIntervalSeconds = 0.25f;

@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class UI_LobbyMenu : UI_Scene
+public class UI_LobbyMenu : UI_Menu
 {
     private const string MaskedCodeText = "******";
     private const string HiddenCodeButtonText = "Show Code";
@@ -35,6 +35,8 @@ public class UI_LobbyMenu : UI_Scene
 
     private bool _isCodeVisible;
     private UI_DrawFace _drawFace;
+
+    public bool IsDrawFaceVisible => _drawFace != null && _drawFace.gameObject.activeSelf;
 
     public override void Init()
     {
@@ -92,10 +94,15 @@ public class UI_LobbyMenu : UI_Scene
 
     private void HandleDrawFaceClosed()
     {
-        if (_drawFace != null)
-            _drawFace.gameObject.SetActive(false);
+        HideDrawFace();
 
         gameObject.SetActive(true);
+    }
+
+    public void HideDrawFace()
+    {
+        if (_drawFace != null)
+            _drawFace.gameObject.SetActive(false);
     }
 
     private void OnShowCodeButtonClicked(PointerEventData eventData)

@@ -86,6 +86,25 @@ public class UIManager
         return scene;
     }
 
+    public void HideAllMenuUIs()
+    {
+        UI_Menu[] menuUis = _root.GetComponentsInChildren<UI_Menu>(true);
+        foreach (UI_Menu menuUi in menuUis)
+            menuUi.gameObject.SetActive(false);
+    }
+
+    public bool HasActiveMenuUI()
+    {
+        UI_Menu[] menuUis = _root.GetComponentsInChildren<UI_Menu>(true);
+        foreach (UI_Menu menuUi in menuUis)
+        {
+            if (menuUi.gameObject.activeSelf)
+                return true;
+        }
+
+        return false;
+    }
+
     public void Clear()
     {
         _scene = null;

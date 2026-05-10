@@ -157,10 +157,7 @@ public class LobbyScene : BaseScene
         if (_isLobbySetupPending)
             return;
 
-        if (CloseRoleSelectMenu())
-            return;
-
-        ToggleLobbyMenu();
+        ToggleMenuInputMode();
     }
 
     private void OnDestroy()
@@ -558,22 +555,29 @@ public class LobbyScene : BaseScene
         };
     }
 
-    private void ToggleLobbyMenu()
+    private void ToggleMenuInputMode()
     {
-        EnsureLobbyMenu();
-        if (_lobbyMenu == null)
+        if (Managers.Input.Mode == Define.InputMode.UI)
+        {
+            HideAllMenus();
+            Managers.Input.SetMode(Define.InputMode.Player);
             return;
+        }
 
-        bool shouldShow = !_lobbyMenu.gameObject.activeSelf;
-        _lobbyMenu.gameObject.SetActive(shouldShow);
-        RefreshInputMode();
+        EnsureLobbyMenu();
+        _lobbyMenu.gameObject.SetActive(true);
+        Managers.Input.SetMode(Define.InputMode.UI);
+    }
+
+    private void HideAllMenus()
+    {
+        Managers.UI.HideAllMenuUIs();
     }
 
     private void RefreshInputMode()
     {
         bool hasBlockingUi = _isLobbySetupPending
-            || (_lobbyMenu != null && _lobbyMenu.gameObject.activeSelf)
-            || (_roleSelectMenu != null && _roleSelectMenu.gameObject.activeSelf);
+            || Managers.UI.HasActiveMenuUI();
 
         Managers.Input.SetMode(hasBlockingUi ? Define.InputMode.UI : Define.InputMode.Player);
     }

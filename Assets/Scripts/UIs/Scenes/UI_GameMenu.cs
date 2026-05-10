@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class UI_GameMenu : UI_Scene
+public class UI_GameMenu : UI_Menu
 {
 
     enum Images

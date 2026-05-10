@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class UI_DrawFace : UI_Scene
+public class UI_DrawFace : UI_Menu
 {
     private enum DrawMode
     {

@@ -68,14 +68,20 @@ public class GameScene : BaseScene
         if (!IsEscapePressedThisFrame())
             return;
 
-        ToggleGameMenu();
+        ToggleMenuInputMode();
     }
 
-    private void ToggleGameMenu()
+    private void ToggleMenuInputMode()
     {
-        bool shouldShow = !_gameMenuUi.gameObject.activeSelf;
-        _gameMenuUi.gameObject.SetActive(shouldShow);
-        Managers.Input.SetMode(shouldShow ? Define.InputMode.UI : Define.InputMode.Player);
+        if (Managers.Input.Mode == Define.InputMode.UI)
+        {
+            Managers.UI.HideAllMenuUIs();
+            Managers.Input.SetMode(Define.InputMode.Player);
+            return;
+        }
+
+        _gameMenuUi.gameObject.SetActive(true);
+        Managers.Input.SetMode(Define.InputMode.UI);
     }
 
     private static bool IsEscapePressedThisFrame()

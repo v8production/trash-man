@@ -5,6 +5,7 @@ public static class RangerFaceTextureStore
 {
     public const int TextureWidth = 32;
     public const int TextureHeight = 16;
+    private const int ExportTextureHeight = 32;
 
     private const string ResourceTexturePath = "Arts/Ranger/Texture/Ranger_Face";
     private const string CustomTextureDirectoryName = "Ranger";
@@ -28,9 +29,10 @@ public static class RangerFaceTextureStore
     public static void SaveCustomTexture(Texture2D sourceTexture)
     {
         string savePath = CustomTexturePath;
+        Texture2D exportTexture = CreateExportTexture(sourceTexture);
         Directory.CreateDirectory(Path.GetDirectoryName(savePath));
-        File.WriteAllBytes(savePath, sourceTexture.EncodeToPNG());
-        ReplaceCachedRuntimeTexture(sourceTexture);
+        File.WriteAllBytes(savePath, exportTexture.EncodeToPNG());
+        ReplaceCachedRuntimeTexture(exportTexture);
     }
 
     public static void ApplyTo(GameObject root)
@@ -103,9 +105,10 @@ public static class RangerFaceTextureStore
     {
         Texture2D readableSourceTexture = sourceTexture.isReadable ? sourceTexture : CreateReadableCopy(sourceTexture);
         Color[] pixels = new Color[TextureWidth * TextureHeight];
+        int sourceYOffset = Mathf.Max(0, readableSourceTexture.height - TextureHeight);
         for (int y = 0; y < TextureHeight; y++)
         {
-            int sourceY = Mathf.Clamp(y, 0, readableSourceTexture.height - 1);
+            int sourceY = Mathf.Clamp(sourceYOffset + y, 0, readableSourceTexture.height - 1);
             for (int x = 0; x < TextureWidth; x++)
             {
                 int sourceX = Mathf.Clamp(x, 0, readableSourceTexture.width - 1);
@@ -118,6 +121,36 @@ public static class RangerFaceTextureStore
 
         if (readableSourceTexture != sourceTexture)
             Object.Destroy(readableSourceTexture);
+    }
+
+    private static Texture2D CreateExportTexture(Texture2D sourceTexture)
+    {
+        Texture2D readableSourceTexture = sourceTexture.isReadable ? sourceTexture : CreateReadableCopy(sourceTexture);
+        Texture2D exportTexture = new(TextureWidth, ExportTextureHeight, TextureFormat.RGBA32, false);
+        ConfigureTexture(exportTexture);
+
+        Color[] pixels = new Color[TextureWidth * ExportTextureHeight];
+        for (int i = 0; i < pixels.Length; i++)
+            pixels[i] = Color.clear;
+
+        for (int y = 0; y < TextureHeight; y++)
+        {
+            int targetY = y + TextureHeight;
+            int sourceY = Mathf.Clamp(y, 0, readableSourceTexture.height - 1);
+            for (int x = 0; x < TextureWidth; x++)
+            {
+                int sourceX = Mathf.Clamp(x, 0, readableSourceTexture.width - 1);
+                pixels[targetY * TextureWidth + x] = readableSourceTexture.GetPixel(sourceX, sourceY);
+            }
+        }
+
+        exportTexture.SetPixels(pixels);
+        exportTexture.Apply();
+
+        if (readableSourceTexture != sourceTexture)
+            Object.Destroy(readableSourceTexture);
+
+        return exportTexture;
     }
 
     private static Texture2D CreateReadableCopy(Texture sourceTexture)
@@ -142,8 +175,7 @@ public static class RangerFaceTextureStore
         if (_cachedRuntimeTexture != null && _cachedRuntimeTexture.name != "Ranger_Face")
             Object.Destroy(_cachedRuntimeTexture);
 
-        _cachedRuntimeTexture = CreateEmptyTexture();
-        CopyPixels(sourceTexture, _cachedRuntimeTexture);
+        _cachedRuntimeTexture = sourceTexture;
     }
 
     private static void ApplyTextureToMaterial(Material material, Texture texture)
