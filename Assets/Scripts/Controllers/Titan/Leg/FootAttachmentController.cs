@@ -14,7 +14,8 @@ public class FootAttachmentController : MonoBehaviour
     [SerializeField] private float probeRadius = 0.18f;
     [SerializeField] private float probeDistance = 0.8f;
     [SerializeField] private float probeStartOffset = 0.05f;
-    [SerializeField] private float parallelToleranceDegrees = 75f;
+    [SerializeField] private float maxAttachSurfaceDistance = 0.5f;
+    [SerializeField] private float footSurfaceNormalToleranceDegrees = 35f;
     [SerializeField] private bool drawDebugGizmos;
     [SerializeField] private bool logAttachDetachTransitions = true;
 
@@ -78,9 +79,7 @@ public class FootAttachmentController : MonoBehaviour
             return true;
         }
 
-        Vector3 fallbackOrigin = probe.position + (Vector3.up * 1.5f);
-        RaycastHit[] fallbackHits = Physics.RaycastAll(fallbackOrigin, Vector3.down, 3f, attachableGroundLayers, QueryTriggerInteraction.Ignore);
-        return TrySelectBestGroundHit(fallbackHits, out hit);
+        return false;
     }
 
     private bool TrySelectBestGroundHit(RaycastHit[] hits, out RaycastHit hit)
@@ -137,7 +136,7 @@ public class FootAttachmentController : MonoBehaviour
             return;
         }
 
-        if (!TryGetGroundHit(out RaycastHit hit) || !IsFootParallelToSurface(hit.normal))
+        if (!TryGetGroundHit(out RaycastHit hit) || !IsProbeCloseToSurface(hit) || !IsFootParallelToSurface(hit.normal))
         {
             return;
         }
@@ -206,22 +205,51 @@ public class FootAttachmentController : MonoBehaviour
         }
     }
 
-    private bool IsFootParallelToSurface(Vector3 surfaceNormal)
+    private bool IsProbeCloseToSurface(in RaycastHit hit)
     {
-        Transform foot = footTransform;
-        if (foot == null || surfaceNormal.sqrMagnitude < 0.0001f)
+        Transform probe = BottomProbe;
+        if (probe == null || hit.collider == null)
         {
             return false;
         }
 
+        float maxDistance = Mathf.Max(0f, maxAttachSurfaceDistance);
+        return Vector3.Distance(probe.position, hit.point) <= maxDistance;
+    }
+
+    private Vector3 GetSoleNormal()
+    {
+        Transform foot = footTransform;
+        Transform probe = bottomProbe;
+        if (foot == null)
+        {
+            return Vector3.zero;
+        }
+
+        if (probe != null && probe.localPosition.sqrMagnitude > 0.000001f)
+        {
+            return (-foot.TransformDirection(probe.localPosition)).normalized;
+        }
+
+        return foot.up;
+    }
+
+    private float GetFootSurfaceNormalAngle(Vector3 surfaceNormal)
+    {
+        Vector3 soleNormal = GetSoleNormal();
+        if (soleNormal.sqrMagnitude < 0.0001f || surfaceNormal.sqrMagnitude < 0.0001f)
+        {
+            return 180f;
+        }
+
         Vector3 normal = surfaceNormal.normalized;
-        float bestAngle = 180f;
-        bestAngle = Mathf.Min(bestAngle, Vector3.Angle(foot.up, normal));
-        bestAngle = Mathf.Min(bestAngle, Vector3.Angle(-foot.up, normal));
-        bestAngle = Mathf.Min(bestAngle, Vector3.Angle(foot.forward, normal));
-        bestAngle = Mathf.Min(bestAngle, Vector3.Angle(-foot.forward, normal));
-        bestAngle = Mathf.Min(bestAngle, Vector3.Angle(foot.right, normal));
-        bestAngle = Mathf.Min(bestAngle, Vector3.Angle(-foot.right, normal));
-        return bestAngle <= parallelToleranceDegrees;
+        return Mathf.Min(
+            Vector3.Angle(soleNormal, normal),
+            Vector3.Angle(-soleNormal, normal));
+    }
+
+    private bool IsFootParallelToSurface(Vector3 surfaceNormal)
+    {
+        return GetFootSurfaceNormalAngle(surfaceNormal) <= footSurfaceNormalToleranceDegrees;
     }
 }

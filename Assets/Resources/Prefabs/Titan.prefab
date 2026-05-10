@@ -850,7 +850,8 @@ MonoBehaviour:
   probeRadius: 0.18
   probeDistance: 0.8
   probeStartOffset: 0.05
-  parallelToleranceDegrees: 75
+  maxAttachSurfaceDistance: 0.5
+  footSurfaceNormalToleranceDegrees: 35
   drawDebugGizmos: 0
   logAttachDetachTransitions: 1
   characterRoot: {fileID: 0}
@@ -875,7 +876,8 @@ MonoBehaviour:
   probeRadius: 0.18
   probeDistance: 0.8
   probeStartOffset: 0.05
-  parallelToleranceDegrees: 75
+  maxAttachSurfaceDistance: 0.22
+  footSurfaceNormalToleranceDegrees: 35
   drawDebugGizmos: 0
   logAttachDetachTransitions: 1
   characterRoot: {fileID: 0}

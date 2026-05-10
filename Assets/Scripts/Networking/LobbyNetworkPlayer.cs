@@ -396,8 +396,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         TitanAggregatedInput currentInput = Managers.Input.CaptureTitanInput();
         if (currentInput.RightMousePressedThisFrame)
         {
-            string activeRoleLabel = activeRole != 0 ? ((Define.TitanRole)activeRole).ToString() : "<none>";
-            InputDebug.Log($"[TitanAttachClick] owner={OwnerClientId} selectedMask=0x{selectedMask:X} activeRole={activeRoleLabel} rmbHeld={currentInput.RightMouseHeld} mouse={currentInput.MousePosition} delta={currentInput.MouseDelta}");
             _attachInputBufferRemaining = AttachInputBufferSeconds;
         }
         else
