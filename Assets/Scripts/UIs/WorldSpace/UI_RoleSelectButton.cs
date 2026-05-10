@@ -153,6 +153,9 @@ public class UI_RoleSelectButton : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private void NotifyRoleSelectButtonClicked()
     {
+        if (Managers.Input.Mode != Define.InputMode.Player)
+            return;
+
         // When UI action map is enabled, the Unity Button can be clicked via EventSystem.
         // Preserve the intended proximity interaction rule.
         if (!_isInteractableByProximity)
@@ -185,6 +188,15 @@ public class UI_RoleSelectButton : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private void RefreshProximityOutline()
     {
+        if (Managers.Input.Mode != Define.InputMode.Player)
+        {
+            _isInteractableByProximity = false;
+            _currentProximitySqrDistance = float.PositiveInfinity;
+            SetOutlineVisible(false);
+            SetUiHighlight(false);
+            return;
+        }
+
         if (!Managers.LobbySession.HasJoinedLobbySession)
         {
             _isInteractableByProximity = false;
@@ -216,6 +228,9 @@ public class UI_RoleSelectButton : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private void TryHandleDirectClick()
     {
+        if (Managers.Input.Mode != Define.InputMode.Player)
+            return;
+
         if (!_isInteractableByProximity)
             return;
 

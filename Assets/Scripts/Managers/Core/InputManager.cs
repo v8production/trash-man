@@ -80,6 +80,8 @@ public class InputManager
     public TitanAggregatedInput CaptureTitanInput()
     {
         TitanAggregatedInput input = default;
+        if (Mode != Define.InputMode.Player)
+            return input;
 
         input.MouseDelta = ReadTitanMouseDelta();
         input.MousePosition = ReadMousePosition();
@@ -108,6 +110,9 @@ public class InputManager
 
     public Vector2 ReadTitanMouseDelta()
     {
+        if (Mode != Define.InputMode.Player)
+            return Vector2.zero;
+
         Mouse mouse = Mouse.current;
         if (mouse == null)
             return Vector2.zero;
@@ -117,6 +122,9 @@ public class InputManager
 
     public Vector2 ReadPlayerLookInput()
     {
+        if (Mode != Define.InputMode.Player)
+            return Vector2.zero;
+
         if (_lookAction != null)
             return _lookAction.ReadValue<Vector2>();
 
@@ -129,12 +137,18 @@ public class InputManager
 
     public bool IsRightMouseHeld()
     {
+        if (Mode != Define.InputMode.Player)
+            return false;
+
         Mouse mouse = Mouse.current;
         return mouse != null && mouse.rightButton.isPressed;
     }
 
     public bool WasRightMousePressedThisFrame()
     {
+        if (Mode != Define.InputMode.Player)
+            return false;
+
         Mouse mouse = Mouse.current;
         return mouse != null && mouse.rightButton.wasPressedThisFrame;
     }
@@ -147,6 +161,9 @@ public class InputManager
 
     public Vector2 ReadMousePosition()
     {
+        if (Mode != Define.InputMode.Player)
+            return Vector2.zero;
+
         Mouse mouse = Mouse.current;
         if (mouse == null)
             return Vector2.zero;
@@ -177,6 +194,9 @@ public class InputManager
 
     public float GetAxis(Key positive, Key negative)
     {
+        if (Mode != Define.InputMode.Player)
+            return 0f;
+
         float axis = 0f;
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null)
@@ -193,6 +213,9 @@ public class InputManager
 
     public bool WasDigitPressedThisFrame(int digitOneToFive)
     {
+        if (Mode != Define.InputMode.Player)
+            return false;
+
         switch (digitOneToFive)
         {
             case 1:
