@@ -23,6 +23,10 @@ public sealed class TitanClawWireController : MonoBehaviour
     [SerializeField] private float slackSagMultiplier = 0.4f;
     [SerializeField] private float blockedPileupMultiplier = 0.8f;
     [SerializeField] private float wireWidth = 0.035f;
+    [SerializeField] private Texture2D wireTileTexture;
+    [SerializeField] private float wireTileWorldLength = 0.35f;
+
+    private const string DefaultWireTextureResourcePath = "Arts/Titan/Texture/Chain";
 
     private TitanClawWirePhase _phase;
     private float _phaseTime;
@@ -288,41 +292,41 @@ public sealed class TitanClawWireController : MonoBehaviour
 
     private void RenderWireCurve()
     {
-        Vector3 start = ResolveWireAnchorPosition();
-        Vector3 end = ResolveClawPosition();
-        UpdateSlackLength(start);
+        Vector3 anchor = ResolveWireAnchorPosition();
+        Vector3 claw = ResolveClawPosition();
+        UpdateSlackLength(anchor);
 
         int segments = Mathf.Max(2, lineSegmentCount);
         _wireRenderer.positionCount = segments;
 
-        float distance = Vector3.Distance(start, end);
+        float distance = Vector3.Distance(anchor, claw);
         float slack = Mathf.Max(0f, _currentChainLength - distance);
 
-        // Simple quadratic bezier with sag driven by slack.
         float baseSag = 0.05f;
         float sagAmount = baseSag + (slack * slackSagMultiplier);
-        Vector3 midpoint = (start + end) * 0.5f;
+        Vector3 midpoint = (anchor + claw) * 0.5f;
         Vector3 control = midpoint + (Vector3.down * sagAmount);
 
         bool blockedPileup = _phase == TitanClawWirePhase.HitBlocked && slack > 0.001f;
         float pileupStartT = 0.6f;
         float pileupExponent = Mathf.Lerp(1f, 0.25f, Mathf.Clamp01(blockedPileupMultiplier));
 
+        Vector3[] points = new Vector3[segments];
+
         for (int i = 0; i < segments; i++)
         {
             float t = segments == 1 ? 1f : i / (float)(segments - 1);
             float warpedT = t;
+
             if (blockedPileup && t >= pileupStartT)
             {
                 float u = Mathf.InverseLerp(pileupStartT, 1f, t);
-                // exponent < 1 pushes points closer to claw
                 float uWarped = Mathf.Pow(u, pileupExponent);
                 warpedT = Mathf.Lerp(pileupStartT, 1f, uWarped);
             }
 
-            Vector3 p = EvaluateQuadraticBezier(start, control, end, warpedT);
+            Vector3 p = EvaluateQuadraticBezier(anchor, control, claw, warpedT);
 
-            // Additional pileup sag near claw when blocked and slack exists.
             if (blockedPileup)
             {
                 float nearEnd = Mathf.InverseLerp(pileupStartT, 1f, t);
@@ -330,7 +334,34 @@ public sealed class TitanClawWireController : MonoBehaviour
                 p += Vector3.down * extraSag;
             }
 
+            points[i] = p;
+        }
+
+        float curveLength = 0f;
+
+        for (int i = 0; i < segments; i++)
+        {
+            Vector3 p = points[segments - 1 - i];
             _wireRenderer.SetPosition(i, p);
+
+            if (i > 0)
+            {
+                Vector3 prev = points[segments - i];
+                curveLength += Vector3.Distance(prev, p);
+            }
+        }
+
+        float tileLen = Mathf.Max(0.01f, wireTileWorldLength);
+        float repeats = Mathf.Max(0.001f, curveLength / tileLen);
+
+        _wireRenderer.textureMode = LineTextureMode.RepeatPerSegment;
+        _wireRenderer.textureScale = new Vector2(repeats, 1f);
+
+        if (_wireMaterial != null && _wireMaterial.mainTexture != null)
+        {
+            float endU = repeats;
+            float offsetX = Mathf.Ceil(endU) - endU;
+            _wireMaterial.mainTextureOffset = new Vector2(offsetX, 0f);
         }
     }
 
@@ -501,8 +532,24 @@ public sealed class TitanClawWireController : MonoBehaviour
         _wireRenderer.startWidth = wireWidth;
         _wireRenderer.endWidth = wireWidth;
         _wireRenderer.numCapVertices = 4;
-        _wireMaterial = new Material(Shader.Find("Sprites/Default"));
-        _wireMaterial.color = Color.yellow;
+        _wireRenderer.textureMode = LineTextureMode.RepeatPerSegment;
+
+        if (wireTileTexture == null)
+            wireTileTexture = Resources.Load<Texture2D>(DefaultWireTextureResourcePath);
+
+        Shader shader = Shader.Find("Unlit/Texture");
+        if (shader == null)
+            shader = Shader.Find("Sprites/Default");
+
+        _wireMaterial = new Material(shader);
+        _wireMaterial.color = Color.white;
+        if (wireTileTexture != null)
+        {
+            wireTileTexture.wrapMode = TextureWrapMode.Repeat;
+            _wireMaterial.mainTexture = wireTileTexture;
+            _wireMaterial.mainTextureScale = Vector2.one;
+        }
+
         _wireRenderer.material = _wireMaterial;
     }
 
