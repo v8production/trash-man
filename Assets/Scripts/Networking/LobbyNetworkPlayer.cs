@@ -743,7 +743,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             for (int m = 0; m < sharedMaterials.Length; m++)
             {
                 Material mat = sharedMaterials[m];
-                if (mat != null && mat.name == "Ranger Color_Mat")
+                if (mat != null && mat.name.StartsWith("Ranger Color_Mat"))
                 {
                     targetMaterialIndex = m;
                     break;
@@ -760,10 +760,11 @@ public class LobbyNetworkPlayer : NetworkBehaviour
                 continue;
             }
 
-            // Set ONLY the "Color" property on Ranger Color_Mat.
+            // Apply color to both common properties so builds/shaders stay consistent.
             Color color = RgbaToColor(_rangerColorRgba.Value);
             renderer.GetPropertyBlock(_rangerColorPropertyBlock, targetMaterialIndex);
             _rangerColorPropertyBlock.SetColor("_Color", color);
+            _rangerColorPropertyBlock.SetColor("_BaseColor", color);
             renderer.SetPropertyBlock(_rangerColorPropertyBlock, targetMaterialIndex);
         }
     }
