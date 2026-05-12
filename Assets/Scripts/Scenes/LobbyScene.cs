@@ -132,7 +132,9 @@ public class LobbyScene : BaseScene
 
         _pendingHostBootstrap = Managers.Scene.ConsumeLobbyHostRequest();
         _pendingJoinCode = Managers.Scene.ConsumeLobbyJoinCodeRequest(out string joinCode) ? joinCode : string.Empty;
-        _isLobbySetupPending = _pendingHostBootstrap || !string.IsNullOrWhiteSpace(_pendingJoinCode);
+        _isLobbySetupPending = _pendingHostBootstrap
+            || !string.IsNullOrWhiteSpace(_pendingJoinCode)
+            || Managers.LobbySession.HasPendingSteamLobbyJoin;
 
         if (_isLobbySetupPending)
         {
