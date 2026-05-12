@@ -15,14 +15,16 @@ public class UI_Intro : UI_Scene
     enum Buttons
     {
         NewGame,
-        Join,
+        JoinGame,
+        EnterCode,
         Quit,
     }
 
     enum Texts
     {
         NewGame,
-        Join,
+        JoinGame,
+        EnterCode,
         Quit,
     }
 
@@ -36,8 +38,17 @@ public class UI_Intro : UI_Scene
         Bind<TextMeshProUGUI>(typeof(Texts));
 
         GetButton((int)Buttons.NewGame).gameObject.BindEvent(OnNewGameButtonClicked);
-        GetButton((int)Buttons.Join).gameObject.BindEvent(OnJoinButtonClicked);
+        GetButton((int)Buttons.JoinGame).gameObject.BindEvent(OnJoinGameCodeButtonClicked);
+        GetButton((int)Buttons.EnterCode).gameObject.BindEvent(OnEnterCodeButtonClicked);
         GetButton((int)Buttons.Quit).gameObject.BindEvent(OnQuitButtonClicked);
+
+        TextMeshProUGUI joinGameText = Get<TextMeshProUGUI>((int)Texts.JoinGame);
+        if (joinGameText != null)
+            joinGameText.text = "Join Game";
+
+        TextMeshProUGUI enterCodeText = Get<TextMeshProUGUI>((int)Texts.EnterCode);
+        if (enterCodeText != null)
+            enterCodeText.text = "Enter Code";
     }
 
     private void OnNewGameButtonClicked(PointerEventData eventData)
@@ -49,7 +60,21 @@ public class UI_Intro : UI_Scene
         Managers.Scene.LoadLobbyAsHost();
     }
 
-    private void OnJoinButtonClicked(PointerEventData eventData)
+    private void OnJoinGameCodeButtonClicked(PointerEventData eventData)
+    {
+        if (_isTransitioning)
+            return;
+
+        if (!Managers.Steam.IsInitialized)
+        {
+            Managers.Toast.EnqueueMessage($"Steam is not initialized.\n{Managers.Steam.LastInitError}", 3f);
+            return;
+        }
+
+        Managers.LobbySession.OpenSteamFriendsOverlay();
+    }
+
+    private void OnEnterCodeButtonClicked(PointerEventData eventData)
     {
         if (_isTransitioning)
             return;

@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class Util
 {
-    private const int MaxLobbyJoinCodeLength = 20;
+    private const int LobbyJoinCodeLength = 6;
 
     public static string NormalizeLobbyJoinCode(string value)
     {
@@ -10,16 +10,54 @@ public class Util
             return string.Empty;
 
         string trimmed = value.Trim();
-        if (trimmed.Length == 0 || trimmed.Length > MaxLobbyJoinCodeLength)
+        if (trimmed.Length != LobbyJoinCodeLength)
             return string.Empty;
 
-        for (int i = 0; i < trimmed.Length; i++)
+        bool hasLetter = false;
+        bool hasDigit = false;
+
+        char[] normalized = new char[LobbyJoinCodeLength];
+        for (int i = 0; i < LobbyJoinCodeLength; i++)
         {
-            if (!char.IsDigit(trimmed[i]))
+            char c = char.ToUpperInvariant(trimmed[i]);
+            bool isDigit = c >= '0' && c <= '9';
+            bool isLetter = c >= 'A' && c <= 'Z';
+            if (!isDigit && !isLetter)
                 return string.Empty;
+
+            hasDigit |= isDigit;
+            hasLetter |= isLetter;
+            normalized[i] = c;
         }
 
-        return trimmed;
+        if (!hasDigit || !hasLetter)
+            return string.Empty;
+
+        return new string(normalized);
+    }
+
+    public static string CreateLobbyJoinCode()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+        // Requirement: 6 chars, must include both letters and digits.
+        while (true)
+        {
+            bool hasLetter = false;
+            bool hasDigit = false;
+
+            char[] code = new char[LobbyJoinCodeLength];
+            for (int i = 0; i < LobbyJoinCodeLength; i++)
+            {
+                char c = chars[Random.Range(0, chars.Length)];
+                code[i] = c;
+                hasDigit |= c >= '0' && c <= '9';
+                hasLetter |= c >= 'A' && c <= 'Z';
+            }
+
+            if (hasDigit && hasLetter)
+                return new string(code);
+        }
     }
 
     public static T GetorAddComponent<T>(GameObject go) where T : Component
