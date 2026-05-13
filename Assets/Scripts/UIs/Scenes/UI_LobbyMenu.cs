@@ -113,15 +113,13 @@ public class UI_LobbyMenu : UI_Menu
 
     private void OnInviteRoomButtonClicked(PointerEventData eventData)
     {
-        string joinCode = Managers.LobbySession.CurrentJoinCode;
-        if (string.IsNullOrWhiteSpace(joinCode))
+        if (!Managers.Steam.IsInitialized)
         {
-            Managers.Toast.EnqueueMessage("Host Steam ID is not ready yet.", 2.5f);
+            Managers.Toast.EnqueueMessage($"Steam is not initialized.\n{Managers.Steam.LastInitError}", 3f);
             return;
         }
 
-        GUIUtility.systemCopyBuffer = joinCode;
-        Managers.Toast.EnqueueMessage($"Host Steam ID copied: {joinCode}", 2.5f);
+        Managers.LobbySession.OpenSteamFriendsOverlay();
     }
 
     private void OnBackToLobbyButtonClicked(PointerEventData eventData)

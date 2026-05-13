@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public class UI_EnterCode : UI_Scene
 {
-    private const int MaxCodeLength = 20;
+    private const int MaxCodeLength = 6;
 
     enum Images
     {
@@ -52,7 +52,7 @@ public class UI_EnterCode : UI_Scene
         string normalizedCode = Util.NormalizeLobbyJoinCode(rawInput);
         if (string.IsNullOrWhiteSpace(normalizedCode))
         {
-            Managers.Toast.EnqueueMessage("Please enter a valid host Steam ID.", 2f);
+            Managers.Toast.EnqueueMessage("Please enter a valid 6-character join code.", 2f);
             return;
         }
 

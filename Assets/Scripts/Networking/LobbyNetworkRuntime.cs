@@ -5,6 +5,7 @@ using UnityEngine;
 
 public static class LobbyNetworkRuntime
 {
+    private const int MaxLobbyPlayers = 5;
     private const string RuntimeRootName = "@NetworkManager";
     private const string NetworkObjectPrefabPath = "Prefabs/@NetworkObject";
 
@@ -90,12 +91,28 @@ public static class LobbyNetworkRuntime
 
         networkManager.NetworkConfig.NetworkTransport = transport;
         networkManager.NetworkConfig.EnableSceneManagement = false;
-        networkManager.NetworkConfig.ConnectionApproval = false;
+        networkManager.NetworkConfig.ConnectionApproval = true;
         networkManager.NetworkConfig.ForceSamePrefabs = false;
         networkManager.NetworkConfig.PlayerPrefab = playerPrefab;
 
+        networkManager.ConnectionApprovalCallback -= HandleConnectionApproval;
+        networkManager.ConnectionApprovalCallback += HandleConnectionApproval;
+
         EnsureNetworkPrefabRegistered(networkManager, playerPrefab);
         return true;
+    }
+
+    private static void HandleConnectionApproval(
+        NetworkManager.ConnectionApprovalRequest request,
+        NetworkManager.ConnectionApprovalResponse response)
+    {
+        NetworkManager networkManager = Object.FindAnyObjectByType<NetworkManager>();
+        int connectedCount = networkManager != null ? networkManager.ConnectedClientsIds.Count : 0;
+
+        response.Approved = connectedCount < MaxLobbyPlayers;
+        response.CreatePlayerObject = true;
+        response.Pending = false;
+        response.Reason = response.Approved ? string.Empty : "Lobby is full.";
     }
 
     private static GameObject EnsurePlayerPrefab()

@@ -1,14 +1,27 @@
 using System.Collections.Generic;
 using Netcode.Transports;
+using Steamworks;
 using Unity.Netcode;
 using UnityEngine;
 
 public class LobbySessionManager
 {
+    private const int LobbyCapacity = 5;
+    private const string LobbyJoinCodeKey = "join_code";
+    private const string LobbyHostSteamIdKey = "host_steam_id";
+
     private readonly Dictionary<string, RangerController> _rangersByUserId = new();
     private readonly Dictionary<string, UI_Nickname> _nicknamesByUserId = new();
 
     private ulong _currentHostSteamId;
+
+    private CSteamID _currentSteamLobbyId = CSteamID.Nil;
+
+    private bool _steamCallbacksReady;
+    private Callback<LobbyEnter_t> _lobbyEnterCallback;
+    private Callback<GameLobbyJoinRequested_t> _gameLobbyJoinRequestedCallback;
+    private CallResult<LobbyCreated_t> _lobbyCreatedResult;
+    private CallResult<LobbyMatchList_t> _lobbyMatchListResult;
 
     private bool _pendingSteamClientConnect;
     private bool _hasRequestedSteamClientStart;
@@ -23,6 +36,7 @@ public class LobbySessionManager
     public string CurrentJoinCode { get; private set; } = string.Empty;
     public string CurrentVoiceSecret => string.Empty;
     public bool HasJoinedLobbySession => IsLobbyNetworkConnected;
+    public bool HasPendingSteamLobbyJoin { get; private set; }
 
     public bool HasLobbyNetworkConnectionFailed { get; private set; }
     public string LastLobbyNetworkError { get; private set; } = string.Empty;
@@ -47,6 +61,8 @@ public class LobbySessionManager
         HostUserId = string.Empty;
         CurrentJoinCode = string.Empty;
         _currentHostSteamId = 0;
+        _currentSteamLobbyId = CSteamID.Nil;
+        HasPendingSteamLobbyJoin = false;
         _pendingSteamClientConnect = false;
         _hasRequestedSteamClientStart = false;
         _pendingSteamClientConnectDeadline = 0f;
@@ -124,32 +140,49 @@ public class LobbySessionManager
     public bool JoinLobbyByCode(string rawJoinCode)
     {
         string joinCode = NormalizeJoinCode(rawJoinCode);
-        if (string.IsNullOrWhiteSpace(joinCode) || !ulong.TryParse(joinCode, out ulong hostSteamId) || hostSteamId == 0)
+
+        if (!Managers.Steam.IsInitialized)
         {
-            Debug.LogWarning("[Lobby] Join failed: invalid host Steam ID.");
+            Debug.LogWarning("[Lobby] Join failed: Steam is not initialized.");
             return false;
         }
+
+        if (string.IsNullOrWhiteSpace(joinCode))
+        {
+            Debug.LogWarning("[Lobby] Join failed: invalid join code.");
+            return false;
+        }
+
+        EnsureSteamCallbacks();
 
         CleanupExistingLobbyObjects();
 
         CurrentJoinCode = joinCode;
-        _currentHostSteamId = hostSteamId;
+        _currentHostSteamId = 0;
+        _currentSteamLobbyId = CSteamID.Nil;
+        HasPendingSteamLobbyJoin = true;
         _pendingSteamClientConnect = false;
         _hasRequestedSteamClientStart = false;
         _pendingSteamClientConnectDeadline = 0f;
 
-        if (!TryStartSteamClient(hostSteamId))
-        {
-            Debug.LogWarning($"[Lobby] Join failed: Steam client did not start. hostSteamId={hostSteamId}");
-            return false;
-        }
+        SteamMatchmaking.AddRequestLobbyListStringFilter(
+            LobbyJoinCodeKey,
+            joinCode,
+            ELobbyComparison.k_ELobbyComparisonEqual);
 
-        _hasRequestedSteamClientStart = true;
+        SteamAPICall_t call = SteamMatchmaking.RequestLobbyList();
+        _lobbyMatchListResult.Set(call);
         return true;
     }
 
     public void QuitCurrentRoom()
     {
+        if (Managers.Steam.IsInitialized && _currentSteamLobbyId.IsValid())
+        {
+            SteamMatchmaking.LeaveLobby(_currentSteamLobbyId);
+            _currentSteamLobbyId = CSteamID.Nil;
+        }
+
         TryStopNetwork();
         _rangersByUserId.Clear();
         _nicknamesByUserId.Clear();
@@ -157,6 +190,7 @@ public class LobbySessionManager
         HostUserId = string.Empty;
         CurrentJoinCode = string.Empty;
         _currentHostSteamId = 0;
+        HasPendingSteamLobbyJoin = false;
         _pendingSteamClientConnect = false;
         _hasRequestedSteamClientStart = false;
         _pendingSteamClientConnectDeadline = 0f;
@@ -179,8 +213,10 @@ public class LobbySessionManager
 
         ulong localSteamId = Managers.Steam.LocalSteamId.m_SteamID;
         HostUserId = Managers.Steam.LocalUserId;
-        CurrentJoinCode = localSteamId != 0 ? localSteamId.ToString() : string.Empty;
+        CurrentJoinCode = Util.CreateLobbyJoinCode();
         _currentHostSteamId = localSteamId;
+        _currentSteamLobbyId = CSteamID.Nil;
+        HasPendingSteamLobbyJoin = false;
         _pendingSteamClientConnect = false;
         _hasRequestedSteamClientStart = false;
         _pendingSteamClientConnectDeadline = 0f;
@@ -197,9 +233,45 @@ public class LobbySessionManager
             return;
         }
 
+        EnsureSteamCallbacks();
+
+        SteamAPICall_t createCall = SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypePublic, LobbyCapacity);
+        _lobbyCreatedResult.Set(createCall);
+
         GUIUtility.systemCopyBuffer = CurrentJoinCode;
-        Managers.Toast.EnqueueMessage("Host Steam ID is copied to clipboard.", 2.5f);
-        Debug.Log($"[Lobby] Steam lobby ready. hostSteamId={_currentHostSteamId}, localHosting={IsHosting}");
+        Managers.Toast.EnqueueMessage("Join code copied to clipboard.", 2.5f);
+        Debug.Log($"[Lobby] Lobby host ready. hostSteamId={_currentHostSteamId}, joinCode={CurrentJoinCode}");
+    }
+
+    public void OpenSteamFriendsOverlay()
+    {
+        if (!Managers.Steam.IsInitialized)
+            return;
+
+        SteamFriends.ActivateGameOverlay("Friends");
+    }
+
+    public bool OpenSteamInviteOverlay()
+    {
+        if (!Managers.Steam.IsInitialized)
+            return false;
+
+        if (!_currentSteamLobbyId.IsValid())
+            return false;
+
+        SteamFriends.ActivateGameOverlayInviteDialog(_currentSteamLobbyId);
+        return true;
+    }
+
+    public bool OpenSteamInviteOverlayOrFriends()
+    {
+        if (!OpenSteamInviteOverlay())
+        {
+            OpenSteamFriendsOverlay();
+            return false;
+        }
+
+        return true;
     }
 
     private static void CleanupExistingLobbyObjects()
@@ -246,6 +318,110 @@ public class LobbySessionManager
             Managers.Toast.EnqueueMessage("Failed to connect to lobby host.", 2.5f);
             Managers.Scene.LoadScene(Define.Scene.Intro);
         }
+    }
+
+    private void EnsureSteamCallbacks()
+    {
+        if (_steamCallbacksReady)
+            return;
+
+        if (!Managers.Steam.IsInitialized)
+            return;
+
+        _steamCallbacksReady = true;
+
+        _lobbyEnterCallback = Callback<LobbyEnter_t>.Create(HandleLobbyEnter);
+        _gameLobbyJoinRequestedCallback = Callback<GameLobbyJoinRequested_t>.Create(HandleGameLobbyJoinRequested);
+        _lobbyCreatedResult = CallResult<LobbyCreated_t>.Create(HandleLobbyCreated);
+        _lobbyMatchListResult = CallResult<LobbyMatchList_t>.Create(HandleLobbyMatchList);
+    }
+
+    private void HandleLobbyCreated(LobbyCreated_t callback, bool ioFailure)
+    {
+        if (!IsHosting)
+            return;
+
+        if (ioFailure || callback.m_eResult != EResult.k_EResultOK)
+        {
+            Debug.LogWarning($"[Lobby] Steam lobby create failed. ioFailure={ioFailure}, result={callback.m_eResult}");
+            Managers.Toast.EnqueueMessage("Failed to create Steam lobby.", 2.5f);
+            return;
+        }
+
+        _currentSteamLobbyId = new CSteamID(callback.m_ulSteamIDLobby);
+
+        SteamMatchmaking.SetLobbyJoinable(_currentSteamLobbyId, true);
+        SteamMatchmaking.SetLobbyMemberLimit(_currentSteamLobbyId, LobbyCapacity);
+        SteamMatchmaking.SetLobbyData(_currentSteamLobbyId, LobbyJoinCodeKey, CurrentJoinCode);
+        SteamMatchmaking.SetLobbyData(_currentSteamLobbyId, LobbyHostSteamIdKey, _currentHostSteamId.ToString());
+
+        Debug.Log($"[Lobby] Steam lobby created. lobbyId={_currentSteamLobbyId.m_SteamID}, joinCode={CurrentJoinCode}");
+    }
+
+    private void HandleLobbyMatchList(LobbyMatchList_t callback, bool ioFailure)
+    {
+        if (IsHosting)
+            return;
+
+        if (ioFailure || callback.m_nLobbiesMatching <= 0)
+        {
+            HasPendingSteamLobbyJoin = false;
+            HasLobbyNetworkConnectionFailed = true;
+            LastLobbyNetworkError = "No matching lobby found for that join code.";
+            Debug.LogWarning($"[Lobby] {LastLobbyNetworkError}");
+            Managers.Toast.EnqueueMessage("No lobby found for that join code.", 2.5f);
+            Managers.Scene.LoadScene(Define.Scene.Intro);
+            return;
+        }
+
+        CSteamID lobbyId = SteamMatchmaking.GetLobbyByIndex(0);
+        SteamMatchmaking.JoinLobby(lobbyId);
+    }
+
+    private void HandleGameLobbyJoinRequested(GameLobbyJoinRequested_t callback)
+    {
+        if (!Managers.Steam.IsInitialized)
+            return;
+
+        // User accepted invite or selected Join Game from Steam overlay.
+        HasPendingSteamLobbyJoin = true;
+        Managers.Scene.LoadScene(Define.Scene.Lobby);
+        SteamMatchmaking.JoinLobby(callback.m_steamIDLobby);
+    }
+
+    private void HandleLobbyEnter(LobbyEnter_t callback)
+    {
+        if (IsHosting)
+            return;
+
+        _currentSteamLobbyId = new CSteamID(callback.m_ulSteamIDLobby);
+        CSteamID owner = SteamMatchmaking.GetLobbyOwner(_currentSteamLobbyId);
+        ulong hostSteamId = owner.m_SteamID;
+        if (hostSteamId == 0)
+        {
+            HasPendingSteamLobbyJoin = false;
+            HasLobbyNetworkConnectionFailed = true;
+            LastLobbyNetworkError = "Failed to resolve lobby owner.";
+            Debug.LogWarning($"[Lobby] {LastLobbyNetworkError}");
+            Managers.Scene.LoadScene(Define.Scene.Intro);
+            return;
+        }
+
+        _currentHostSteamId = hostSteamId;
+
+        if (!TryStartSteamClient(hostSteamId))
+        {
+            HasPendingSteamLobbyJoin = false;
+            HasLobbyNetworkConnectionFailed = true;
+            LastLobbyNetworkError = $"Failed to start Steam client. hostSteamId={hostSteamId}";
+            Debug.LogWarning($"[Lobby] {LastLobbyNetworkError}");
+            Managers.Toast.EnqueueMessage("Failed to connect to lobby host.", 2.5f);
+            Managers.Scene.LoadScene(Define.Scene.Intro);
+            return;
+        }
+
+        _hasRequestedSteamClientStart = true;
+        HasPendingSteamLobbyJoin = false;
     }
 
     private bool TryStartSteamHost()
