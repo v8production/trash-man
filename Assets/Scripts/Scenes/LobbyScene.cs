@@ -359,6 +359,13 @@ public class LobbyScene : BaseScene
         int currentMask = localPlayer.SelectedTitanRoleMaskValue;
         int bit = 1 << (((int)selectedRole) - (int)Define.TitanRole.Torso);
         int nextMask = currentMask ^ bit;
+        bool isSelecting = (currentMask & bit) == 0;
+
+        if (isSelecting && localPlayer.IsTitanRoleSelectedByOtherPlayer(selectedRole))
+        {
+            Managers.Toast.EnqueueMessage($"Already selected: {GetRoleLabel(selectedRole)}", 1.4f);
+            return false;
+        }
 
         localPlayer.ToggleTitanRoleSelection(selectedRole);
 

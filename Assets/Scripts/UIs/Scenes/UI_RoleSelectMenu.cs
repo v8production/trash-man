@@ -99,6 +99,8 @@ public class UI_RoleSelectMenu : UI_Menu
     {
         LobbyNetworkPlayer[] players = FindObjectsByType<LobbyNetworkPlayer>();
         Dictionary<Define.TitanRole, List<string>> namesByRole = new();
+        int localRoleMask = 0;
+        int occupiedByOtherMask = 0;
 
         if (players != null && players.Length > 0)
         {
@@ -129,6 +131,11 @@ public class UI_RoleSelectMenu : UI_Menu
                 if (roleMask == 0)
                     continue;
 
+                if (player.IsOwner)
+                    localRoleMask |= roleMask;
+                else
+                    occupiedByOtherMask |= roleMask;
+
                 int selectedRoleCount = CountBits(roleMask);
                 string formattedName = selectedRoleCount > 1
                     ? $"{displayName} ({selectedRoleCount}개 역할)"
@@ -147,6 +154,11 @@ public class UI_RoleSelectMenu : UI_Menu
         ApplyRoleNicknameText(namesByRole, Define.TitanRole.RightArm, Texts.RightArmNickname);
         ApplyRoleNicknameText(namesByRole, Define.TitanRole.LeftLeg, Texts.LeftLegNickname);
         ApplyRoleNicknameText(namesByRole, Define.TitanRole.RightLeg, Texts.RightLegNickname);
+        ApplyRoleButtonInteractable(Define.TitanRole.Torso, Buttons.Torso, localRoleMask, occupiedByOtherMask);
+        ApplyRoleButtonInteractable(Define.TitanRole.LeftArm, Buttons.LeftArm, localRoleMask, occupiedByOtherMask);
+        ApplyRoleButtonInteractable(Define.TitanRole.RightArm, Buttons.RightArm, localRoleMask, occupiedByOtherMask);
+        ApplyRoleButtonInteractable(Define.TitanRole.LeftLeg, Buttons.LeftLeg, localRoleMask, occupiedByOtherMask);
+        ApplyRoleButtonInteractable(Define.TitanRole.RightLeg, Buttons.RightLeg, localRoleMask, occupiedByOtherMask);
     }
 
     private void ApplyRoleNicknameText(Dictionary<Define.TitanRole, List<string>> namesByRole, Define.TitanRole role, Texts targetText)
@@ -160,9 +172,19 @@ public class UI_RoleSelectMenu : UI_Menu
         }
 
         names.Sort(StringComparer.OrdinalIgnoreCase);
-        bool hasDuplicateOwners = names.Count > 1;
-        string header = hasDuplicateOwners ? $"{roleLabel} [중복]" : roleLabel;
-        SetNicknameText(targetText, $"{header} -\n{string.Join("\n", names)}");
+        SetNicknameText(targetText, $"{roleLabel} -\n{string.Join("\n", names)}");
+    }
+
+    private void ApplyRoleButtonInteractable(Define.TitanRole role, Buttons targetButton, int localRoleMask, int occupiedByOtherMask)
+    {
+        Button button = GetButton((int)targetButton);
+        if (button == null)
+            return;
+
+        int bit = 1 << (((int)role) - (int)Define.TitanRole.Torso);
+        bool isSelectedByLocalPlayer = (localRoleMask & bit) != 0;
+        bool isSelectedByOtherPlayer = (occupiedByOtherMask & bit) != 0;
+        button.interactable = isSelectedByLocalPlayer || !isSelectedByOtherPlayer;
     }
 
     private static void AddRoleNameIfSelected(Dictionary<Define.TitanRole, List<string>> namesByRole, Define.TitanRole role, int roleMask, string displayName)

@@ -18,6 +18,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private readonly NetworkVariable<int> _activeTitanRole = new(0);
     // Packed RGBA (0xRRGGBBAA) for compatibility with NGO primitive NetworkVariable types.
     private readonly NetworkVariable<int> _rangerColorRgba = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    private readonly NetworkVariable<FixedString4096Bytes> _rangerFacePayload = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanRoleInputPayload> _roleInput = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanRigPosePayload> _titanPose = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> _titanGauge = new(100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -29,11 +30,15 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private LobbyCameraController _localCamera;
 
     private MaterialPropertyBlock _rangerColorPropertyBlock;
+    private Texture2D _rangerFaceTexture;
 
     private Animator _remoteAnimator;
     private Vector3 _remoteLastPosition;
     private bool _remoteHasLastPosition;
     private bool _remoteWasWalking;
+    private bool _remoteEmotionActive;
+    private Define.RangerAnimState _remoteEmotionState;
+    private bool _subscribedLobbyRangerEmotion;
 
     private bool _submittedIdentity;
 
@@ -135,6 +140,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _selectedTitanRoleMask.OnValueChanged += HandleSelectedRoleChanged;
         _activeTitanRole.OnValueChanged += HandleActiveRoleChanged;
         _rangerColorRgba.OnValueChanged += HandleRangerColorChanged;
+        _rangerFacePayload.OnValueChanged += HandleRangerFaceChanged;
 
         if (isLobbyScene)
         {
@@ -144,6 +150,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             RefreshIdentityPresentation();
 
             ApplyRangerColorPresentation();
+            ApplyRangerFacePresentation();
 
             // Ensure an initial, deterministic spawn position is applied on the server.
             // This avoids a frame of (0,0,0) before the first NetworkTransform tick.
@@ -170,6 +177,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             {
                 EnsureLocalCamera();
                 SubmitIdentityServerRpc(Managers.Steam.LocalUserId, Managers.Steam.LocalDisplayName);
+                SubmitLocalSavedFace();
                 _submittedIdentity = true;
             }
             else if (isGameScene)
@@ -187,6 +195,13 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _selectedTitanRoleMask.OnValueChanged -= HandleSelectedRoleChanged;
         _activeTitanRole.OnValueChanged -= HandleActiveRoleChanged;
         _rangerColorRgba.OnValueChanged -= HandleRangerColorChanged;
+        _rangerFacePayload.OnValueChanged -= HandleRangerFaceChanged;
+
+        if (_lobbyRanger != null && _subscribedLobbyRangerEmotion)
+        {
+            _lobbyRanger.EmotionRequested -= HandleLocalRangerEmotionRequested;
+            _subscribedLobbyRangerEmotion = false;
+        }
 
         string lobbyUserId = GetLobbyUserId();
         if (!string.IsNullOrWhiteSpace(lobbyUserId))
@@ -204,6 +219,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (_lobbyRanger != null)
             Destroy(_lobbyRanger.gameObject);
 
+        ClearRangerFaceTexture();
+
         base.OnNetworkDespawn();
     }
 
@@ -218,7 +235,16 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private void SubmitSelectedTitanRoleMaskServerRpc(int titanRoleMask)
     {
         InputDebug.Log($"[ServerRpc] SubmitSelectedTitanRoleMaskServerRpc from client={OwnerClientId} raw=0x{titanRoleMask:X}");
-        _selectedTitanRoleMask.Value = NormalizeTitanRoleMask(titanRoleMask);
+        int currentMask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
+        int requestedMask = NormalizeTitanRoleMask(titanRoleMask);
+        int addedMask = requestedMask & ~currentMask;
+        int occupiedByOtherMask = GetRoleMaskSelectedByOtherPlayers();
+        int acceptedMask = NormalizeTitanRoleMask(requestedMask & ~occupiedByOtherMask);
+
+        if ((addedMask & occupiedByOtherMask) != 0)
+            InputDebug.LogWarning($"Role selection rejected for client={OwnerClientId}. requested=0x{requestedMask:X}, occupiedByOther=0x{occupiedByOtherMask:X}, accepted=0x{acceptedMask:X}");
+
+        _selectedTitanRoleMask.Value = acceptedMask;
 
         int normalizedMask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
         _rangerColorRgba.Value = ResolveRangerColorRgbaFromRoleMask(normalizedMask);
@@ -257,10 +283,56 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _roleInput.Value = inputPayload;
     }
 
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void SubmitRangerEmotionServerRpc(int rangerAnimStateValue)
+    {
+        Define.RangerAnimState rangerAnimState = (Define.RangerAnimState)rangerAnimStateValue;
+        if (!RangerController.IsEmotionState(rangerAnimState))
+            return;
+
+        PlayRangerEmotionClientRpc(rangerAnimStateValue);
+    }
+
+    [Rpc(SendTo.ClientsAndHost)]
+    private void PlayRangerEmotionClientRpc(int rangerAnimStateValue)
+    {
+        if (IsOwner)
+            return;
+
+        Define.RangerAnimState rangerAnimState = (Define.RangerAnimState)rangerAnimStateValue;
+        if (!RangerController.IsEmotionState(rangerAnimState))
+            return;
+
+        PlayRemoteRangerEmotion(rangerAnimState);
+    }
+
     [Rpc(SendTo.ClientsAndHost)]
     private void LoadGameSceneClientRpc()
     {
         Managers.Scene.LoadScene(Define.Scene.Game);
+    }
+
+    public void SubmitLocalFaceTexture(Texture2D faceTexture)
+    {
+        if (!IsOwner)
+            return;
+
+        string payload = RangerFaceTextureStore.CreateFacePayload(faceTexture);
+        SubmitRangerFacePayloadServerRpc(new FixedString4096Bytes(payload));
+    }
+
+    private void SubmitLocalSavedFace()
+    {
+        if (!IsOwner)
+            return;
+
+        SubmitRangerFacePayloadServerRpc(new FixedString4096Bytes(RangerFaceTextureStore.CreateLocalCustomFacePayload()));
+    }
+
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void SubmitRangerFacePayloadServerRpc(FixedString4096Bytes facePayload)
+    {
+        _rangerFacePayload.Value = facePayload;
     }
 
     public bool TryGetLobbyUserId(out string userId)
@@ -310,6 +382,26 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         SubmitSelectedTitanRoleMaskServerRpc(nextMask);
+    }
+
+    public bool IsTitanRoleSelectedByOtherPlayer(Define.TitanRole titanRole)
+    {
+        int bit = RoleToMaskBit(titanRole);
+        if (bit == 0)
+            return false;
+
+        LobbyNetworkPlayer[] players = FindAllSpawnedPlayers();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || player.OwnerClientId == OwnerClientId)
+                continue;
+
+            if ((NormalizeTitanRoleMask(player._selectedTitanRoleMask.Value) & bit) != 0)
+                return true;
+        }
+
+        return false;
     }
 
     public bool TryGetActiveTitanRole(out Define.TitanRole role)
@@ -659,6 +751,11 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         ApplyRangerColorPresentation();
     }
 
+    private void HandleRangerFaceChanged(FixedString4096Bytes previousValue, FixedString4096Bytes newValue)
+    {
+        ApplyRangerFacePresentation();
+    }
+
     private void UpdateRuntimeObjectName()
     {
         string userId = GetLobbyUserId();
@@ -702,15 +799,38 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         _lobbyRanger = rangerObject.GetComponent<RangerController>();
         _lobbyRangerCharacterController = rangerObject.GetComponent<CharacterController>();
+        SubscribeLobbyRangerEmotion();
         ApplyOwnershipState();
         UpdateLobbyRangerName();
 
         ApplyRangerColorPresentation();
+        ApplyRangerFacePresentation();
 
         // On the owner, drive the network player object's transform from the visible lobby ranger.
         // This is what remote clients will replicate and follow.
         if (IsOwner)
             transform.SetPositionAndRotation(initial, Quaternion.identity);
+    }
+
+    private void SubscribeLobbyRangerEmotion()
+    {
+        if (!IsOwner || _lobbyRanger == null || _subscribedLobbyRangerEmotion)
+            return;
+
+        _lobbyRanger.EmotionRequested += HandleLocalRangerEmotionRequested;
+        _subscribedLobbyRangerEmotion = true;
+    }
+
+    private void HandleLocalRangerEmotionRequested(Define.RangerAnimState rangerAnimState)
+    {
+        if (!IsOwner || !IsSpawned)
+            return;
+
+        BaseScene scene = Managers.Scene.CurrentScene;
+        if (scene == null || scene.SceneType != Define.Scene.Lobby)
+            return;
+
+        SubmitRangerEmotionServerRpc((int)rangerAnimState);
     }
 
     private void ApplyRangerColorPresentation()
@@ -767,6 +887,40 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             _rangerColorPropertyBlock.SetColor("_BaseColor", color);
             renderer.SetPropertyBlock(_rangerColorPropertyBlock, targetMaterialIndex);
         }
+    }
+
+    private void ApplyRangerFacePresentation()
+    {
+        if (_lobbyRanger == null)
+            return;
+
+        string payload = _rangerFacePayload.Value.ToString();
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            ClearRangerFaceTexture();
+            RangerFaceTextureStore.ApplyDefaultTo(_lobbyRanger.gameObject);
+            return;
+        }
+
+        if (!RangerFaceTextureStore.TryCreateTextureFromPayload(payload, out Texture2D faceTexture))
+        {
+            ClearRangerFaceTexture();
+            RangerFaceTextureStore.ApplyDefaultTo(_lobbyRanger.gameObject);
+            return;
+        }
+
+        ClearRangerFaceTexture();
+        _rangerFaceTexture = faceTexture;
+        RangerFaceTextureStore.ApplyTextureTo(_lobbyRanger.gameObject, _rangerFaceTexture);
+    }
+
+    private void ClearRangerFaceTexture()
+    {
+        if (_rangerFaceTexture == null)
+            return;
+
+        Destroy(_rangerFaceTexture);
+        _rangerFaceTexture = null;
     }
 
     private static int ResolveRangerColorRgbaFromRoleMask(int normalizedMask)
@@ -853,11 +1007,76 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _remoteLastPosition = currentPos;
 
         bool walking = speed > 0.15f;
+
+        if (_remoteEmotionActive)
+        {
+            if (walking)
+            {
+                _remoteEmotionActive = false;
+                _remoteWasWalking = true;
+                CrossFadeRemoteRanger(Define.RangerAnimState.Walk_00, 0.10f);
+                return;
+            }
+
+            if (!IsRemoteRangerEmotionFinished())
+                return;
+
+            _remoteEmotionActive = false;
+            _remoteWasWalking = false;
+            CrossFadeRemoteRanger(Define.RangerAnimState.Idle_00, 0.10f);
+            return;
+        }
+
         if (walking == _remoteWasWalking)
             return;
 
         _remoteWasWalking = walking;
-        _remoteAnimator.CrossFade(walking ? Define.RangerAnimState.Walk_00.ToString() : Define.RangerAnimState.Idle_00.ToString(), 0.10f);
+        CrossFadeRemoteRanger(walking ? Define.RangerAnimState.Walk_00 : Define.RangerAnimState.Idle_00, 0.10f);
+    }
+
+    private void PlayRemoteRangerEmotion(Define.RangerAnimState rangerAnimState)
+    {
+        if (_lobbyRanger == null)
+            EnsureLobbyRanger();
+
+        if (_lobbyRanger == null)
+            return;
+
+        if (_remoteAnimator == null)
+            _remoteAnimator = _lobbyRanger.GetComponentInChildren<Animator>(true);
+
+        if (_remoteAnimator == null)
+            return;
+
+        _remoteEmotionActive = true;
+        _remoteEmotionState = rangerAnimState;
+        _remoteWasWalking = false;
+        CrossFadeRemoteRanger(rangerAnimState, 0.10f, 0f);
+    }
+
+    private bool IsRemoteRangerEmotionFinished()
+    {
+        if (_remoteAnimator == null || _remoteAnimator.IsInTransition(0))
+            return false;
+
+        AnimatorStateInfo stateInfo = _remoteAnimator.GetCurrentAnimatorStateInfo(0);
+        return stateInfo.IsName(_remoteEmotionState.ToString()) && stateInfo.normalizedTime >= 1f;
+    }
+
+    private void CrossFadeRemoteRanger(Define.RangerAnimState state, float transitionDuration)
+    {
+        if (_remoteAnimator == null)
+            return;
+
+        _remoteAnimator.CrossFade(state.ToString(), transitionDuration);
+    }
+
+    private void CrossFadeRemoteRanger(Define.RangerAnimState state, float transitionDuration, float normalizedTime)
+    {
+        if (_remoteAnimator == null)
+            return;
+
+        _remoteAnimator.CrossFade(state.ToString(), transitionDuration, 0, normalizedTime);
     }
 
     private void EnsureLocalCamera()
@@ -1022,6 +1241,22 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         }
 
         return Define.TitanRole.Torso;
+    }
+
+    private int GetRoleMaskSelectedByOtherPlayers()
+    {
+        int occupiedMask = 0;
+        LobbyNetworkPlayer[] players = FindAllSpawnedPlayers();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || player.OwnerClientId == OwnerClientId)
+                continue;
+
+            occupiedMask |= NormalizeTitanRoleMask(player._selectedTitanRoleMask.Value);
+        }
+
+        return NormalizeTitanRoleMask(occupiedMask);
     }
 
     private static bool IsValidTitanRoleValue(int roleValue)

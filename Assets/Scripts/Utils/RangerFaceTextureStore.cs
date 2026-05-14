@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using UnityEngine;
 
@@ -15,6 +16,7 @@ public static class RangerFaceTextureStore
     private static Texture2D _cachedRuntimeTexture;
 
     public static string CustomTexturePath => Path.Combine(Application.persistentDataPath, CustomTextureDirectoryName, CustomTextureFileName);
+    public static bool HasCustomTexture => File.Exists(CustomTexturePath);
 
     public static Texture2D CreateEditableTexture()
     {
@@ -37,11 +39,17 @@ public static class RangerFaceTextureStore
 
     public static void ApplyTo(GameObject root)
     {
-        if (root == null)
-            return;
+        ApplyTextureTo(root, LoadRuntimeTexture());
+    }
 
-        Texture2D faceTexture = LoadRuntimeTexture();
-        if (faceTexture == null)
+    public static void ApplyDefaultTo(GameObject root)
+    {
+        ApplyTextureTo(root, LoadDefaultTexture());
+    }
+
+    public static void ApplyTextureTo(GameObject root, Texture texture)
+    {
+        if (root == null || texture == null)
             return;
 
         Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
@@ -53,14 +61,76 @@ public static class RangerFaceTextureStore
                 if (material == null || !material.name.StartsWith(FaceMaterialName))
                     continue;
 
-                ApplyTextureToMaterial(material, faceTexture);
+                ApplyTextureToMaterial(material, texture);
             }
         }
     }
 
+    public static string CreateLocalCustomFacePayload()
+    {
+        if (!HasCustomTexture)
+            return string.Empty;
+
+        return CreateFacePayload(LoadRuntimeTexture());
+    }
+
+    public static string CreateFacePayload(Texture2D sourceTexture)
+    {
+        Texture2D editableTexture = CreateEmptyTexture();
+        CopyPixels(sourceTexture, editableTexture);
+
+        byte[] bytes = new byte[TextureWidth * TextureHeight * 4];
+        Color32[] pixels = editableTexture.GetPixels32();
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            int byteIndex = i * 4;
+            Color32 pixel = pixels[i];
+            bytes[byteIndex] = pixel.r;
+            bytes[byteIndex + 1] = pixel.g;
+            bytes[byteIndex + 2] = pixel.b;
+            bytes[byteIndex + 3] = pixel.a;
+        }
+
+        UnityEngine.Object.Destroy(editableTexture);
+        return Convert.ToBase64String(bytes);
+    }
+
+    public static bool TryCreateTextureFromPayload(string payload, out Texture2D texture)
+    {
+        texture = null;
+        if (string.IsNullOrWhiteSpace(payload))
+            return false;
+
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(payload);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        if (bytes.Length != TextureWidth * TextureHeight * 4)
+            return false;
+
+        Texture2D editableTexture = CreateEmptyTexture();
+        Color32[] pixels = new Color32[TextureWidth * TextureHeight];
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            int byteIndex = i * 4;
+            pixels[i] = new Color32(bytes[byteIndex], bytes[byteIndex + 1], bytes[byteIndex + 2], bytes[byteIndex + 3]);
+        }
+
+        editableTexture.SetPixels32(pixels);
+        editableTexture.Apply();
+        texture = CreateExportTexture(editableTexture);
+        UnityEngine.Object.Destroy(editableTexture);
+        return true;
+    }
+
     public static void ApplyToLoadedRangers()
     {
-        RangerController[] rangers = Object.FindObjectsByType<RangerController>(FindObjectsInactive.Include);
+        RangerController[] rangers = UnityEngine.Object.FindObjectsByType<RangerController>(FindObjectsInactive.Include);
         foreach (RangerController ranger in rangers)
             ApplyTo(ranger.gameObject);
     }
@@ -81,11 +151,16 @@ public static class RangerFaceTextureStore
                 return _cachedRuntimeTexture;
             }
 
-            Object.Destroy(customTexture);
+            UnityEngine.Object.Destroy(customTexture);
         }
 
-        _cachedRuntimeTexture = Resources.Load<Texture2D>(ResourceTexturePath);
+        _cachedRuntimeTexture = LoadDefaultTexture();
         return _cachedRuntimeTexture;
+    }
+
+    private static Texture2D LoadDefaultTexture()
+    {
+        return Resources.Load<Texture2D>(ResourceTexturePath);
     }
 
     private static Texture2D CreateEmptyTexture()
@@ -120,7 +195,7 @@ public static class RangerFaceTextureStore
         destinationTexture.Apply();
 
         if (readableSourceTexture != sourceTexture)
-            Object.Destroy(readableSourceTexture);
+            UnityEngine.Object.Destroy(readableSourceTexture);
     }
 
     private static Texture2D CreateExportTexture(Texture2D sourceTexture)
@@ -148,7 +223,7 @@ public static class RangerFaceTextureStore
         exportTexture.Apply();
 
         if (readableSourceTexture != sourceTexture)
-            Object.Destroy(readableSourceTexture);
+            UnityEngine.Object.Destroy(readableSourceTexture);
 
         return exportTexture;
     }
@@ -173,7 +248,7 @@ public static class RangerFaceTextureStore
     private static void ReplaceCachedRuntimeTexture(Texture2D sourceTexture)
     {
         if (_cachedRuntimeTexture != null && _cachedRuntimeTexture.name != "Ranger_Face")
-            Object.Destroy(_cachedRuntimeTexture);
+            UnityEngine.Object.Destroy(_cachedRuntimeTexture);
 
         _cachedRuntimeTexture = sourceTexture;
     }
