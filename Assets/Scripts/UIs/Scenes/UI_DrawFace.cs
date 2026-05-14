@@ -121,7 +121,12 @@ public class UI_DrawFace : UI_Menu
     {
         CommitCurrentStroke();
         RangerFaceTextureStore.SaveCustomTexture(_faceTexture);
-        RangerFaceTextureStore.ApplyToLoadedRangers();
+
+        LobbyNetworkPlayer localPlayer = LobbyNetworkPlayer.FindLocalOwnedPlayer();
+        if (localPlayer != null)
+            localPlayer.SubmitLocalFaceTexture(_faceTexture);
+        else
+            RangerFaceTextureStore.ApplyToLoadedRangers();
 
         Managers.Toast.EnqueueMessage("Face image saved.", 2.0f);
     }
