@@ -226,7 +226,16 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private void SubmitSelectedTitanRoleMaskServerRpc(int titanRoleMask)
     {
         InputDebug.Log($"[ServerRpc] SubmitSelectedTitanRoleMaskServerRpc from client={OwnerClientId} raw=0x{titanRoleMask:X}");
-        _selectedTitanRoleMask.Value = NormalizeTitanRoleMask(titanRoleMask);
+        int currentMask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
+        int requestedMask = NormalizeTitanRoleMask(titanRoleMask);
+        int addedMask = requestedMask & ~currentMask;
+        int occupiedByOtherMask = GetRoleMaskSelectedByOtherPlayers();
+        int acceptedMask = NormalizeTitanRoleMask(requestedMask & ~occupiedByOtherMask);
+
+        if ((addedMask & occupiedByOtherMask) != 0)
+            InputDebug.LogWarning($"Role selection rejected for client={OwnerClientId}. requested=0x{requestedMask:X}, occupiedByOther=0x{occupiedByOtherMask:X}, accepted=0x{acceptedMask:X}");
+
+        _selectedTitanRoleMask.Value = acceptedMask;
 
         int normalizedMask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
         _rangerColorRgba.Value = ResolveRangerColorRgbaFromRoleMask(normalizedMask);
@@ -341,6 +350,26 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         SubmitSelectedTitanRoleMaskServerRpc(nextMask);
+    }
+
+    public bool IsTitanRoleSelectedByOtherPlayer(Define.TitanRole titanRole)
+    {
+        int bit = RoleToMaskBit(titanRole);
+        if (bit == 0)
+            return false;
+
+        LobbyNetworkPlayer[] players = FindAllSpawnedPlayers();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || player.OwnerClientId == OwnerClientId)
+                continue;
+
+            if ((NormalizeTitanRoleMask(player._selectedTitanRoleMask.Value) & bit) != 0)
+                return true;
+        }
+
+        return false;
     }
 
     public bool TryGetActiveTitanRole(out Define.TitanRole role)
@@ -1093,6 +1122,22 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         }
 
         return Define.TitanRole.Torso;
+    }
+
+    private int GetRoleMaskSelectedByOtherPlayers()
+    {
+        int occupiedMask = 0;
+        LobbyNetworkPlayer[] players = FindAllSpawnedPlayers();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || player.OwnerClientId == OwnerClientId)
+                continue;
+
+            occupiedMask |= NormalizeTitanRoleMask(player._selectedTitanRoleMask.Value);
+        }
+
+        return NormalizeTitanRoleMask(occupiedMask);
     }
 
     private static bool IsValidTitanRoleValue(int roleValue)
