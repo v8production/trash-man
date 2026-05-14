@@ -20,6 +20,8 @@ public class RangerController : MonoBehaviour
     private bool _initialized;
 
     Animator Anim;
+    public event System.Action<Define.RangerAnimState> EmotionRequested;
+
     private Define.RangerAnimState _animState;
     public Define.RangerAnimState AnimState
     {
@@ -69,6 +71,8 @@ public class RangerController : MonoBehaviour
         }
 
         UpdateInput();
+        Define.RangerAnimState requestedEmotion;
+        bool hasEmotionInput = TryGetEmotionInput(out requestedEmotion);
 
         Vector3 moveDirection = GetCameraRelativeDirectionOnPlane(_moveInput);
         Vector3 planarVelocity = moveDirection * moveSpeed;
@@ -76,13 +80,89 @@ public class RangerController : MonoBehaviour
 
         UpdateRotation(moveDirection);
 
-        AnimState = _moveInput.sqrMagnitude > 0.0001f ? Define.RangerAnimState.Walk_00 : Define.RangerAnimState.Idle_00;
+        if (hasEmotionInput)
+        {
+            PlayEmotion(requestedEmotion);
+            EmotionRequested?.Invoke(requestedEmotion);
+            return;
+        }
+
+        bool isMoving = _moveInput.sqrMagnitude > 0.0001f;
+        if (isMoving)
+        {
+            AnimState = Define.RangerAnimState.Walk_00;
+            return;
+        }
+
+        if (IsEmotionState(AnimState) && !IsCurrentAnimationFinished())
+            return;
+
+        AnimState = Define.RangerAnimState.Idle_00;
     }
 
     private void UpdateInput()
     {
         _moveInput = _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
         _moveInput = Vector2.ClampMagnitude(_moveInput, 1f);
+    }
+
+    private bool TryGetEmotionInput(out Define.RangerAnimState emotionState)
+    {
+        emotionState = Define.RangerAnimState.Idle_00;
+
+        if (Managers.Input.WasDigitPressedThisFrame(1))
+        {
+            emotionState = Define.RangerAnimState.Emotion_01;
+            return true;
+        }
+        else if (Managers.Input.WasDigitPressedThisFrame(2))
+        {
+            emotionState = Define.RangerAnimState.Emotion_02;
+            return true;
+        }
+        else if (Managers.Input.WasDigitPressedThisFrame(3))
+        {
+            emotionState = Define.RangerAnimState.Emotion_03;
+            return true;
+        }
+        else if (Managers.Input.WasDigitPressedThisFrame(4))
+        {
+            emotionState = Define.RangerAnimState.Emotion_04;
+            return true;
+        }
+        else if (Managers.Input.WasDigitPressedThisFrame(5))
+        {
+            emotionState = Define.RangerAnimState.Emotion_05;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void PlayEmotion(Define.RangerAnimState emotionState)
+    {
+        _animState = emotionState;
+
+        if (Anim != null)
+            Anim.CrossFade(emotionState.ToString(), 0.1f, 0, 0f);
+    }
+
+    private bool IsCurrentAnimationFinished()
+    {
+        if (Anim == null || Anim.IsInTransition(0))
+            return false;
+
+        AnimatorStateInfo stateInfo = Anim.GetCurrentAnimatorStateInfo(0);
+        return stateInfo.IsName(AnimState.ToString()) && stateInfo.normalizedTime >= 1f;
+    }
+
+    public static bool IsEmotionState(Define.RangerAnimState state)
+    {
+        return state == Define.RangerAnimState.Emotion_01
+            || state == Define.RangerAnimState.Emotion_02
+            || state == Define.RangerAnimState.Emotion_03
+            || state == Define.RangerAnimState.Emotion_04
+            || state == Define.RangerAnimState.Emotion_05;
     }
 
     private void UpdateRotation(Vector3 moveDirection)
@@ -136,7 +216,7 @@ public class RangerController : MonoBehaviour
 
     private static LobbyCameraController GetMainCameraController()
     {
-        LobbyCameraController cameraController = Object.FindAnyObjectByType<LobbyCameraController>();
+        LobbyCameraController cameraController = UnityEngine.Object.FindAnyObjectByType<LobbyCameraController>();
         if (cameraController != null)
             return cameraController;
 

@@ -36,6 +36,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private Vector3 _remoteLastPosition;
     private bool _remoteHasLastPosition;
     private bool _remoteWasWalking;
+    private bool _remoteEmotionActive;
+    private Define.RangerAnimState _remoteEmotionState;
+    private bool _subscribedLobbyRangerEmotion;
 
     private bool _submittedIdentity;
 
@@ -194,6 +197,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _rangerColorRgba.OnValueChanged -= HandleRangerColorChanged;
         _rangerFacePayload.OnValueChanged -= HandleRangerFaceChanged;
 
+        if (_lobbyRanger != null && _subscribedLobbyRangerEmotion)
+        {
+            _lobbyRanger.EmotionRequested -= HandleLocalRangerEmotionRequested;
+            _subscribedLobbyRangerEmotion = false;
+        }
+
         string lobbyUserId = GetLobbyUserId();
         if (!string.IsNullOrWhiteSpace(lobbyUserId))
         {
@@ -272,6 +281,29 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private void SubmitRoleInputServerRpc(TitanRoleInputPayload inputPayload)
     {
         _roleInput.Value = inputPayload;
+    }
+
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void SubmitRangerEmotionServerRpc(int rangerAnimStateValue)
+    {
+        Define.RangerAnimState rangerAnimState = (Define.RangerAnimState)rangerAnimStateValue;
+        if (!RangerController.IsEmotionState(rangerAnimState))
+            return;
+
+        PlayRangerEmotionClientRpc(rangerAnimStateValue);
+    }
+
+    [Rpc(SendTo.ClientsAndHost)]
+    private void PlayRangerEmotionClientRpc(int rangerAnimStateValue)
+    {
+        if (IsOwner)
+            return;
+
+        Define.RangerAnimState rangerAnimState = (Define.RangerAnimState)rangerAnimStateValue;
+        if (!RangerController.IsEmotionState(rangerAnimState))
+            return;
+
+        PlayRemoteRangerEmotion(rangerAnimState);
     }
 
     [Rpc(SendTo.ClientsAndHost)]
@@ -767,6 +799,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         _lobbyRanger = rangerObject.GetComponent<RangerController>();
         _lobbyRangerCharacterController = rangerObject.GetComponent<CharacterController>();
+        SubscribeLobbyRangerEmotion();
         ApplyOwnershipState();
         UpdateLobbyRangerName();
 
@@ -777,6 +810,27 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         // This is what remote clients will replicate and follow.
         if (IsOwner)
             transform.SetPositionAndRotation(initial, Quaternion.identity);
+    }
+
+    private void SubscribeLobbyRangerEmotion()
+    {
+        if (!IsOwner || _lobbyRanger == null || _subscribedLobbyRangerEmotion)
+            return;
+
+        _lobbyRanger.EmotionRequested += HandleLocalRangerEmotionRequested;
+        _subscribedLobbyRangerEmotion = true;
+    }
+
+    private void HandleLocalRangerEmotionRequested(Define.RangerAnimState rangerAnimState)
+    {
+        if (!IsOwner || !IsSpawned)
+            return;
+
+        BaseScene scene = Managers.Scene.CurrentScene;
+        if (scene == null || scene.SceneType != Define.Scene.Lobby)
+            return;
+
+        SubmitRangerEmotionServerRpc((int)rangerAnimState);
     }
 
     private void ApplyRangerColorPresentation()
@@ -953,11 +1007,76 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _remoteLastPosition = currentPos;
 
         bool walking = speed > 0.15f;
+
+        if (_remoteEmotionActive)
+        {
+            if (walking)
+            {
+                _remoteEmotionActive = false;
+                _remoteWasWalking = true;
+                CrossFadeRemoteRanger(Define.RangerAnimState.Walk_00, 0.10f);
+                return;
+            }
+
+            if (!IsRemoteRangerEmotionFinished())
+                return;
+
+            _remoteEmotionActive = false;
+            _remoteWasWalking = false;
+            CrossFadeRemoteRanger(Define.RangerAnimState.Idle_00, 0.10f);
+            return;
+        }
+
         if (walking == _remoteWasWalking)
             return;
 
         _remoteWasWalking = walking;
-        _remoteAnimator.CrossFade(walking ? Define.RangerAnimState.Walk_00.ToString() : Define.RangerAnimState.Idle_00.ToString(), 0.10f);
+        CrossFadeRemoteRanger(walking ? Define.RangerAnimState.Walk_00 : Define.RangerAnimState.Idle_00, 0.10f);
+    }
+
+    private void PlayRemoteRangerEmotion(Define.RangerAnimState rangerAnimState)
+    {
+        if (_lobbyRanger == null)
+            EnsureLobbyRanger();
+
+        if (_lobbyRanger == null)
+            return;
+
+        if (_remoteAnimator == null)
+            _remoteAnimator = _lobbyRanger.GetComponentInChildren<Animator>(true);
+
+        if (_remoteAnimator == null)
+            return;
+
+        _remoteEmotionActive = true;
+        _remoteEmotionState = rangerAnimState;
+        _remoteWasWalking = false;
+        CrossFadeRemoteRanger(rangerAnimState, 0.10f, 0f);
+    }
+
+    private bool IsRemoteRangerEmotionFinished()
+    {
+        if (_remoteAnimator == null || _remoteAnimator.IsInTransition(0))
+            return false;
+
+        AnimatorStateInfo stateInfo = _remoteAnimator.GetCurrentAnimatorStateInfo(0);
+        return stateInfo.IsName(_remoteEmotionState.ToString()) && stateInfo.normalizedTime >= 1f;
+    }
+
+    private void CrossFadeRemoteRanger(Define.RangerAnimState state, float transitionDuration)
+    {
+        if (_remoteAnimator == null)
+            return;
+
+        _remoteAnimator.CrossFade(state.ToString(), transitionDuration);
+    }
+
+    private void CrossFadeRemoteRanger(Define.RangerAnimState state, float transitionDuration, float normalizedTime)
+    {
+        if (_remoteAnimator == null)
+            return;
+
+        _remoteAnimator.CrossFade(state.ToString(), transitionDuration, 0, normalizedTime);
     }
 
     private void EnsureLocalCamera()

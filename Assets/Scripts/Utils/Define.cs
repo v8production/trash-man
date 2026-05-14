@@ -83,8 +83,11 @@ public class Define
     public enum RangerAnimState
     {
         Idle_00,
-        Run_00,
         Walk_00,
-        Wave_00,
+        Emotion_01,
+        Emotion_02,
+        Emotion_03,
+        Emotion_04,
+        Emotion_05,
     }
 }
