@@ -373,3 +373,119 @@ public struct TitanAbilityStatePayload : INetworkSerializable, IEquatable<TitanA
             && RightClawRotation.Equals(other.RightClawRotation);
     }
 }
+
+public struct StatPayload : INetworkSerializable, IEquatable<StatPayload>
+{
+    public int Hp;
+    public int MaxHp;
+    public int Attack;
+
+    public StatPayload(Stat stat)
+    {
+        Hp = stat.Hp;
+        MaxHp = stat.MaxHp;
+        Attack = stat.Attack;
+    }
+
+    public void ApplyTo(Stat stat)
+    {
+        stat.MaxHp = MaxHp;
+        stat.Hp = Hp;
+        stat.Attack = Attack;
+    }
+
+    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+    {
+        serializer.SerializeValue(ref Hp);
+        serializer.SerializeValue(ref MaxHp);
+        serializer.SerializeValue(ref Attack);
+    }
+
+    public bool Equals(StatPayload other)
+    {
+        return Hp == other.Hp
+            && MaxHp == other.MaxHp
+            && Attack == other.Attack;
+    }
+}
+
+public struct TitanStatPayload : INetworkSerializable, IEquatable<TitanStatPayload>
+{
+    public StatPayload BaseStat;
+    public int Gauge;
+    public int MaxGauge;
+
+    public TitanStatPayload(TitanStat titanStat)
+    {
+        BaseStat = new StatPayload(titanStat);
+        Gauge = titanStat.Gauge;
+        MaxGauge = titanStat.MaxGauge;
+    }
+
+    public void ApplyTo(TitanStat titanStat)
+    {
+        BaseStat.ApplyTo(titanStat);
+        titanStat.MaxGauge = MaxGauge;
+        titanStat.Gauge = Gauge;
+    }
+
+    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+    {
+        BaseStat.NetworkSerialize(serializer);
+        serializer.SerializeValue(ref Gauge);
+        serializer.SerializeValue(ref MaxGauge);
+    }
+
+    public bool Equals(TitanStatPayload other)
+    {
+        return BaseStat.Equals(other.BaseStat)
+            && Gauge == other.Gauge
+            && MaxGauge == other.MaxGauge;
+    }
+}
+
+public struct GrolarStatePayload : INetworkSerializable, IEquatable<GrolarStatePayload>
+{
+    public bool IsValid;
+    public StatPayload Stat;
+    public Vector3 Position;
+    public Quaternion Rotation;
+    public int AnimState;
+    public bool AttackInProgress;
+
+    public GrolarStatePayload(GrolarController grolarController)
+    {
+        IsValid = true;
+        Stat = new StatPayload(grolarController.Stat);
+        Position = grolarController.transform.position;
+        Rotation = grolarController.transform.rotation;
+        AnimState = (int)grolarController.AnimState;
+        AttackInProgress = grolarController.AttackInProgress;
+    }
+
+    public void ApplyTo(GrolarController grolarController)
+    {
+        Stat.ApplyTo(grolarController.Stat);
+        grolarController.ApplyNetworkState(Position, Rotation, (Define.GrolarAnimState)AnimState, AttackInProgress);
+    }
+
+    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+    {
+        serializer.SerializeValue(ref IsValid);
+        Stat.NetworkSerialize(serializer);
+        serializer.SerializeValue(ref Position);
+        serializer.SerializeValue(ref Rotation);
+        serializer.SerializeValue(ref AnimState);
+        serializer.SerializeValue(ref AttackInProgress);
+    }
+
+    public bool Equals(GrolarStatePayload other)
+    {
+        return IsValid == other.IsValid
+            && Stat.Equals(other.Stat)
+            && Position.Equals(other.Position)
+            && Rotation.Equals(other.Rotation)
+            && AnimState == other.AnimState
+            && AttackInProgress == other.AttackInProgress;
+    }
+}

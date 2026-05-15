@@ -36,7 +36,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         {
             ApplyClientPhysicsMode();
             ApplyLatestServerPose();
-            ApplyLatestServerGauge();
+            ApplyLatestServerStat();
             ApplyLatestServerAbilityState();
             return;
         }
@@ -66,7 +66,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         TickClawWire(dt);
 
         PublishAuthoritativePose();
-        PublishAuthoritativeGauge();
+        PublishAuthoritativeStat();
         PublishAuthoritativeAbilityState();
     }
 
@@ -115,15 +115,19 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         Managers.TitanRig.ApplyPoseSnapshot(posePayload.ToSnapshot());
     }
 
-    private void ApplyLatestServerGauge()
+    private void ApplyLatestServerStat()
     {
         if (_titanStat == null)
             return;
 
-        if (!LobbyNetworkPlayer.TryGetLatestTitanGauge(out int gauge))
+        if (LobbyNetworkPlayer.TryGetLatestTitanStat(out TitanStatPayload titanStat))
+        {
+            titanStat.ApplyTo(_titanStat);
             return;
+        }
 
-        _titanStat.Gauge = gauge;
+        if (LobbyNetworkPlayer.TryGetLatestTitanGauge(out int gauge))
+            _titanStat.Gauge = gauge;
     }
 
     private void ApplyLatestServerAbilityState()
@@ -149,7 +153,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         LobbyNetworkPlayer.TryPublishServerTitanPose(new TitanRigPosePayload(snapshot));
     }
 
-    private void PublishAuthoritativeGauge()
+    private void PublishAuthoritativeStat()
     {
         NetworkManager networkManager = NetworkManager.Singleton;
         if (networkManager == null || !networkManager.IsListening || !networkManager.IsServer)
@@ -158,6 +162,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         if (_titanStat == null)
             return;
 
+        LobbyNetworkPlayer.TryPublishServerTitanStat(new TitanStatPayload(_titanStat));
         LobbyNetworkPlayer.TryPublishServerTitanGauge(_titanStat.Gauge);
     }
 

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 public class GrolarController : BossController
@@ -31,6 +32,8 @@ public class GrolarController : BossController
                 _animator.CrossFade(_animState.ToString(), fade);
         }
     }
+
+    public bool AttackInProgress => _attackInProgress;
 
     [Header("Animation Blend")]
     [SerializeField] private float _locomotionCrossFade = 0.20f;
@@ -108,9 +111,16 @@ public class GrolarController : BossController
 
     private void Update()
     {
+        if (ShouldApplyServerStateOnly())
+        {
+            ApplyLatestServerState();
+            return;
+        }
+
         if (_attackInProgress)
         {
             ApplyRotationSmoothing(Time.deltaTime);
+            PublishAuthoritativeState();
             return;
         }
 
@@ -119,6 +129,41 @@ public class GrolarController : BossController
 
         TickOrbit(Time.deltaTime);
         ApplyRotationSmoothing(Time.deltaTime);
+        PublishAuthoritativeState();
+    }
+
+    public void ApplyNetworkState(Vector3 position, Quaternion rotation, Define.GrolarAnimState animState, bool attackInProgress)
+    {
+        transform.SetPositionAndRotation(position, rotation);
+        _desiredRotation = rotation;
+        _attackInProgress = attackInProgress;
+        AnimState = animState;
+    }
+
+    private void ApplyLatestServerState()
+    {
+        if (!LobbyNetworkPlayer.TryGetLatestGrolarState(out GrolarStatePayload grolarState))
+            return;
+
+        grolarState.ApplyTo(this);
+    }
+
+    private void PublishAuthoritativeState()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager == null || !networkManager.IsListening || !networkManager.IsServer)
+            return;
+
+        LobbyNetworkPlayer.TryPublishServerGrolarState(new GrolarStatePayload(this));
+    }
+
+    private static bool ShouldApplyServerStateOnly()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        return networkManager != null
+            && networkManager.IsListening
+            && networkManager.IsClient
+            && !networkManager.IsServer;
     }
 
     private bool BindTitanIfNeeded()
@@ -424,6 +469,9 @@ public class GrolarController : BossController
 
     internal void NotifySwingHit()
     {
+        if (ShouldApplyServerStateOnly())
+            return;
+
         if (_attackInProgress == false)
             return;
         if (_swingHitHandled)
@@ -447,7 +495,10 @@ public class GrolarController : BossController
         }
 
         if (_titan != null && _titan.Stat != null)
+        {
             _titan.Stat.OnAttacked(_stat);
+            PublishAuthoritativeState();
+        }
     }
 
 }

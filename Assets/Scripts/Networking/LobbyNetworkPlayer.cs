@@ -25,7 +25,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private readonly NetworkVariable<TitanRoleInputPayload> _roleInput = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanRigPosePayload> _titanPose = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> _titanGauge = new(100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    private readonly NetworkVariable<TitanStatPayload> _titanStat = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanAbilityStatePayload> _titanAbilityState = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    private readonly NetworkVariable<GrolarStatePayload> _grolarState = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     private RangerController _lobbyRanger;
     private CharacterController _lobbyRangerCharacterController;
@@ -626,6 +628,31 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         return true;
     }
 
+    public static bool TryPublishServerTitanStat(TitanStatPayload titanStat)
+    {
+        LobbyNetworkPlayer publisher = FindServerPosePublisher();
+        if (publisher == null || !publisher.IsServer || !publisher.IsSpawned)
+            return false;
+
+        if (publisher._titanStat.Value.Equals(titanStat))
+            return true;
+
+        publisher._titanStat.Value = titanStat;
+        return true;
+    }
+
+    public static bool TryGetLatestTitanStat(out TitanStatPayload titanStat)
+    {
+        titanStat = default;
+
+        LobbyNetworkPlayer publisher = FindServerPosePublisher();
+        if (publisher == null || !publisher.IsSpawned)
+            return false;
+
+        titanStat = publisher._titanStat.Value;
+        return titanStat.BaseStat.MaxHp > 0 || titanStat.MaxGauge > 0;
+    }
+
     public static bool TryGetLatestTitanGauge(out int gauge)
     {
         gauge = 0;
@@ -661,6 +688,31 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         abilityState = publisher._titanAbilityState.Value;
         return true;
+    }
+
+    public static bool TryPublishServerGrolarState(GrolarStatePayload grolarState)
+    {
+        LobbyNetworkPlayer publisher = FindServerPosePublisher();
+        if (publisher == null || !publisher.IsServer || !publisher.IsSpawned)
+            return false;
+
+        if (publisher._grolarState.Value.Equals(grolarState))
+            return true;
+
+        publisher._grolarState.Value = grolarState;
+        return true;
+    }
+
+    public static bool TryGetLatestGrolarState(out GrolarStatePayload grolarState)
+    {
+        grolarState = default;
+
+        LobbyNetworkPlayer publisher = FindServerPosePublisher();
+        if (publisher == null || !publisher.IsSpawned)
+            return false;
+
+        grolarState = publisher._grolarState.Value;
+        return grolarState.IsValid;
     }
 
     private static LobbyNetworkPlayer FindServerPosePublisher()
