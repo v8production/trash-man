@@ -34,7 +34,6 @@ public class LobbySessionManager
     public bool IsHosting { get; private set; }
     public string HostUserId { get; private set; } = string.Empty;
     public string CurrentJoinCode { get; private set; } = string.Empty;
-    public string CurrentVoiceSecret => string.Empty;
     public bool HasJoinedLobbySession => IsLobbyNetworkConnected;
     public bool HasPendingSteamLobbyJoin { get; private set; }
 
@@ -195,10 +194,6 @@ public class LobbySessionManager
         _hasRequestedSteamClientStart = false;
         _pendingSteamClientConnectDeadline = 0f;
         ResetClientConnectionTracking();
-    }
-
-    public void SetRangerNicknameVoiceActive(string userId, bool isVoiceChatActive)
-    {
     }
 
     public void BootstrapLocalHostLobby()

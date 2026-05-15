@@ -98,18 +98,6 @@ public class LobbyScene : BaseScene
             s_userEntriesByUserId.Remove(userId);
     }
 
-    public static bool TrySetNicknameSpeakerActive(string userId, bool isVoiceChatActive)
-    {
-        if (string.IsNullOrWhiteSpace(userId))
-            return false;
-
-        if (!s_userEntriesByUserId.TryGetValue(userId, out LobbyUserEntry entry) || entry == null || entry.Nickname == null)
-            return false;
-
-        entry.Nickname.SetActive(isVoiceChatActive);
-        return true;
-    }
-
     public static void ClearUserObjectRegistry()
     {
         s_userEntriesByUserId.Clear();
