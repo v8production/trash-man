@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Netcode.Transports;
 using Steamworks;
@@ -20,8 +21,10 @@ public class LobbySessionManager
     private bool _steamCallbacksReady;
     private Callback<LobbyEnter_t> _lobbyEnterCallback;
     private Callback<GameLobbyJoinRequested_t> _gameLobbyJoinRequestedCallback;
+    private Callback<NewUrlLaunchParameters_t> _newUrlLaunchParametersCallback;
     private CallResult<LobbyCreated_t> _lobbyCreatedResult;
     private CallResult<LobbyMatchList_t> _lobbyMatchListResult;
+    private bool _checkedInitialSteamLaunchParameters;
 
     private bool _pendingSteamClientConnect;
     private bool _hasRequestedSteamClientStart;
@@ -42,10 +45,15 @@ public class LobbySessionManager
 
     public void Init()
     {
+        EnsureSteamCallbacks();
+        TryHandleSteamLaunchParameters(force: false);
     }
 
     public void OnUpdate()
     {
+        EnsureSteamCallbacks();
+        TryHandleSteamLaunchParameters(force: false);
+
         if (Managers.Scene.CurrentScene == null || Managers.Scene.CurrentScene.SceneType != Define.Scene.Lobby)
             return;
 
@@ -327,8 +335,14 @@ public class LobbySessionManager
 
         _lobbyEnterCallback = Callback<LobbyEnter_t>.Create(HandleLobbyEnter);
         _gameLobbyJoinRequestedCallback = Callback<GameLobbyJoinRequested_t>.Create(HandleGameLobbyJoinRequested);
+        _newUrlLaunchParametersCallback = Callback<NewUrlLaunchParameters_t>.Create(HandleNewUrlLaunchParameters);
         _lobbyCreatedResult = CallResult<LobbyCreated_t>.Create(HandleLobbyCreated);
         _lobbyMatchListResult = CallResult<LobbyMatchList_t>.Create(HandleLobbyMatchList);
+    }
+
+    private void HandleNewUrlLaunchParameters(NewUrlLaunchParameters_t callback)
+    {
+        TryHandleSteamLaunchParameters(force: true);
     }
 
     private void HandleLobbyCreated(LobbyCreated_t callback, bool ioFailure)
@@ -379,9 +393,69 @@ public class LobbySessionManager
             return;
 
         // User accepted invite or selected Join Game from Steam overlay.
+        RequestJoinSteamLobby(callback.m_steamIDLobby);
+    }
+
+    private void RequestJoinSteamLobby(CSteamID steamLobbyId)
+    {
+        if (!steamLobbyId.IsValid())
+            return;
+
         HasPendingSteamLobbyJoin = true;
         Managers.Scene.LoadScene(Define.Scene.Lobby);
-        SteamMatchmaking.JoinLobby(callback.m_steamIDLobby);
+        SteamMatchmaking.JoinLobby(steamLobbyId);
+    }
+
+    private void TryHandleSteamLaunchParameters(bool force)
+    {
+        if (!force && _checkedInitialSteamLaunchParameters)
+            return;
+
+        if (!Managers.Steam.IsInitialized)
+            return;
+
+        if (!force)
+            _checkedInitialSteamLaunchParameters = true;
+
+        if (TryGetLaunchLobbyId(out CSteamID steamLobbyId))
+            RequestJoinSteamLobby(steamLobbyId);
+    }
+
+    private static bool TryGetLaunchLobbyId(out CSteamID steamLobbyId)
+    {
+        steamLobbyId = CSteamID.Nil;
+
+        string queryLobbyId = SteamApps.GetLaunchQueryParam("connect_lobby");
+        if (TryParseSteamLobbyId(queryLobbyId, out steamLobbyId))
+            return true;
+
+        SteamApps.GetLaunchCommandLine(out string commandLine, 1024);
+        if (string.IsNullOrWhiteSpace(commandLine))
+            return false;
+
+        string[] args = commandLine.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (!args[i].Equals("+connect_lobby", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (i + 1 >= args.Length)
+                return false;
+
+            return TryParseSteamLobbyId(args[i + 1], out steamLobbyId);
+        }
+
+        return false;
+    }
+
+    private static bool TryParseSteamLobbyId(string value, out CSteamID steamLobbyId)
+    {
+        steamLobbyId = CSteamID.Nil;
+        if (!ulong.TryParse(value, out ulong rawLobbyId) || rawLobbyId == 0)
+            return false;
+
+        steamLobbyId = new CSteamID(rawLobbyId);
+        return steamLobbyId.IsValid();
     }
 
     private void HandleLobbyEnter(LobbyEnter_t callback)
