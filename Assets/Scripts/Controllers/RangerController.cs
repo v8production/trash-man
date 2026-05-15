@@ -54,7 +54,7 @@ public class RangerController : MonoBehaviour
         if (playerMap != null)
             _moveAction = playerMap.FindAction(moveActionName, false);
 
-        AnimState = Define.RangerAnimState.Idle_00;
+        AnimState = Define.RangerAnimState.Idle00;
         RangerFaceTextureStore.ApplyTo(gameObject);
         _initialized = true;
     }
@@ -90,14 +90,14 @@ public class RangerController : MonoBehaviour
         bool isMoving = _moveInput.sqrMagnitude > 0.0001f;
         if (isMoving)
         {
-            AnimState = Define.RangerAnimState.Walk_00;
+            AnimState = Define.RangerAnimState.Walk01;
             return;
         }
 
         if (IsEmotionState(AnimState) && !IsCurrentAnimationFinished())
             return;
 
-        AnimState = Define.RangerAnimState.Idle_00;
+        AnimState = Define.RangerAnimState.Idle00;
     }
 
     private void UpdateInput()
@@ -108,31 +108,21 @@ public class RangerController : MonoBehaviour
 
     private bool TryGetEmotionInput(out Define.RangerAnimState emotionState)
     {
-        emotionState = Define.RangerAnimState.Idle_00;
+        emotionState = Define.RangerAnimState.Idle00;
 
         if (Managers.Input.WasDigitPressedThisFrame(1))
         {
-            emotionState = Define.RangerAnimState.Emotion_01;
+            emotionState = Define.RangerAnimState.Emote00;
             return true;
         }
         else if (Managers.Input.WasDigitPressedThisFrame(2))
         {
-            emotionState = Define.RangerAnimState.Emotion_02;
+            emotionState = Define.RangerAnimState.Emote01;
             return true;
         }
         else if (Managers.Input.WasDigitPressedThisFrame(3))
         {
-            emotionState = Define.RangerAnimState.Emotion_03;
-            return true;
-        }
-        else if (Managers.Input.WasDigitPressedThisFrame(4))
-        {
-            emotionState = Define.RangerAnimState.Emotion_04;
-            return true;
-        }
-        else if (Managers.Input.WasDigitPressedThisFrame(5))
-        {
-            emotionState = Define.RangerAnimState.Emotion_05;
+            emotionState = Define.RangerAnimState.Emote02;
             return true;
         }
 
@@ -158,11 +148,9 @@ public class RangerController : MonoBehaviour
 
     public static bool IsEmotionState(Define.RangerAnimState state)
     {
-        return state == Define.RangerAnimState.Emotion_01
-            || state == Define.RangerAnimState.Emotion_02
-            || state == Define.RangerAnimState.Emotion_03
-            || state == Define.RangerAnimState.Emotion_04
-            || state == Define.RangerAnimState.Emotion_05;
+        return state == Define.RangerAnimState.Emote00
+            || state == Define.RangerAnimState.Emote01
+            || state == Define.RangerAnimState.Emote02;
     }
 
     private void UpdateRotation(Vector3 moveDirection)
@@ -174,11 +162,9 @@ public class RangerController : MonoBehaviour
         if (currentForward.sqrMagnitude <= 0.0001f)
             currentForward = moveDirection;
 
-        Vector3 lerpedForward = Vector3.Lerp(currentForward.normalized, moveDirection.normalized, rotateLerpSpeed * Time.deltaTime);
-        if (lerpedForward.sqrMagnitude <= 0.0001f)
-            return;
-
-        transform.rotation = Quaternion.LookRotation(lerpedForward.normalized, Vector3.up);
+        Quaternion currentRotation = Quaternion.LookRotation(currentForward.normalized, Vector3.up);
+        Quaternion targetRotation = Quaternion.LookRotation(moveDirection.normalized, Vector3.up);
+        transform.rotation = Quaternion.Slerp(currentRotation, targetRotation, rotateLerpSpeed * Time.deltaTime);
     }
 
     private Vector3 GetCameraRelativeDirectionOnPlane(Vector2 moveInput)
@@ -224,4 +210,3 @@ public class RangerController : MonoBehaviour
         return mainCamera != null ? mainCamera.GetComponent<LobbyCameraController>() : null;
     }
 }
-

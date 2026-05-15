@@ -53,9 +53,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2100000, guid: 5fef890c78e37534c9fac642191ae61e, type: 2}
     - target: {fileID: 812947928087963621, guid: 3f658cbc784bed946a534e15e33d73e0, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 37ea1642552f94c4aa5aadf0930390e5, type: 2}
+    - target: {fileID: 812947928087963621, guid: 3f658cbc784bed946a534e15e33d73e0, type: 3}
       propertyPath: 'm_Materials.Array.data[2]'
       value: 
       objectReference: {fileID: 2100000, guid: 998d3cdd3f85f0846a0cc0f1668da598, type: 2}
+    - target: {fileID: 812947928087963621, guid: 3f658cbc784bed946a534e15e33d73e0, type: 3}
+      propertyPath: 'm_Materials.Array.data[3]'
+      value: 
+      objectReference: {fileID: 2100000, guid: bcc74653075364c49aa605dcd7f02ea8, type: 2}
     - target: {fileID: 919132149155446097, guid: 3f658cbc784bed946a534e15e33d73e0, type: 3}
       propertyPath: m_Name
       value: Ranger

@@ -12,6 +12,7 @@ public static class RangerFaceTextureStore
     private const string CustomTextureDirectoryName = "Ranger";
     private const string CustomTextureFileName = "Ranger_Face.png";
     private const string FaceMaterialName = "Ranger Face_Mat";
+    private const string ImportedFaceMaterialName = "Ranger_Face";
 
     private static Texture2D _cachedRuntimeTexture;
 
@@ -58,7 +59,7 @@ public static class RangerFaceTextureStore
             Material[] materials = targetRenderer.materials;
             foreach (Material material in materials)
             {
-                if (material == null || !material.name.StartsWith(FaceMaterialName))
+                if (material == null || !IsFaceMaterial(material))
                     continue;
 
                 ApplyTextureToMaterial(material, texture);
@@ -258,10 +259,24 @@ public static class RangerFaceTextureStore
         if (material.HasProperty("_BaseMap"))
             material.SetTexture("_BaseMap", texture);
 
+        if (material.HasProperty("_Base_Color"))
+            material.SetTexture("_Base_Color", texture);
+
         if (material.HasProperty("_MainTex"))
             material.SetTexture("_MainTex", texture);
 
+        if (material.HasProperty("_Emission"))
+            material.SetTexture("_Emission", texture);
+
         if (material.HasProperty("_EmissionMap"))
             material.SetTexture("_EmissionMap", texture);
+    }
+
+    private static bool IsFaceMaterial(Material material)
+    {
+        string materialName = material.name;
+        return materialName.StartsWith(FaceMaterialName)
+            || materialName == ImportedFaceMaterialName
+            || materialName.StartsWith(ImportedFaceMaterialName + " ");
     }
 }

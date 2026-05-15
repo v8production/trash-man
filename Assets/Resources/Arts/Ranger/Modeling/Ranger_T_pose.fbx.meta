@@ -18,7 +18,7 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Ranger_Face
-    second: {fileID: 2100000, guid: 5e12b55af13c7f14bb00a2dc246a47a6, type: 2}
+    second: {fileID: 2100000, guid: 5fef890c78e37534c9fac642191ae61e, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

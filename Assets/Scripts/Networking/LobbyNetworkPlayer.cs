@@ -9,6 +9,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 {
     private const string LobbyCameraPrefabName = "Lobby_Camera";
     private const string LobbyRangerPrefabName = "Ranger";
+    private const string RangerColorMaterialName = "Ranger Color_Mat";
+    private const string RangerFaceMaterialName = "Ranger Face_Mat";
+    private const string ImportedRangerFaceMaterialName = "Ranger_Face";
     private const int FirstTitanRoleValue = (int)Define.TitanRole.Torso;
     private const int LastTitanRoleValue = (int)Define.TitanRole.RightLeg;
 
@@ -854,39 +857,41 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             if (renderer == null)
                 continue;
 
-            // Apply only to the material slot that uses Ranger Color_Mat.
+            // Apply only to material slots that use role-tinted Ranger materials.
             Material[] sharedMaterials = renderer.sharedMaterials;
             if (sharedMaterials == null || sharedMaterials.Length == 0)
                 continue;
 
-            int targetMaterialIndex = -1;
             for (int m = 0; m < sharedMaterials.Length; m++)
             {
                 Material mat = sharedMaterials[m];
-                if (mat != null && mat.name.StartsWith("Ranger Color_Mat"))
+                if (mat == null || !IsRangerRoleTintMaterial(mat))
+                    continue;
+
+                if (!shouldApplyOverride)
                 {
-                    targetMaterialIndex = m;
-                    break;
+                    // No selection: remove overrides so the material's own Color field is used.
+                    renderer.SetPropertyBlock(null, m);
+                    continue;
                 }
+
+                // Apply color to both common properties so builds/shaders stay consistent.
+                Color color = RgbaToColor(_rangerColorRgba.Value);
+                renderer.GetPropertyBlock(_rangerColorPropertyBlock, m);
+                _rangerColorPropertyBlock.SetColor("_Color", color);
+                _rangerColorPropertyBlock.SetColor("_BaseColor", color);
+                renderer.SetPropertyBlock(_rangerColorPropertyBlock, m);
             }
-
-            if (targetMaterialIndex < 0)
-                continue;
-
-            if (!shouldApplyOverride)
-            {
-                // No selection: remove overrides so the material's own Color field is used.
-                renderer.SetPropertyBlock(null, targetMaterialIndex);
-                continue;
-            }
-
-            // Apply color to both common properties so builds/shaders stay consistent.
-            Color color = RgbaToColor(_rangerColorRgba.Value);
-            renderer.GetPropertyBlock(_rangerColorPropertyBlock, targetMaterialIndex);
-            _rangerColorPropertyBlock.SetColor("_Color", color);
-            _rangerColorPropertyBlock.SetColor("_BaseColor", color);
-            renderer.SetPropertyBlock(_rangerColorPropertyBlock, targetMaterialIndex);
         }
+    }
+
+    private static bool IsRangerRoleTintMaterial(Material material)
+    {
+        string materialName = material.name;
+        return materialName.StartsWith(RangerColorMaterialName)
+            || materialName.StartsWith(RangerFaceMaterialName)
+            || materialName == ImportedRangerFaceMaterialName
+            || materialName.StartsWith(ImportedRangerFaceMaterialName + " ");
     }
 
     private void ApplyRangerFacePresentation()
@@ -997,7 +1002,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         {
             _remoteHasLastPosition = true;
             _remoteLastPosition = currentPos;
-            _remoteAnimator.CrossFade(Define.RangerAnimState.Idle_00.ToString(), 0.05f);
+            _remoteAnimator.CrossFade(Define.RangerAnimState.Idle00.ToString(), 0.05f);
             _remoteWasWalking = false;
             return;
         }
@@ -1014,7 +1019,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             {
                 _remoteEmotionActive = false;
                 _remoteWasWalking = true;
-                CrossFadeRemoteRanger(Define.RangerAnimState.Walk_00, 0.10f);
+                CrossFadeRemoteRanger(Define.RangerAnimState.Walk00, 0.10f);
                 return;
             }
 
@@ -1023,7 +1028,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
             _remoteEmotionActive = false;
             _remoteWasWalking = false;
-            CrossFadeRemoteRanger(Define.RangerAnimState.Idle_00, 0.10f);
+            CrossFadeRemoteRanger(Define.RangerAnimState.Idle00, 0.10f);
             return;
         }
 
@@ -1031,7 +1036,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         _remoteWasWalking = walking;
-        CrossFadeRemoteRanger(walking ? Define.RangerAnimState.Walk_00 : Define.RangerAnimState.Idle_00, 0.10f);
+        CrossFadeRemoteRanger(walking ? Define.RangerAnimState.Walk00 : Define.RangerAnimState.Idle00, 0.10f);
     }
 
     private void PlayRemoteRangerEmotion(Define.RangerAnimState rangerAnimState)
