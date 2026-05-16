@@ -272,9 +272,12 @@ MonoBehaviour:
   _titanTarget: {fileID: 0}
   _bossTarget: {fileID: 0}
   _titanPivotOffset: {x: 0, y: 1, z: 0}
+  _useDynamicTitanCenter: 1
+  _dynamicTitanCenterOffset: {x: 0, y: 0, z: 0}
+  _lookPointOffset: {x: 0, y: 0.3, z: 0}
   _bossLookOffset: {x: 0, y: 0.5, z: 0}
   _followDistance: 2
-  _heightOffset: 0
+  _heightOffset: 0.8
   _lookAtBossWeight: 0
   _followLerpSpeed: 8
   _rotationLerpSpeed: 10

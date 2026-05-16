@@ -9,9 +9,12 @@ public class GameCameraController : MonoBehaviour
 
     [Header("Framing")]
     [SerializeField] private Vector3 _titanPivotOffset = new(0f, 1f, 0f);
+    [SerializeField] private bool _useDynamicTitanCenter = true;
+    [SerializeField] private Vector3 _dynamicTitanCenterOffset = Vector3.zero;
+    [SerializeField] private Vector3 _lookPointOffset = new(0f, -0.15f, 0f);
     [SerializeField] private Vector3 _bossLookOffset = new(0f, 0.5f, 0f);
     [SerializeField] private float _followDistance = 2f;
-    [SerializeField] private float _heightOffset = 0f;
+    [SerializeField] private float _heightOffset = 1.1f;
     [SerializeField] private float _lookAtBossWeight = 0f;
 
     [Header("Smoothing")]
@@ -21,6 +24,9 @@ public class GameCameraController : MonoBehaviour
     [Header("Fallback")]
     [SerializeField] private Vector3 _fallbackForward = Vector3.forward;
     [SerializeField] private float _minimumPlanarDistance = 0.25f;
+
+    private TitanRigRuntime _cachedTitanRuntime;
+    private Renderer[] _cachedTitanRenderers = System.Array.Empty<Renderer>();
 
     private void OnEnable()
     {
@@ -49,6 +55,8 @@ public class GameCameraController : MonoBehaviour
     {
         _titanTarget = titanTarget;
         _bossTarget = bossTarget;
+        _cachedTitanRuntime = null;
+        _cachedTitanRenderers = System.Array.Empty<Renderer>();
 
         if (TryBuildCameraPose(out Vector3 desiredPosition, out Quaternion desiredRotation))
         {
@@ -85,7 +93,7 @@ public class GameCameraController : MonoBehaviour
         if (_titanTarget == null)
             return false;
 
-        Vector3 titanPivot = _titanTarget.position + _titanPivotOffset;
+        Vector3 titanPivot = ResolveTitanPivot();
         Vector3 titanForward = ResolvePlanarForward(titanPivot);
         Vector3 desiredLookPoint = ResolveLookPoint(titanPivot);
 
@@ -97,6 +105,62 @@ public class GameCameraController : MonoBehaviour
 
         desiredRotation = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
         return true;
+    }
+
+    private Vector3 ResolveTitanPivot()
+    {
+        if (_useDynamicTitanCenter && TryGetTitanVisualCenter(out Vector3 visualCenter))
+            return visualCenter + _dynamicTitanCenterOffset;
+
+        return _titanTarget.position + _titanPivotOffset;
+    }
+
+    private bool TryGetTitanVisualCenter(out Vector3 visualCenter)
+    {
+        visualCenter = Vector3.zero;
+
+        TitanRigRuntime runtime = Managers.TitanRig.Runtime;
+        if (runtime == null)
+            runtime = _titanTarget.GetComponentInParent<TitanRigRuntime>();
+
+        if (runtime == null)
+            return false;
+
+        CacheTitanRenderers(runtime);
+
+        bool hasBounds = false;
+        Bounds titanBounds = default;
+
+        for (int i = 0; i < _cachedTitanRenderers.Length; i++)
+        {
+            Renderer titanRenderer = _cachedTitanRenderers[i];
+            if (titanRenderer == null || !titanRenderer.enabled || !titanRenderer.gameObject.activeInHierarchy)
+                continue;
+
+            if (!hasBounds)
+            {
+                titanBounds = titanRenderer.bounds;
+                hasBounds = true;
+                continue;
+            }
+
+            titanBounds.Encapsulate(titanRenderer.bounds);
+        }
+
+        if (!hasBounds)
+            return false;
+
+        visualCenter = titanBounds.center;
+        return true;
+    }
+
+    private void CacheTitanRenderers(TitanRigRuntime runtime)
+    {
+        if (_cachedTitanRuntime == runtime && _cachedTitanRenderers.Length > 0)
+            return;
+
+        _cachedTitanRuntime = runtime;
+        _cachedTitanRenderers = runtime.GetComponentsInChildren<Renderer>(includeInactive: true);
     }
 
     private Vector3 ResolvePlanarForward(Vector3 titanPivot)
@@ -120,10 +184,10 @@ public class GameCameraController : MonoBehaviour
     private Vector3 ResolveLookPoint(Vector3 titanPivot)
     {
         if (_bossTarget == null)
-            return titanPivot;
+            return titanPivot + _lookPointOffset;
 
         Vector3 bossPivot = _bossTarget.transform.position + _bossLookOffset;
         float bossWeight = Mathf.Clamp01(_lookAtBossWeight);
-        return Vector3.Lerp(titanPivot, bossPivot, bossWeight);
+        return Vector3.Lerp(titanPivot, bossPivot, bossWeight) + _lookPointOffset;
     }
 }
