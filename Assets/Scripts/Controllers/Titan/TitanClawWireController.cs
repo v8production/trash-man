@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class TitanClawWireController : MonoBehaviour
 {
     private const string ClawPrefabName = "Claw";
+    private const string ChainPrefabResourcePath = "Arts/Chain/Chain";
 
     private const float ClawHitRadius = 0.18f;
 
@@ -19,14 +21,15 @@ public sealed class TitanClawWireController : MonoBehaviour
     [SerializeField] private float chainRetractSpeed = 1f;
     [SerializeField] private float retractPullForce = 40f;
     [SerializeField] private float recoverDistance = 0.2f;
+    [SerializeField] private float maxLengthHangTime = 0.6f;
     [SerializeField] private int lineSegmentCount = 16;
     [SerializeField] private float slackSagMultiplier = 0.4f;
     [SerializeField] private float blockedPileupMultiplier = 0.8f;
-    [SerializeField] private float wireWidth = 0.035f;
-    [SerializeField] private Texture2D wireTileTexture;
-    [SerializeField] private float wireTileWorldLength = 0.35f;
 
-    private const string DefaultWireTextureResourcePath = "Arts/Titan/Texture/Chain";
+    [Header("Chain Mesh")]
+    [SerializeField] private float chainSpacing = 0.22f;
+    [SerializeField] private Vector3 chainLinkScale = Vector3.one;
+    [SerializeField] private int maxChainLinkCount = 32;
 
     private TitanClawWirePhase _phase;
     private float _phaseTime;
@@ -45,10 +48,13 @@ public sealed class TitanClawWireController : MonoBehaviour
     private GameObject _spawnedClaw;
     private Transform _spawnedClawTransform;
     private Rigidbody _spawnedClawRigidbody;
-    private LineRenderer _wireRenderer;
-    private Material _wireMaterial;
+    private GameObject _chainPrefab;
+    private Transform _chainRoot;
+    private readonly List<GameObject> _chainLinks = new();
+    private Vector3[] _chainCurvePoints;
     private TitanStat _attackerStat;
     private bool _hitBossThisLaunch;
+    private float _maxLengthReachedTime = -1f;
     private Vector3 _launchStartPosition;
     private Quaternion _launchStartRotation;
     private Vector3 _launchDirection;
@@ -72,6 +78,7 @@ public sealed class TitanClawWireController : MonoBehaviour
         _phaseTime = 0f;
         _currentChainLength = 0f;
         _slackLength = 0f;
+        _maxLengthReachedTime = -1f;
         _attackerStat = attacker as TitanStat;
         _hitBossThisLaunch = false;
         CacheLaunchPose();
@@ -126,6 +133,7 @@ public sealed class TitanClawWireController : MonoBehaviour
         _phaseTime = 0f;
         _hitBossThisLaunch = _phase == TitanClawWirePhase.Idle || _hitBossThisLaunch;
         _slackLength = 0f;
+        _maxLengthReachedTime = -1f;
 
         if (_phase == TitanClawWirePhase.Idle)
         {
@@ -143,6 +151,8 @@ public sealed class TitanClawWireController : MonoBehaviour
         }
 
         SetSpawnedClawPose(snapshot.ClawPosition, snapshot.ClawRotation);
+        if (_phase != TitanClawWirePhase.Idle)
+            ApplyDistanceConstraint(ResolveWireAnchorPosition(), maxChainLength);
         UpdateVisuals();
     }
 
@@ -157,19 +167,31 @@ public sealed class TitanClawWireController : MonoBehaviour
         Vector3 previousPosition = ResolveClawPosition();
         Vector3 nextPosition = ResolveClawPosition();
 
-        ApplyDistanceConstraintDuringLaunch(anchor);
+        ApplyDistanceConstraint(anchor, Mathf.Min(_currentChainLength, maxChainLength));
         nextPosition = ResolveClawPosition();
         TryApplyClawAttack(previousPosition, nextPosition);
 
-        // Launch ends once chain fully extends; Retracting will first remove slack, then pull.
         if (_currentChainLength >= maxChainLength)
-            EnterRetracting();
+        {
+            if (_maxLengthReachedTime < 0f)
+                _maxLengthReachedTime = _phaseTime;
+
+            if (maxLengthHangTime <= 0f || _phaseTime - _maxLengthReachedTime >= maxLengthHangTime)
+                EnterRetracting();
+        }
+        else
+        {
+            _maxLengthReachedTime = -1f;
+        }
+        if (_phase == TitanClawWirePhase.Launching && Vector3.Distance(anchor, ResolveClawPosition()) >= maxChainLength - 0.01f)
+            ApplyDistanceConstraint(anchor, maxChainLength);
     }
 
     private void EnterRetracting()
     {
         SetPhase(TitanClawWirePhase.Retracting, "EnterRetracting");
         _phaseTime = 0f;
+        _maxLengthReachedTime = -1f;
         _retractStartPosition = ResolveClawPosition();
         _retractStartRotation = ResolveClawRotation();
     }
@@ -177,6 +199,7 @@ public sealed class TitanClawWireController : MonoBehaviour
     private void SimulateHitBlocked(float dt)
     {
         Vector3 anchor = ResolveWireAnchorPosition();
+        ApplyDistanceConstraint(anchor, maxChainLength);
         UpdateSlackLength(anchor);
 
         if (_spawnedClawRigidbody != null)
@@ -203,7 +226,7 @@ public sealed class TitanClawWireController : MonoBehaviour
             // First, retract chain length (removes slack visually). Only pull the claw once slack is nearly gone.
             if (_slackLength <= 0.02f)
             {
-                ApplyDistanceConstraintTaut(anchor);
+                ApplyDistanceConstraint(anchor, Mathf.Min(_currentChainLength, maxChainLength));
 
                 Vector3 clawPos = _spawnedClawRigidbody.position;
                 Vector3 toAnchor = anchor - clawPos;
@@ -211,12 +234,15 @@ public sealed class TitanClawWireController : MonoBehaviour
                 if (dist > 0.0001f)
                 {
                     Vector3 dir = toAnchor / dist;
+                    Vector3 v = GetRigidbodyVelocity(_spawnedClawRigidbody);
+                    float inwardSpeed = Mathf.Max(0f, Vector3.Dot(v, dir));
+                    SetRigidbodyVelocity(_spawnedClawRigidbody, v + (dir * Mathf.Max(0f, chainRetractSpeed - inwardSpeed)));
                     _spawnedClawRigidbody.AddForce(dir * retractPullForce, ForceMode.Acceleration);
                 }
             }
         }
 
-        if (_spawnedClawTransform != null && Vector3.Distance(anchor, _spawnedClawTransform.position) <= recoverDistance)
+        if (_spawnedClawTransform != null && Vector3.Distance(anchor, ResolveClawPosition()) <= recoverDistance)
         {
             SetPhase(TitanClawWirePhase.Idle, "RetractComplete");
             _phaseTime = 0f;
@@ -280,24 +306,26 @@ public sealed class TitanClawWireController : MonoBehaviour
 
     private void UpdateVisuals()
     {
-        EnsureWireRenderer();
-
         bool visible = _phase != TitanClawWirePhase.Idle;
-        _wireRenderer.enabled = visible;
         if (!visible)
+        {
+            HideChainLinks();
             return;
+        }
 
-        RenderWireCurve();
+        RenderChainCurve();
     }
 
-    private void RenderWireCurve()
+    private void RenderChainCurve()
     {
+        EnsureChainRoot();
+
         Vector3 anchor = ResolveWireAnchorPosition();
         Vector3 claw = ResolveClawPosition();
         UpdateSlackLength(anchor);
 
         int segments = Mathf.Max(2, lineSegmentCount);
-        _wireRenderer.positionCount = segments;
+        EnsureCurveBuffer(segments);
 
         float distance = Vector3.Distance(anchor, claw);
         float slack = Mathf.Max(0f, _currentChainLength - distance);
@@ -310,8 +338,6 @@ public sealed class TitanClawWireController : MonoBehaviour
         bool blockedPileup = _phase == TitanClawWirePhase.HitBlocked && slack > 0.001f;
         float pileupStartT = 0.6f;
         float pileupExponent = Mathf.Lerp(1f, 0.25f, Mathf.Clamp01(blockedPileupMultiplier));
-
-        Vector3[] points = new Vector3[segments];
 
         for (int i = 0; i < segments; i++)
         {
@@ -334,35 +360,76 @@ public sealed class TitanClawWireController : MonoBehaviour
                 p += Vector3.down * extraSag;
             }
 
-            points[i] = p;
+            _chainCurvePoints[i] = p;
         }
 
         float curveLength = 0f;
+        for (int i = 1; i < segments; i++)
+            curveLength += Vector3.Distance(_chainCurvePoints[i - 1], _chainCurvePoints[i]);
 
-        for (int i = 0; i < segments; i++)
+        float spacing = Mathf.Max(0.01f, chainSpacing);
+        int linkCount = Mathf.Clamp(Mathf.CeilToInt(curveLength / spacing), 1, Mathf.Max(1, maxChainLinkCount));
+        EnsureChainPool(linkCount);
+
+        for (int i = 0; i < _chainLinks.Count; i++)
         {
-            Vector3 p = points[segments - 1 - i];
-            _wireRenderer.SetPosition(i, p);
+            GameObject link = _chainLinks[i];
+            bool active = i < linkCount;
+            if (link.activeSelf != active)
+                link.SetActive(active);
 
-            if (i > 0)
+            if (!active)
+                continue;
+
+            float distanceOnCurve = linkCount <= 1 ? 0f : Mathf.Lerp(0f, curveLength, i / (float)(linkCount - 1));
+            SampleCurveByDistance(segments, distanceOnCurve, out Vector3 position, out Vector3 tangent);
+            link.transform.SetPositionAndRotation(position, ResolveChainLinkRotation(tangent));
+            link.transform.localScale = chainLinkScale;
+        }
+    }
+
+    private void EnsureCurveBuffer(int segments)
+    {
+        if (_chainCurvePoints == null || _chainCurvePoints.Length != segments)
+            _chainCurvePoints = new Vector3[segments];
+    }
+
+    private void SampleCurveByDistance(int segments, float targetDistance, out Vector3 position, out Vector3 tangent)
+    {
+        position = _chainCurvePoints[0];
+        tangent = segments > 1 ? _chainCurvePoints[1] - _chainCurvePoints[0] : Vector3.forward;
+
+        float walked = 0f;
+        for (int i = 1; i < segments; i++)
+        {
+            Vector3 from = _chainCurvePoints[i - 1];
+            Vector3 to = _chainCurvePoints[i];
+            Vector3 segment = to - from;
+            float length = segment.magnitude;
+            if (length <= 0.0001f)
+                continue;
+
+            if (walked + length >= targetDistance)
             {
-                Vector3 prev = points[segments - i];
-                curveLength += Vector3.Distance(prev, p);
+                float t = Mathf.Clamp01((targetDistance - walked) / length);
+                position = Vector3.Lerp(from, to, t);
+                tangent = segment / length;
+                return;
             }
+
+            walked += length;
         }
 
-        float tileLen = Mathf.Max(0.01f, wireTileWorldLength);
-        float repeats = Mathf.Max(0.001f, curveLength / tileLen);
+        position = _chainCurvePoints[segments - 1];
+        tangent = _chainCurvePoints[segments - 1] - _chainCurvePoints[Mathf.Max(0, segments - 2)];
+    }
 
-        _wireRenderer.textureMode = LineTextureMode.RepeatPerSegment;
-        _wireRenderer.textureScale = new Vector2(repeats, 1f);
+    private static Quaternion ResolveChainLinkRotation(Vector3 tangent)
+    {
+        if (tangent.sqrMagnitude < 0.0001f)
+            tangent = Vector3.forward;
 
-        if (_wireMaterial != null && _wireMaterial.mainTexture != null)
-        {
-            float endU = repeats;
-            float offsetX = Mathf.Ceil(endU) - endU;
-            _wireMaterial.mainTextureOffset = new Vector2(offsetX, 0f);
-        }
+        return Quaternion.LookRotation(tangent.normalized, Vector3.up);
     }
 
     private static Vector3 EvaluateQuadraticBezier(Vector3 p0, Vector3 p1, Vector3 p2, float t)
@@ -516,41 +583,69 @@ public sealed class TitanClawWireController : MonoBehaviour
         if (_spawnedClawTransform == null)
             return;
 
+        if (_spawnedClawRigidbody != null)
+        {
+            _spawnedClawRigidbody.position = position;
+            _spawnedClawRigidbody.rotation = rotation;
+            return;
+        }
+
         _spawnedClawTransform.SetPositionAndRotation(position, rotation);
     }
 
-    private void EnsureWireRenderer()
+    private void EnsureChainRoot()
     {
-        if (_wireRenderer != null)
+        if (_chainRoot != null)
             return;
 
-        GameObject wire = new("RightClaw_WireRenderer");
-        wire.transform.SetParent(transform, worldPositionStays: true);
-        _wireRenderer = wire.AddComponent<LineRenderer>();
-        _wireRenderer.positionCount = Mathf.Max(2, lineSegmentCount);
-        _wireRenderer.useWorldSpace = true;
-        _wireRenderer.startWidth = wireWidth;
-        _wireRenderer.endWidth = wireWidth;
-        _wireRenderer.numCapVertices = 4;
-        _wireRenderer.textureMode = LineTextureMode.RepeatPerSegment;
+        GameObject root = new("RightClaw_ChainMeshRoot");
+        root.transform.SetParent(transform, worldPositionStays: true);
+        _chainRoot = root.transform;
+    }
 
-        if (wireTileTexture == null)
-            wireTileTexture = Resources.Load<Texture2D>(DefaultWireTextureResourcePath);
+    private void EnsureChainPool(int requiredCount)
+    {
+        EnsureChainRoot();
 
-        Shader shader = Shader.Find("Unlit/Texture");
-        if (shader == null)
-            shader = Shader.Find("Sprites/Default");
+        if (_chainPrefab == null)
+            _chainPrefab = Resources.Load<GameObject>(ChainPrefabResourcePath);
 
-        _wireMaterial = new Material(shader);
-        _wireMaterial.color = Color.white;
-        if (wireTileTexture != null)
+        if (_chainPrefab == null)
+            return;
+
+        int cappedCount = Mathf.Min(requiredCount, Mathf.Max(1, maxChainLinkCount));
+        while (_chainLinks.Count < cappedCount)
         {
-            wireTileTexture.wrapMode = TextureWrapMode.Repeat;
-            _wireMaterial.mainTexture = wireTileTexture;
-            _wireMaterial.mainTextureScale = Vector2.one;
+            GameObject link = Instantiate(_chainPrefab, _chainRoot);
+            link.name = $"RightClaw_ChainLink_{_chainLinks.Count:00}";
+            DisableChainPhysics(link);
+            link.SetActive(false);
+            _chainLinks.Add(link);
         }
+    }
 
-        _wireRenderer.material = _wireMaterial;
+    private static void DisableChainPhysics(GameObject link)
+    {
+        Collider[] colliders = link.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+            colliders[i].enabled = false;
+
+        Joint[] joints = link.GetComponentsInChildren<Joint>(true);
+        for (int i = 0; i < joints.Length; i++)
+            Object.Destroy(joints[i]);
+
+        Rigidbody[] rigidbodies = link.GetComponentsInChildren<Rigidbody>(true);
+        for (int i = 0; i < rigidbodies.Length; i++)
+            Object.Destroy(rigidbodies[i]);
+    }
+
+    private void HideChainLinks()
+    {
+        for (int i = 0; i < _chainLinks.Count; i++)
+        {
+            if (_chainLinks[i] != null && _chainLinks[i].activeSelf)
+                _chainLinks[i].SetActive(false);
+        }
     }
 
     private Vector3 ResolveWireAnchorPosition()
@@ -564,11 +659,17 @@ public sealed class TitanClawWireController : MonoBehaviour
 
     private Vector3 ResolveClawPosition()
     {
+        if (_spawnedClawRigidbody != null)
+            return _spawnedClawRigidbody.position;
+
         return _spawnedClawTransform != null ? _spawnedClawTransform.position : _launchStartPosition;
     }
 
     private Quaternion ResolveClawRotation()
     {
+        if (_spawnedClawRigidbody != null)
+            return _spawnedClawRigidbody.rotation;
+
         return _spawnedClawTransform != null ? _spawnedClawTransform.rotation : _launchStartRotation;
     }
 
@@ -645,7 +746,7 @@ public sealed class TitanClawWireController : MonoBehaviour
         _slackLength = Mathf.Max(0f, _currentChainLength - distance);
     }
 
-    private void ApplyDistanceConstraintDuringLaunch(Vector3 anchor)
+    private void ApplyDistanceConstraint(Vector3 anchor, float allowedLength)
     {
         if (_spawnedClawRigidbody == null)
             return;
@@ -660,10 +761,9 @@ public sealed class TitanClawWireController : MonoBehaviour
             return;
         }
 
-        float allowed = Mathf.Max(0f, _currentChainLength);
+        float allowed = Mathf.Max(0f, allowedLength);
         if (distance > allowed)
         {
-            // Only enforce outward constraint during Launching so we don't shove the claw into colliders when blocked.
             Vector3 dir = toClaw / distance;
             rb.position = anchor + (dir * allowed);
 
@@ -675,32 +775,6 @@ public sealed class TitanClawWireController : MonoBehaviour
         }
 
         UpdateSlackLength(anchor);
-    }
-
-    private void ApplyDistanceConstraintTaut(Vector3 anchor)
-    {
-        if (_spawnedClawRigidbody == null)
-            return;
-
-        Rigidbody rb = _spawnedClawRigidbody;
-        Vector3 clawPos = rb.position;
-        Vector3 toClaw = clawPos - anchor;
-        float distance = toClaw.magnitude;
-        if (distance < 0.0001f)
-            return;
-
-        float allowed = Mathf.Max(0f, _currentChainLength);
-        if (distance > allowed)
-        {
-            Vector3 dir = toClaw / distance;
-            rb.position = anchor + (dir * allowed);
-
-            Vector3 v = GetRigidbodyVelocity(rb);
-            float outward = Vector3.Dot(v, dir);
-            if (outward > 0f)
-                v -= dir * outward;
-            SetRigidbodyVelocity(rb, v);
-        }
     }
 
     internal void NotifyClawHitNonBoss(Collision collision)
