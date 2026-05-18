@@ -133,7 +133,7 @@ public static class RangerFaceTextureStore
     {
         RangerController[] rangers = UnityEngine.Object.FindObjectsByType<RangerController>(FindObjectsInactive.Include);
         foreach (RangerController ranger in rangers)
-            ApplyTo(ranger.gameObject);
+            ranger.ApplySavedFaceTexture();
     }
 
     private static Texture2D LoadRuntimeTexture()

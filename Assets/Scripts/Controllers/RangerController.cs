@@ -5,6 +5,10 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CharacterController))]
 public class RangerController : MonoBehaviour
 {
+    private const string RangerColorMaterialName = "Ranger Color_Mat";
+    private const string RangerFaceMaterialName = "Ranger Face_Mat";
+    private const string ImportedRangerFaceMaterialName = "Ranger_Face";
+
     [Header("Actions (Player Map)")]
     [SerializeField] private string moveActionName = "Move";
 
@@ -13,9 +17,16 @@ public class RangerController : MonoBehaviour
     [SerializeField] private float moveSpeed = 2f;
     [SerializeField] private float rotateLerpSpeed = 12f;
 
+    [Header("Material Debug")]
+    [SerializeField] private bool _hasNetworkedColorOverride;
+    [SerializeField] private Color _rangerColor = Color.white;
+    [SerializeField] private Color _faceColor = Color.white;
+
     private CharacterController _characterController;
     private LobbyCameraController _cameraController;
     private InputAction _moveAction;
+    private MaterialPropertyBlock _materialPropertyBlock;
+    private Renderer[] _renderers = System.Array.Empty<Renderer>();
     private Vector2 _moveInput;
     private bool _initialized;
 
@@ -49,6 +60,7 @@ public class RangerController : MonoBehaviour
 
         _characterController = GetComponent<CharacterController>();
         Anim = GetComponentInChildren<Animator>();
+        _renderers = GetComponentsInChildren<Renderer>(true);
 
         InputActionMap playerMap = Managers.Input.PlayerMap;
         if (playerMap != null)
@@ -56,7 +68,44 @@ public class RangerController : MonoBehaviour
 
         AnimState = Define.RangerAnimState.Idle00;
         RangerFaceTextureStore.ApplyTo(gameObject);
+        RefreshMaterialDebugValues();
         _initialized = true;
+    }
+
+    public void ApplyNetworkedColors(Color color, bool hasNetworkedColorOverride)
+    {
+        Init();
+
+        _hasNetworkedColorOverride = hasNetworkedColorOverride;
+        if (_hasNetworkedColorOverride)
+        {
+            _rangerColor = color;
+            _faceColor = color;
+        }
+
+        ApplyColorPresentation();
+        RefreshMaterialDebugValues();
+    }
+
+    public void ApplyDefaultFaceTexture()
+    {
+        Init();
+        RangerFaceTextureStore.ApplyDefaultTo(gameObject);
+        RefreshMaterialDebugValues();
+    }
+
+    public void ApplySavedFaceTexture()
+    {
+        Init();
+        RangerFaceTextureStore.ApplyTo(gameObject);
+        RefreshMaterialDebugValues();
+    }
+
+    public void ApplyFaceTexture(Texture texture)
+    {
+        Init();
+        RangerFaceTextureStore.ApplyTextureTo(gameObject, texture);
+        RefreshMaterialDebugValues();
     }
 
     private void Update()
@@ -151,6 +200,118 @@ public class RangerController : MonoBehaviour
         return state == Define.RangerAnimState.Emote00
             || state == Define.RangerAnimState.Emote01
             || state == Define.RangerAnimState.Emote02;
+    }
+
+    private void ApplyColorPresentation()
+    {
+        if (_renderers == null || _renderers.Length == 0)
+            _renderers = GetComponentsInChildren<Renderer>(true);
+
+        if (_materialPropertyBlock == null)
+            _materialPropertyBlock = new MaterialPropertyBlock();
+
+        for (int i = 0; i < _renderers.Length; i++)
+        {
+            Renderer targetRenderer = _renderers[i];
+            if (targetRenderer == null)
+                continue;
+
+            Material[] sharedMaterials = targetRenderer.sharedMaterials;
+            if (sharedMaterials == null || sharedMaterials.Length == 0)
+                continue;
+
+            for (int m = 0; m < sharedMaterials.Length; m++)
+            {
+                Material material = sharedMaterials[m];
+                if (material == null)
+                    continue;
+
+                bool isRangerColorMaterial = IsRangerColorMaterial(material);
+                bool isFaceMaterial = IsFaceMaterial(material);
+                if (!isRangerColorMaterial && !isFaceMaterial)
+                    continue;
+
+                if (!_hasNetworkedColorOverride)
+                {
+                    targetRenderer.SetPropertyBlock(null, m);
+                    continue;
+                }
+
+                Color targetColor = isFaceMaterial ? _faceColor : _rangerColor;
+                targetRenderer.GetPropertyBlock(_materialPropertyBlock, m);
+                _materialPropertyBlock.SetColor("_Color", targetColor);
+                _materialPropertyBlock.SetColor("_BaseColor", targetColor);
+                targetRenderer.SetPropertyBlock(_materialPropertyBlock, m);
+            }
+        }
+    }
+
+    private void RefreshMaterialDebugValues()
+    {
+        if (_renderers == null || _renderers.Length == 0)
+            _renderers = GetComponentsInChildren<Renderer>(true);
+
+        bool foundRangerColor = false;
+        bool foundFace = false;
+
+        for (int i = 0; i < _renderers.Length; i++)
+        {
+            Renderer targetRenderer = _renderers[i];
+            if (targetRenderer == null)
+                continue;
+
+            Material[] sharedMaterials = targetRenderer.sharedMaterials;
+            if (sharedMaterials == null || sharedMaterials.Length == 0)
+                continue;
+
+            for (int m = 0; m < sharedMaterials.Length; m++)
+            {
+                Material material = sharedMaterials[m];
+                if (material == null)
+                    continue;
+
+                if (IsRangerColorMaterial(material) && !_hasNetworkedColorOverride)
+                {
+                    _rangerColor = ReadMaterialColor(material);
+                    foundRangerColor = true;
+                }
+
+                if (!IsFaceMaterial(material))
+                    continue;
+
+                if (!_hasNetworkedColorOverride)
+                    _faceColor = ReadMaterialColor(material);
+
+                foundFace = true;
+
+                if (foundRangerColor && foundFace)
+                    return;
+            }
+        }
+    }
+
+    private static Color ReadMaterialColor(Material material)
+    {
+        if (material.HasProperty("_Color"))
+            return material.GetColor("_Color");
+
+        if (material.HasProperty("_BaseColor"))
+            return material.GetColor("_BaseColor");
+
+        return Color.white;
+    }
+
+    private static bool IsRangerColorMaterial(Material material)
+    {
+        return material.name.StartsWith(RangerColorMaterialName);
+    }
+
+    private static bool IsFaceMaterial(Material material)
+    {
+        string materialName = material.name;
+        return materialName.StartsWith(RangerFaceMaterialName)
+            || materialName == ImportedRangerFaceMaterialName
+            || materialName.StartsWith(ImportedRangerFaceMaterialName + " ");
     }
 
     private void UpdateRotation(Vector3 moveDirection)

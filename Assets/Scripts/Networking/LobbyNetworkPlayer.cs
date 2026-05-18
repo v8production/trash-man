@@ -9,9 +9,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 {
     private const string LobbyCameraPrefabName = "Lobby_Camera";
     private const string LobbyRangerPrefabName = "Ranger";
-    private const string RangerColorMaterialName = "Ranger Color_Mat";
-    private const string RangerFaceMaterialName = "Ranger Face_Mat";
-    private const string ImportedRangerFaceMaterialName = "Ranger_Face";
     private const int FirstTitanRoleValue = (int)Define.TitanRole.Torso;
     private const int LastTitanRoleValue = (int)Define.TitanRole.RightLeg;
 
@@ -34,7 +31,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private UI_Nickname _nicknameUI;
     private LobbyCameraController _localCamera;
 
-    private MaterialPropertyBlock _rangerColorPropertyBlock;
     private Texture2D _rangerFaceTexture;
 
     private Animator _remoteAnimator;
@@ -894,56 +890,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         int roleMask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
-        bool shouldApplyOverride = roleMask != 0;
-
-        Renderer[] renderers = _lobbyRanger.GetComponentsInChildren<Renderer>(true);
-        if (renderers == null || renderers.Length == 0)
-            return;
-
-        if (_rangerColorPropertyBlock == null)
-            _rangerColorPropertyBlock = new MaterialPropertyBlock();
-
-        for (int i = 0; i < renderers.Length; i++)
-        {
-            Renderer renderer = renderers[i];
-            if (renderer == null)
-                continue;
-
-            // Apply only to material slots that use role-tinted Ranger materials.
-            Material[] sharedMaterials = renderer.sharedMaterials;
-            if (sharedMaterials == null || sharedMaterials.Length == 0)
-                continue;
-
-            for (int m = 0; m < sharedMaterials.Length; m++)
-            {
-                Material mat = sharedMaterials[m];
-                if (mat == null || !IsRangerRoleTintMaterial(mat))
-                    continue;
-
-                if (!shouldApplyOverride)
-                {
-                    // No selection: remove overrides so the material's own Color field is used.
-                    renderer.SetPropertyBlock(null, m);
-                    continue;
-                }
-
-                // Apply color to both common properties so builds/shaders stay consistent.
-                Color color = RgbaToColor(_rangerColorRgba.Value);
-                renderer.GetPropertyBlock(_rangerColorPropertyBlock, m);
-                _rangerColorPropertyBlock.SetColor("_Color", color);
-                _rangerColorPropertyBlock.SetColor("_BaseColor", color);
-                renderer.SetPropertyBlock(_rangerColorPropertyBlock, m);
-            }
-        }
-    }
-
-    private static bool IsRangerRoleTintMaterial(Material material)
-    {
-        string materialName = material.name;
-        return materialName.StartsWith(RangerColorMaterialName)
-            || materialName.StartsWith(RangerFaceMaterialName)
-            || materialName == ImportedRangerFaceMaterialName
-            || materialName.StartsWith(ImportedRangerFaceMaterialName + " ");
+        _lobbyRanger.ApplyNetworkedColors(RgbaToColor(_rangerColorRgba.Value), roleMask != 0);
     }
 
     private void ApplyRangerFacePresentation()
@@ -955,20 +902,20 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (string.IsNullOrWhiteSpace(payload))
         {
             ClearRangerFaceTexture();
-            RangerFaceTextureStore.ApplyDefaultTo(_lobbyRanger.gameObject);
+            _lobbyRanger.ApplyDefaultFaceTexture();
             return;
         }
 
         if (!RangerFaceTextureStore.TryCreateTextureFromPayload(payload, out Texture2D faceTexture))
         {
             ClearRangerFaceTexture();
-            RangerFaceTextureStore.ApplyDefaultTo(_lobbyRanger.gameObject);
+            _lobbyRanger.ApplyDefaultFaceTexture();
             return;
         }
 
         ClearRangerFaceTexture();
         _rangerFaceTexture = faceTexture;
-        RangerFaceTextureStore.ApplyTextureTo(_lobbyRanger.gameObject, _rangerFaceTexture);
+        _lobbyRanger.ApplyFaceTexture(_rangerFaceTexture);
     }
 
     private void ClearRangerFaceTexture()
@@ -986,17 +933,18 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (normalizedMask == 0)
             return 0;
 
-        // Priority: Red > Blue > Green > Yellow > Black
+        // Priority follows below order:
+        // Torso (Red) > RightLeg (Blue) > LeftLeg (Green) > RightArm (Yellow) > LeftArm (Black).
         if ((normalizedMask & RoleToMaskBit(Define.TitanRole.Torso)) != 0)
-            return PackRgba(220, 20, 60, 255); // Red (#DC143C)
+            return PackRgba(0xAC, 0x00, 0x00, 255); // Red (#AC0000)
         if ((normalizedMask & RoleToMaskBit(Define.TitanRole.RightLeg)) != 0)
-            return PackRgba(0, 102, 255, 255); // Blue (#0066FF)
+            return PackRgba(0x1E, 0x37, 0xB5, 255); // Blue (#1E37B5)
         if ((normalizedMask & RoleToMaskBit(Define.TitanRole.LeftLeg)) != 0)
-            return PackRgba(0, 170, 60, 255); // Green (#00AA3C)
+            return PackRgba(0x42, 0xAA, 0x00, 255); // Green (#42AA00)
         if ((normalizedMask & RoleToMaskBit(Define.TitanRole.RightArm)) != 0)
-            return PackRgba(255, 215, 0, 255); // Yellow (#FFD700)
+            return PackRgba(0xF7, 0xC6, 0x00, 255); // Yellow (#F7C600)
         if ((normalizedMask & RoleToMaskBit(Define.TitanRole.LeftArm)) != 0)
-            return PackRgba(30, 30, 35, 255); // Black (#1E1E23)
+            return PackRgba(0x0F, 0x0F, 0x0F, 255); // Black (#0F0F0F)
 
         return 0;
     }
