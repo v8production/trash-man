@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 76007fd4cb3e33345a6a075b9a7d7ea3
+guid: 30ec0e703d6ae294092138ae7af34dc7
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -35,7 +35,7 @@ ModelImporter:
       takeName: Take 001
       internalID: 1827226128182048838
       firstFrame: 0
-      lastFrame: 76
+      lastFrame: 15
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
@@ -341,7 +341,7 @@ ModelImporter:
     legStretch: 0.05
     feetSpacing: 0
     globalScale: 1
-    rootMotionBoneName: Bip001
+    rootMotionBoneName: 
     hasTranslationDoF: 1
     hasExtraRoot: 0
     skeletonHasParents: 1

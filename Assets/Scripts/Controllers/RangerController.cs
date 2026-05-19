@@ -143,7 +143,7 @@ public class RangerController : MonoBehaviour
             return;
         }
 
-        if (IsEmotionState(AnimState) && !IsCurrentAnimationFinished())
+        if (IsEmotionState(AnimState))
             return;
 
         AnimState = Define.RangerAnimState.Idle00;
@@ -184,15 +184,6 @@ public class RangerController : MonoBehaviour
 
         if (Anim != null)
             Anim.CrossFade(emotionState.ToString(), 0.1f, 0, 0f);
-    }
-
-    private bool IsCurrentAnimationFinished()
-    {
-        if (Anim == null || Anim.IsInTransition(0))
-            return false;
-
-        AnimatorStateInfo stateInfo = Anim.GetCurrentAnimatorStateInfo(0);
-        return stateInfo.IsName(AnimState.ToString()) && stateInfo.normalizedTime >= 1f;
     }
 
     public static bool IsEmotionState(Define.RangerAnimState state)

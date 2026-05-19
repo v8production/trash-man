@@ -38,7 +38,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private bool _remoteHasLastPosition;
     private bool _remoteWasWalking;
     private bool _remoteEmotionActive;
-    private Define.RangerAnimState _remoteEmotionState;
     private bool _subscribedLobbyRangerEmotion;
 
     private bool _submittedIdentity;
@@ -1023,12 +1022,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
                 return;
             }
 
-            if (!IsRemoteRangerEmotionFinished())
-                return;
-
-            _remoteEmotionActive = false;
-            _remoteWasWalking = false;
-            CrossFadeRemoteRanger(Define.RangerAnimState.Idle00, 0.10f);
             return;
         }
 
@@ -1054,18 +1047,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         _remoteEmotionActive = true;
-        _remoteEmotionState = rangerAnimState;
         _remoteWasWalking = false;
         CrossFadeRemoteRanger(rangerAnimState, 0.10f, 0f);
-    }
-
-    private bool IsRemoteRangerEmotionFinished()
-    {
-        if (_remoteAnimator == null || _remoteAnimator.IsInTransition(0))
-            return false;
-
-        AnimatorStateInfo stateInfo = _remoteAnimator.GetCurrentAnimatorStateInfo(0);
-        return stateInfo.IsName(_remoteEmotionState.ToString()) && stateInfo.normalizedTime >= 1f;
     }
 
     private void CrossFadeRemoteRanger(Define.RangerAnimState state, float transitionDuration)
