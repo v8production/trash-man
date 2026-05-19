@@ -8,24 +8,21 @@ public class GrolarController : BossController
     private Animator _animator;
 
     protected Define.GrolarAnimState _animState;
+    private bool _hasAnimState;
 
     public virtual Define.GrolarAnimState AnimState
     {
         get { return _animState; }
         set
         {
-            // Note: Enum default (0) can match the first desired state.
-            // If we early-return here, the Animator may never receive the initial CrossFade.
-            if (Equals(_animState, value))
-            {
-                if (_animator == null)
-                    return;
+            // Network state can arrive every frame while the logical Grolar state is unchanged.
+            // Restarting CrossFade for the same state prevents the local Animator transition from
+            // completing, making clients see very slow or missing animation playback.
+            if (_hasAnimState && _animState == value)
+                return;
 
-                AnimatorStateInfo info = _animator.GetCurrentAnimatorStateInfo(0);
-                if (info.IsName(value.ToString()))
-                    return;
-            }
             _animState = value;
+            _hasAnimState = true;
 
             float fade = IsLocomotionState(_animState) ? _locomotionCrossFade : _actionCrossFade;
             if (_animator != null)
