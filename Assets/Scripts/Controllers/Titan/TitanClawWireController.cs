@@ -6,6 +6,7 @@ public sealed class TitanClawWireController : MonoBehaviour
     [Header("Claw References")]
     [SerializeField] private Transform wireAnchor;
     [SerializeField] private Transform clawMount;
+    [SerializeField] private string clawPrefabPath = "Prefabs/Claw";
     [SerializeField] private GameObject clawPrefab;
 
     [Header("Launch")]
@@ -21,7 +22,6 @@ public sealed class TitanClawWireController : MonoBehaviour
     [Header("Chain Mesh")]
     [SerializeField] private string chainPrefabPath = "Prefabs/Chain";
     [SerializeField] private float linkSpacing = 0.22f;
-    [SerializeField] private float linkScale = 0.1f;
     [SerializeField] private int maxLinkCount = 32;
     [SerializeField] private Vector3 linkRotationOffsetEuler = Vector3.zero;
 
@@ -32,6 +32,14 @@ public sealed class TitanClawWireController : MonoBehaviour
     private GameObject chainPrefab;
     private Transform chainRoot;
     private readonly List<Transform> chainLinks = new();
+    private Renderer[] mountedClawRenderers;
+    private bool[] mountedClawRendererStates;
+    private Collider[] mountedClawColliders;
+    private bool[] mountedClawColliderStates;
+    private Vector3 mountedClawOriginalLocalPosition;
+    private Quaternion mountedClawOriginalLocalRotation;
+    private Vector3 mountedClawOriginalLocalScale;
+    private bool hasMountedClawOriginalPose;
 
     private float hangTimer;
     private float currentLength;
@@ -42,6 +50,7 @@ public sealed class TitanClawWireController : MonoBehaviour
     {
         ResolveReferences();
         EnsureChainPool();
+        SetMountedClawVisible(true);
         HideChain();
     }
 
@@ -71,7 +80,7 @@ public sealed class TitanClawWireController : MonoBehaviour
 
         if (currentLength >= maxChainLength * 0.98f)
         {
-            phase = TitanClawWirePhase.HitBlocked;
+            SetPhase(TitanClawWirePhase.HitBlocked);
             hangTimer = 0f;
         }
     }
@@ -137,9 +146,7 @@ public sealed class TitanClawWireController : MonoBehaviour
         GameObject source = clawPrefab != null ? clawPrefab : clawMount.gameObject;
         spawnedClaw = Instantiate(source, clawMount.position, clawMount.rotation);
         spawnedClaw.name = $"{source.name}_Launched";
-
-        if (source == clawMount.gameObject)
-            clawMount.gameObject.SetActive(false);
+        spawnedClaw.SetActive(true);
 
         clawBody = spawnedClaw.GetComponent<Rigidbody>();
         if (clawBody == null)
@@ -150,7 +157,7 @@ public sealed class TitanClawWireController : MonoBehaviour
         clawBody.linearVelocity = GetLaunchDirection() * launchSpeed;
         clawBody.angularVelocity = Vector3.zero;
 
-        phase = TitanClawWirePhase.Launching;
+        SetPhase(TitanClawWirePhase.Launching);
         hangTimer = 0f;
         currentLength = 0f;
 
@@ -166,7 +173,7 @@ public sealed class TitanClawWireController : MonoBehaviour
 
         if (currentLength >= maxChainLength * 0.98f)
         {
-            phase = TitanClawWirePhase.HitBlocked;
+            SetPhase(TitanClawWirePhase.HitBlocked);
             hangTimer = 0f;
         }
     }
@@ -190,7 +197,7 @@ public sealed class TitanClawWireController : MonoBehaviour
             return;
         }
 
-        phase = TitanClawWirePhase.Retracting;
+        SetPhase(TitanClawWirePhase.Retracting);
 
         clawBody.useGravity = false;
         clawBody.linearVelocity = Vector3.zero;
@@ -226,11 +233,8 @@ public sealed class TitanClawWireController : MonoBehaviour
 
         spawnedClaw = null;
         clawBody = null;
-        phase = TitanClawWirePhase.Idle;
+        SetPhase(TitanClawWirePhase.Idle);
         currentLength = 0f;
-
-        if (clawMount != null)
-            clawMount.gameObject.SetActive(true);
 
         HideChain();
     }
@@ -281,10 +285,37 @@ public sealed class TitanClawWireController : MonoBehaviour
     private void ResolveReferences()
     {
         if (clawMount == null && Managers.TitanRig != null)
-            clawMount = Managers.TitanRig.Claw;
+        clawMount = Managers.TitanRig.Claw;
 
         if (wireAnchor == null)
             wireAnchor = clawMount;
+
+        if (clawPrefab == null)
+            clawPrefab = Resources.Load<GameObject>(NormalizeResourcesPath(clawPrefabPath));
+
+        ResolveMountedClawVisuals();
+    }
+
+    private void ResolveMountedClawVisuals()
+    {
+        if (clawMount == null || hasMountedClawOriginalPose)
+            return;
+
+        mountedClawOriginalLocalPosition = clawMount.localPosition;
+        mountedClawOriginalLocalRotation = clawMount.localRotation;
+        mountedClawOriginalLocalScale = clawMount.localScale;
+
+        mountedClawRenderers = clawMount.GetComponentsInChildren<Renderer>(true);
+        mountedClawRendererStates = new bool[mountedClawRenderers.Length];
+        for (int i = 0; i < mountedClawRenderers.Length; i++)
+            mountedClawRendererStates[i] = mountedClawRenderers[i].enabled;
+
+        mountedClawColliders = clawMount.GetComponentsInChildren<Collider>(true);
+        mountedClawColliderStates = new bool[mountedClawColliders.Length];
+        for (int i = 0; i < mountedClawColliders.Length; i++)
+            mountedClawColliderStates[i] = mountedClawColliders[i].enabled;
+
+        hasMountedClawOriginalPose = true;
     }
 
     private void EnsureChainPool()
@@ -366,7 +397,6 @@ public sealed class TitanClawWireController : MonoBehaviour
 
             Transform link = chainLinks[i];
             link.SetPositionAndRotation(pos, rot);
-            link.localScale = Vector3.one * linkScale;
         }
     }
 
@@ -403,11 +433,94 @@ public sealed class TitanClawWireController : MonoBehaviour
 
     public void ApplySnapshot(TitanClawWireSnapshot snapshot)
     {
-        phase = snapshot.Phase;
+        ResolveReferences();
+
+        if (snapshot.Phase == TitanClawWirePhase.Idle)
+        {
+            ApplyIdleSnapshot();
+            return;
+        }
+
+        EnsureSnapshotClaw(snapshot);
+
+        SetPhase(snapshot.Phase);
         currentLength = snapshot.CurrentLength;
 
         if (spawnedClaw != null)
+        {
             spawnedClaw.transform.SetPositionAndRotation(snapshot.ClawPosition, snapshot.ClawRotation);
+            ShowChain();
+        }
+    }
+
+    private void ApplyIdleSnapshot()
+    {
+        if (spawnedClaw != null)
+            Destroy(spawnedClaw);
+
+        spawnedClaw = null;
+        clawBody = null;
+        SetPhase(TitanClawWirePhase.Idle);
+        currentLength = 0f;
+
+        HideChain();
+    }
+
+    private void EnsureSnapshotClaw(TitanClawWireSnapshot snapshot)
+    {
+        if (spawnedClaw == null)
+        {
+            GameObject source = clawPrefab != null ? clawPrefab : clawMount != null ? clawMount.gameObject : null;
+            if (source == null)
+                return;
+
+            spawnedClaw = Instantiate(source, snapshot.ClawPosition, snapshot.ClawRotation);
+            spawnedClaw.name = $"{source.name}_RemoteLaunched";
+            spawnedClaw.SetActive(true);
+        }
+
+        clawBody = spawnedClaw.GetComponent<Rigidbody>();
+        if (clawBody != null)
+        {
+            clawBody.isKinematic = true;
+            clawBody.useGravity = false;
+            clawBody.linearVelocity = Vector3.zero;
+            clawBody.angularVelocity = Vector3.zero;
+        }
+    }
+
+    private void SetMountedClawVisible(bool visible)
+    {
+        if (clawMount == null || !hasMountedClawOriginalPose)
+            return;
+
+        clawMount.localPosition = mountedClawOriginalLocalPosition;
+        clawMount.localRotation = mountedClawOriginalLocalRotation;
+        clawMount.localScale = visible ? mountedClawOriginalLocalScale : Vector3.zero;
+
+        if (mountedClawRenderers != null)
+        {
+            for (int i = 0; i < mountedClawRenderers.Length; i++)
+            {
+                if (mountedClawRenderers[i] != null)
+                    mountedClawRenderers[i].enabled = visible && mountedClawRendererStates[i];
+            }
+        }
+
+        if (mountedClawColliders != null)
+        {
+            for (int i = 0; i < mountedClawColliders.Length; i++)
+            {
+                if (mountedClawColliders[i] != null)
+                    mountedClawColliders[i].enabled = visible && mountedClawColliderStates[i];
+            }
+        }
+    }
+
+    private void SetPhase(TitanClawWirePhase nextPhase)
+    {
+        phase = nextPhase;
+        SetMountedClawVisible(nextPhase == TitanClawWirePhase.Idle);
     }
 }
 
