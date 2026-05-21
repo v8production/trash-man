@@ -1,15 +1,8 @@
 fileFormatVersion: 2
-guid: 7de1f3450f1006f46b98cc36bd1b0bf5
+guid: 372d47f66eebabd418450f757031da1b
 NativeFormatImporter:
   externalObjects: {}
-  mainObjectFileID: 0
+  mainObjectFileID: 2100000
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 217923
-  packageName: Industry Props
-  packageVersion: 1.0
-  assetPath: Assets/PretoriusLab/IndustrialProps/Materials/Chain_Mat.mat
-  uploadId: 492305
