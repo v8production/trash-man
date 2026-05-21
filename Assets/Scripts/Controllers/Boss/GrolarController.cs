@@ -39,6 +39,11 @@ public class GrolarController : BossController
     [Header("Rotation")]
     [SerializeField] private float _rotationLerpSpeed = 10f;
 
+    [Header("Network Presentation")]
+    [SerializeField] private float _networkPositionLerpSpeed = 14f;
+    [SerializeField] private float _networkRotationLerpSpeed = 14f;
+    [SerializeField] private float _networkSnapDistance = 2f;
+
     [Header("Target")]
     [SerializeField] private TitanController _titan;
 
@@ -67,6 +72,9 @@ public class GrolarController : BossController
     private Coroutine _attackRoutine;
 
     private Quaternion _desiredRotation;
+    private Vector3 _networkTargetPosition;
+    private Quaternion _networkTargetRotation;
+    private bool _hasNetworkTarget;
 
     private GrolarAnimationEventRelay _eventRelay;
 
@@ -131,6 +139,14 @@ public class GrolarController : BossController
 
     public void ApplyNetworkState(Vector3 position, Quaternion rotation, Define.GrolarAnimState animState, bool attackInProgress)
     {
+        if (ShouldApplyServerStateOnly())
+        {
+            ApplyNetworkPresentationTarget(position, rotation);
+            _attackInProgress = attackInProgress;
+            AnimState = animState;
+            return;
+        }
+
         transform.SetPositionAndRotation(position, rotation);
         _desiredRotation = rotation;
         _attackInProgress = attackInProgress;
@@ -143,6 +159,36 @@ public class GrolarController : BossController
             return;
 
         grolarState.ApplyTo(this);
+        SmoothNetworkPresentation(Time.deltaTime);
+    }
+
+    private void ApplyNetworkPresentationTarget(Vector3 position, Quaternion rotation)
+    {
+        _networkTargetPosition = position;
+        _networkTargetRotation = rotation;
+        _desiredRotation = rotation;
+
+        if (!_hasNetworkTarget || Vector3.Distance(transform.position, position) > _networkSnapDistance)
+        {
+            transform.SetPositionAndRotation(position, rotation);
+            _hasNetworkTarget = true;
+        }
+    }
+
+    private void SmoothNetworkPresentation(float deltaTime)
+    {
+        if (!_hasNetworkTarget)
+            return;
+
+        float positionT = _networkPositionLerpSpeed <= 0f
+            ? 1f
+            : 1f - Mathf.Exp(-_networkPositionLerpSpeed * deltaTime);
+        float rotationT = _networkRotationLerpSpeed <= 0f
+            ? 1f
+            : 1f - Mathf.Exp(-_networkRotationLerpSpeed * deltaTime);
+
+        transform.position = Vector3.Lerp(transform.position, _networkTargetPosition, positionT);
+        transform.rotation = Quaternion.Slerp(transform.rotation, _networkTargetRotation, rotationT);
     }
 
     private void PublishAuthoritativeState()
