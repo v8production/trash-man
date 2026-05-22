@@ -1,8 +1,6 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UI;
 
 public class LobbyScene : BaseScene
 {
@@ -441,7 +439,7 @@ public class LobbyScene : BaseScene
 
         // Validate using network-synced role masks, not the lobby UI registry.
         // The UI registry can be stale while identities/objects are still syncing.
-        if (!Managers.TitanRole.RefreshRoleMap(requireAllRoles: true, out string roleError))
+        if (!Managers.TitanRole.CanStartGameWithCurrentLobbyPlayers(out string roleError))
         {
             string label = string.IsNullOrWhiteSpace(roleError) ? "role requirements" : roleError;
             Managers.Toast.EnqueueMessage($"Cannot start game: {label}", 2.8f);

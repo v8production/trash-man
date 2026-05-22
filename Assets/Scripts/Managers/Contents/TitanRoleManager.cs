@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
 using Unity.Netcode;
-using UnityEngine;
 
 public class TitanRoleManager
 {
@@ -100,6 +98,39 @@ public class TitanRoleManager
             error = "No selected Titan roles are currently mapped.";
 
         return _playersByRole.Count > 0;
+    }
+
+    public bool CanStartGameWithCurrentLobbyPlayers(out string error)
+    {
+        error = string.Empty;
+
+        LobbyNetworkPlayer[] players = LobbyNetworkPlayer.FindAllSpawnedPlayers();
+        if (players == null || players.Length == 0)
+        {
+            error = "No lobby players were found.";
+            return false;
+        }
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || !player.IsSpawned)
+                continue;
+
+            if (!player.HasSelectedTitanRole)
+            {
+                error = $"{player.DisplayName} must select at least one role.";
+                return false;
+            }
+        }
+
+        if (!RefreshRoleMap(requireAllRoles: false, out error))
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(error))
+            return false;
+
+        return true;
     }
 
     public bool TryGetLocalRole(out Define.TitanRole role)
