@@ -5,6 +5,9 @@ public class LobbyCameraController : MonoBehaviour
     [SerializeField] private Transform _target;
     [SerializeField] private Vector3 _pivotOffset = new(0f, 1.6f, 0f);
     [SerializeField] private float _distance = 3f;
+    [SerializeField] private float _minDistance = 1.5f;
+    [SerializeField] private float _maxDistance = 6f;
+    [SerializeField] private float _scrollZoomSensitivity = 100f;
     [SerializeField] private float _mouseSensitivity = 0.12f;
     [SerializeField] private float _followLerpSpeed = 12f;
     [SerializeField] private float _minPitch = -20f;
@@ -35,7 +38,9 @@ public class LobbyCameraController : MonoBehaviour
         Vector2 lookInput = Managers.Input.ReadPlayerLookInput();
         float mouseX = lookInput.x;
         float mouseY = lookInput.y;
+        float scrollY = Managers.Input.ReadMouseScrollY();
 
+        _distance = Mathf.Clamp(_distance - scrollY * _scrollZoomSensitivity, _minDistance, _maxDistance);
         _yaw += mouseX * _mouseSensitivity;
         _pitch = Mathf.Clamp(_pitch - mouseY * _mouseSensitivity, _minPitch, _maxPitch);
 

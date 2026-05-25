@@ -7,6 +7,7 @@ public class InputManager
     private string _playerMapName = "Player";
     private string _uiMapName = "UI";
     private const string LookActionName = "Look";
+    private const string ScrollWheelActionName = "ScrollWheel";
     private bool _hasVirtualMousePosition;
     private Vector2 _virtualMousePosition;
     private Vector2Int _virtualMouseScreenSize;
@@ -34,6 +35,7 @@ public class InputManager
     }
 
     private InputAction _lookAction;
+    private InputAction _scrollWheelAction;
 
     public void Init()
     {
@@ -41,6 +43,7 @@ public class InputManager
         PlayerMap = _asset.FindActionMap(_playerMapName, throwIfNotFound: true);
         UIMap = _asset.FindActionMap(_uiMapName, throwIfNotFound: true);
         _lookAction = PlayerMap.FindAction(LookActionName, throwIfNotFound: false);
+        _scrollWheelAction = UIMap.FindAction(ScrollWheelActionName, throwIfNotFound: false);
         SetMode(Define.InputMode.UI);
     }
 
@@ -133,6 +136,25 @@ public class InputManager
             return Vector2.zero;
 
         return mouse.delta.ReadValue();
+    }
+
+    public float ReadMouseScrollY()
+    {
+        if (Mode == Define.InputMode.Cinematic)
+            return 0f;
+
+        if (_scrollWheelAction != null)
+        {
+            float actionScrollY = _scrollWheelAction.ReadValue<Vector2>().y;
+            if (!Mathf.Approximately(actionScrollY, 0f))
+                return actionScrollY;
+        }
+
+        Mouse mouse = Mouse.current;
+        if (mouse == null)
+            return 0f;
+
+        return mouse.scroll.ReadValue().y;
     }
 
     public bool IsRightMouseHeld()
