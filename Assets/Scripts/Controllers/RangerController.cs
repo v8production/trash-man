@@ -21,6 +21,7 @@ public class RangerController : MonoBehaviour
     [SerializeField] private bool _hasNetworkedColorOverride;
     [SerializeField] private Color _rangerColor = Color.white;
     [SerializeField] private Color _faceColor = Color.white;
+    [SerializeField] private float _faceEmissive = 1f;
 
     private CharacterController _characterController;
     private LobbyCameraController _cameraController;
@@ -74,10 +75,15 @@ public class RangerController : MonoBehaviour
 
     public void ApplyNetworkedColors(Color color, bool hasNetworkedColorOverride)
     {
-        ApplyNetworkedColors(color, color, hasNetworkedColorOverride);
+        ApplyNetworkedColors(color, color, hasNetworkedColorOverride, 3f);
     }
 
     public void ApplyNetworkedColors(Color rangerColor, Color faceColor, bool hasNetworkedColorOverride)
+    {
+        ApplyNetworkedColors(rangerColor, faceColor, hasNetworkedColorOverride, 3f);
+    }
+
+    public void ApplyNetworkedColors(Color rangerColor, Color faceColor, bool hasNetworkedColorOverride, float faceEmissive)
     {
         Init();
 
@@ -86,6 +92,7 @@ public class RangerController : MonoBehaviour
         {
             _rangerColor = rangerColor;
             _faceColor = faceColor;
+            _faceEmissive = faceEmissive;
         }
 
         ApplyColorPresentation();
@@ -238,7 +245,7 @@ public class RangerController : MonoBehaviour
                 _materialPropertyBlock.SetColor("_Color", targetColor);
                 _materialPropertyBlock.SetColor("_BaseColor", targetColor);
                 if (isFaceMaterial)
-                    _materialPropertyBlock.SetFloat("_emissive", 3f);
+                    _materialPropertyBlock.SetFloat("_emissive", _faceEmissive);
                 targetRenderer.SetPropertyBlock(_materialPropertyBlock, m);
             }
         }
