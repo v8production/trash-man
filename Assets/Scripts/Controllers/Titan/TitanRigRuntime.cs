@@ -244,7 +244,7 @@ public sealed class TitanRigRuntime : MonoBehaviour
 
         if (leftElbow != null)
         {
-            leftElbow.localRotation = leftElbowBaseRotation * Quaternion.Euler(0f, elbowPitch, 0f);
+            leftElbow.localRotation = leftElbowBaseRotation * Quaternion.Euler(0f, -elbowPitch, 0f);
         }
     }
 

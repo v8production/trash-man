@@ -73,7 +73,7 @@ public abstract class TitanBaseArmRoleController : TitanBaseController
         float blend = 1f - Mathf.Exp(-shoulderSpeed * deltaTime);
 
         state.ShoulderRoll = Mathf.Lerp(state.ShoulderRoll, targetRoll, blend);
-        state.ShoulderPitch += mouseDelta.y * pitchDegreesPerPixel;
+        state.ShoulderPitch += mouseDelta.y * pitchDegreesPerPixel * (IsLeftArm ? 1f : -1f);
 
         float elbowInput = IsLeftArm ? input.LeftArmElbow : -input.RightArmElbow;
 
