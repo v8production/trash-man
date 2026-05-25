@@ -74,13 +74,18 @@ public class RangerController : MonoBehaviour
 
     public void ApplyNetworkedColors(Color color, bool hasNetworkedColorOverride)
     {
+        ApplyNetworkedColors(color, color, hasNetworkedColorOverride);
+    }
+
+    public void ApplyNetworkedColors(Color rangerColor, Color faceColor, bool hasNetworkedColorOverride)
+    {
         Init();
 
         _hasNetworkedColorOverride = hasNetworkedColorOverride;
         if (_hasNetworkedColorOverride)
         {
-            _rangerColor = color;
-            _faceColor = color;
+            _rangerColor = rangerColor;
+            _faceColor = faceColor;
         }
 
         ApplyColorPresentation();
@@ -232,6 +237,8 @@ public class RangerController : MonoBehaviour
                 targetRenderer.GetPropertyBlock(_materialPropertyBlock, m);
                 _materialPropertyBlock.SetColor("_Color", targetColor);
                 _materialPropertyBlock.SetColor("_BaseColor", targetColor);
+                if (isFaceMaterial)
+                    _materialPropertyBlock.SetFloat("_emissive", 3f);
                 targetRenderer.SetPropertyBlock(_materialPropertyBlock, m);
             }
         }

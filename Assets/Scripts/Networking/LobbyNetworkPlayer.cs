@@ -889,7 +889,11 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         int roleMask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
-        _lobbyRanger.ApplyNetworkedColors(RgbaToColor(_rangerColorRgba.Value), roleMask != 0);
+        _lobbyRanger.ApplyNetworkedColors(
+            RgbaToColor(_rangerColorRgba.Value),
+            ResolveRangerFaceColorFromRoleMask(roleMask),
+            roleMask != 0
+        );
     }
 
     private void ApplyRangerFacePresentation()
@@ -946,6 +950,28 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return PackRgba(0x0F, 0x0F, 0x0F, 255); // Black (#0F0F0F)
 
         return 0;
+    }
+
+    private static Color ResolveRangerFaceColorFromRoleMask(int normalizedMask)
+    {
+        // No selection: keep the prefab material's default color.
+        if (normalizedMask == 0)
+            return default;
+
+        // Priority follows below order:
+        // Torso (Red) > RightLeg (Blue) > LeftLeg (Green) > RightArm (Yellow) > LeftArm (Black).
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.Torso)) != 0)
+            return RgbaToColor(PackRgba(0xAC, 0x00, 0x00, 255)); // Red (#AC0000)
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.RightLeg)) != 0)
+            return RgbaToColor(PackRgba(0x1E, 0x37, 0xB5, 255)); // Blue (#1E37B5)
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.LeftLeg)) != 0)
+            return RgbaToColor(PackRgba(0x42, 0xAA, 0x00, 255)); // Green (#42AA00)
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.RightArm)) != 0)
+            return RgbaToColor(PackRgba(0xF7, 0xC6, 0x00, 255)); // Yellow (#F7C600)
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.LeftArm)) != 0)
+            return RgbaToColor(PackRgba(0xE9, 0xE9, 0xE9, 255)); // Black role face (#E9E9E9)
+
+        return default;
     }
 
     private static int PackRgba(byte r, byte g, byte b, byte a)
