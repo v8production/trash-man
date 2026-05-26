@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class LobbyCameraController : MonoBehaviour
 {
+    private const int WallLayer = 7;
+
     [SerializeField] private Transform _target;
     [SerializeField] private Vector3 _pivotOffset = new(0f, 1.6f, 0f);
     [SerializeField] private float _distance = 3f;
@@ -13,9 +15,11 @@ public class LobbyCameraController : MonoBehaviour
     [SerializeField] private float _minPitch = -20f;
     [SerializeField] private float _maxPitch = 65f;
     [SerializeField] private bool _lockCursor = false;
+    [SerializeField] private float _collisionDistanceScale = 0.8f;
 
     private float _yaw;
     private float _pitch = 18f;
+    private readonly int _cameraBlockMask = 1 << WallLayer;
 
     private void Start()
     {
@@ -46,18 +50,38 @@ public class LobbyCameraController : MonoBehaviour
 
         Quaternion orbitRotation = Quaternion.Euler(_pitch, _yaw, 0f);
         Vector3 pivot = _target.position + _pivotOffset;
-        Vector3 desiredPosition = pivot + orbitRotation * (Vector3.back * _distance);
-
-        transform.position = Vector3.Lerp(
+        Vector3 cameraOffset = orbitRotation * (Vector3.back * _distance);
+        Vector3 desiredPosition = ResolveCameraPosition(pivot, cameraOffset);
+        Vector3 smoothedPosition = Vector3.Lerp(
             transform.position,
             desiredPosition,
             1f - Mathf.Exp(-_followLerpSpeed * Time.deltaTime)
         );
+
+        transform.position = ResolveCameraPosition(pivot, smoothedPosition - pivot);
         transform.LookAt(pivot);
     }
 
     public void SetTarget(Transform target)
     {
         _target = target;
+    }
+
+    private Vector3 ResolveCameraPosition(Vector3 pivot, Vector3 cameraOffset)
+    {
+        if (cameraOffset.sqrMagnitude <= Define.epsilon)
+            return pivot;
+
+        RaycastHit[] hits = Physics.RaycastAll(pivot, cameraOffset, cameraOffset.magnitude, _cameraBlockMask);
+        if (hits.Length == 0)
+            return pivot + cameraOffset;
+
+        float closestDistance = cameraOffset.magnitude;
+        for (int i = 0; i < hits.Length; i++)
+        {
+            closestDistance = Mathf.Min(closestDistance, hits[i].distance);
+        }
+
+        return pivot + cameraOffset.normalized * (closestDistance * _collisionDistanceScale);
     }
 }
