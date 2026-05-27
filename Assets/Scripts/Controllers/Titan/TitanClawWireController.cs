@@ -21,8 +21,8 @@ public sealed class TitanClawWireController : MonoBehaviour
 
     [Header("Chain Mesh")]
     [SerializeField] private string chainPrefabPath = "Prefabs/Chain";
-    [SerializeField] private float linkSpacing = 0.22f;
-    [SerializeField] private int maxLinkCount = 32;
+    [SerializeField] private float linkSpacing = 0.02f;
+    [SerializeField] private int maxLinkCount = 100;
     [SerializeField] private Vector3 linkRotationOffsetEuler = Vector3.zero;
 
     private TitanClawWirePhase phase = TitanClawWirePhase.Idle;
@@ -285,7 +285,7 @@ public sealed class TitanClawWireController : MonoBehaviour
     private void ResolveReferences()
     {
         if (clawMount == null && Managers.TitanRig != null)
-        clawMount = Managers.TitanRig.Claw;
+            clawMount = Managers.TitanRig.Claw;
 
         if (wireAnchor == null)
             wireAnchor = clawMount;
