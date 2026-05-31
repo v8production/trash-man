@@ -137,6 +137,9 @@ public class GameCameraController : MonoBehaviour
             if (titanRenderer == null || !titanRenderer.enabled || !titanRenderer.gameObject.activeInHierarchy)
                 continue;
 
+            if (titanRenderer.GetComponentInParent<CameraBoundsIgnore>() != null)
+                continue;
+
             if (!hasBounds)
             {
                 titanBounds = titanRenderer.bounds;
