@@ -11,9 +11,8 @@ public sealed class TitanClawWireController : MonoBehaviour
 
     [Header("Launch")]
     [SerializeField] private Vector3 launchLocalDirection = Vector3.right;
-    [SerializeField] private float launchSpeed = 10f;
+    [SerializeField] private float launchSpeed = 6f;
     [SerializeField] private float maxChainLength = 3f;
-    [SerializeField] private float hangDuration = 0.35f;
     [SerializeField] private float wireAnchorBackwardOffset = 0.05f;
 
     [Header("Retract")]
@@ -33,7 +32,6 @@ public sealed class TitanClawWireController : MonoBehaviour
     private GameObject chainPrefab;
     private Transform chainRoot;
     private readonly List<Transform> chainLinks = new();
-    private readonly List<Vector3> clawPath = new();
     private Renderer[] mountedClawRenderers;
     private bool[] mountedClawRendererStates;
     private Collider[] mountedClawColliders;
@@ -43,7 +41,6 @@ public sealed class TitanClawWireController : MonoBehaviour
     private Vector3 mountedClawOriginalLocalScale;
     private bool hasMountedClawOriginalPose;
 
-    private float hangTimer;
     private float currentLength;
 
     public bool CanLaunch => phase == TitanClawWirePhase.Idle;
@@ -64,43 +61,13 @@ public sealed class TitanClawWireController : MonoBehaviour
                 TickLaunching(dt);
                 break;
 
-            case TitanClawWirePhase.HitBlocked:
-                TickHanging(dt);
-                break;
-
-            case TitanClawWirePhase.Retracting:
-                TickRetracting(dt);
+            case TitanClawWirePhase.TetheredRetracting:
+                TickTetheredRetracting(dt);
                 break;
         }
     }
 
     private void TickLaunching(float dt)
-    {
-        ApplyMaxLengthConstraint();
-        AlignClawToVelocity();
-
-        currentLength = Vector3.Distance(GetAnchorPosition(), clawBody.position);
-
-        if (currentLength >= maxChainLength * 0.98f)
-        {
-            SetPhase(TitanClawWirePhase.HitBlocked);
-            hangTimer = 0f;
-        }
-    }
-
-    private void TickHanging(float dt)
-    {
-        ApplyMaxLengthConstraint();
-        AlignClawToVelocity();
-
-        hangTimer += dt;
-        currentLength = Vector3.Distance(GetAnchorPosition(), clawBody.position);
-
-        if (hangTimer >= hangDuration)
-            BeginRetract();
-    }
-
-    private void TickRetracting(float dt)
     {
         if (clawBody == null)
         {
@@ -108,20 +75,28 @@ public sealed class TitanClawWireController : MonoBehaviour
             return;
         }
 
-        Vector3 anchor = GetAnchorPosition();
+        currentLength = Mathf.Max(currentLength, maxChainLength);
+        IntegrateClawMotion(dt, currentLength);
+        AlignClawToVelocity();
 
-        Vector3 previous = clawBody.position;
-        Vector3 next = Vector3.MoveTowards(
-            previous,
-            anchor,
-            retractSpeed * dt
-        );
+        if (Vector3.Distance(GetAnchorPosition(), clawBody.position) >= currentLength - 0.01f)
+            SetPhase(TitanClawWirePhase.TetheredRetracting);
+    }
 
-        clawBody.MovePosition(next);
-        AlignClawTowards(previous - next);
-        currentLength = Vector3.Distance(anchor, next);
+    private void TickTetheredRetracting(float dt)
+    {
+        if (clawBody == null)
+        {
+            FinishRetract();
+            return;
+        }
 
-        if (currentLength <= recoverDistance)
+        IntegrateClawMotion(dt, currentLength);
+        currentLength = Mathf.Max(0f, currentLength - retractSpeed * dt);
+        ApplyLengthConstraint(currentLength);
+        AlignClawToVelocity();
+
+        if (currentLength <= recoverDistance || Vector3.Distance(GetAnchorPosition(), clawBody.position) <= recoverDistance)
             FinishRetract();
     }
 
@@ -136,14 +111,10 @@ public sealed class TitanClawWireController : MonoBehaviour
         Vector3 anchor = GetAnchorPosition();
         Vector3 clawPosition = spawnedClaw.transform.position;
 
-        if (phase == TitanClawWirePhase.Retracting)
-        {
-            RenderChain(anchor, clawPosition);
-            return;
-        }
-
-        AddClawPathPoint(clawPosition);
-        RenderChain(anchor, clawPosition, clawPath);
+        float ropeLength = phase == TitanClawWirePhase.Launching
+            ? Vector3.Distance(anchor, clawPosition)
+            : currentLength;
+        RenderChain(anchor, clawPosition, ropeLength);
     }
 
     public bool TryLaunch(TitanStat stat)
@@ -170,32 +141,14 @@ public sealed class TitanClawWireController : MonoBehaviour
             clawBody = spawnedClaw.AddComponent<Rigidbody>();
 
         clawBody.isKinematic = false;
-        clawBody.useGravity = true;
+        clawBody.useGravity = false;
         clawBody.linearVelocity = launchDirection * launchSpeed;
         clawBody.angularVelocity = Vector3.zero;
 
         SetPhase(TitanClawWirePhase.Launching);
-        hangTimer = 0f;
-        currentLength = 0f;
-        ResetClawPath(GetAnchorPosition(), spawnedClaw.transform.position);
-
+        currentLength = maxChainLength;
         ShowChain();
         return true;
-    }
-
-    private void BeginRetract()
-    {
-        if (clawBody == null)
-        {
-            FinishRetract();
-            return;
-        }
-
-        SetPhase(TitanClawWirePhase.Retracting);
-
-        clawBody.useGravity = false;
-        clawBody.linearVelocity = Vector3.zero;
-        clawBody.angularVelocity = Vector3.zero;
     }
 
     private void FinishRetract()
@@ -207,56 +160,32 @@ public sealed class TitanClawWireController : MonoBehaviour
         clawBody = null;
         SetPhase(TitanClawWirePhase.Idle);
         currentLength = 0f;
-        clawPath.Clear();
-
         HideChain();
     }
 
-    private void ResetClawPath(Vector3 anchor, Vector3 clawPosition)
+    private void IntegrateClawMotion(float dt, float allowedLength)
     {
-        clawPath.Clear();
-        clawPath.Add(anchor);
-
-        if (Vector3.Distance(anchor, clawPosition) > 0.01f)
-            clawPath.Add(clawPosition);
+        clawBody.linearVelocity += Physics.gravity * dt;
+        clawBody.position += clawBody.linearVelocity * dt;
+        ApplyLengthConstraint(allowedLength);
     }
 
-    private void AddClawPathPoint(Vector3 clawPosition)
-    {
-        if (clawPath.Count == 0)
-        {
-            clawPath.Add(GetAnchorPosition());
-            clawPath.Add(clawPosition);
-            return;
-        }
-
-        int lastIndex = clawPath.Count - 1;
-        float minSpacing = Mathf.Max(0.01f, linkSpacing * 0.5f);
-
-        if (Vector3.Distance(clawPath[lastIndex], clawPosition) <= minSpacing)
-        {
-            clawPath[lastIndex] = clawPosition;
-            return;
-        }
-
-        clawPath.Add(clawPosition);
-    }
-
-    private void ApplyMaxLengthConstraint()
+    private void ApplyLengthConstraint(float allowedLength)
     {
         if (clawBody == null)
             return;
 
+        allowedLength = Mathf.Max(0f, allowedLength);
         Vector3 anchor = GetAnchorPosition();
         Vector3 toClaw = clawBody.position - anchor;
         float distance = toClaw.magnitude;
 
-        if (distance <= maxChainLength || distance <= 0.001f)
+        if (distance <= allowedLength || distance <= 0.001f)
             return;
 
         Vector3 dir = toClaw / distance;
 
-        clawBody.position = anchor + dir * maxChainLength;
+        clawBody.position = anchor + dir * allowedLength;
 
         float outwardSpeed = Vector3.Dot(clawBody.linearVelocity, dir);
         if (outwardSpeed > 0f)
@@ -385,7 +314,7 @@ public sealed class TitanClawWireController : MonoBehaviour
         return normalized;
     }
 
-    private void RenderChain(Vector3 start, Vector3 end)
+    private void RenderChain(Vector3 start, Vector3 end, float ropeLength)
     {
         EnsureChainPool();
 
@@ -399,53 +328,18 @@ public sealed class TitanClawWireController : MonoBehaviour
         }
 
         Vector3 dir = delta / distance;
-        int count = Mathf.Clamp(Mathf.FloorToInt(distance / linkSpacing) + 1, 1, maxLinkCount);
+        float visibleLength = Mathf.Max(distance, ropeLength);
+        float slack = Mathf.Max(0f, ropeLength - distance);
+        float sag = slack * 0.5f + Mathf.Min(distance * 0.02f, 0.05f);
+        int count = Mathf.Clamp(Mathf.FloorToInt(visibleLength / linkSpacing) + 1, 1, maxLinkCount);
 
         SetVisibleLinkCount(count);
 
         for (int i = 0; i < count; i++)
         {
-            float offset = count > 1 ? distance * i / (count - 1) : 0f;
-            Vector3 pos = start + dir * offset;
-
-            Quaternion rot = Quaternion.LookRotation(dir, Vector3.up);
-            rot *= Quaternion.Euler(linkRotationOffsetEuler);
-
-            if ((i & 1) == 1)
-                rot *= Quaternion.Euler(0f, 0f, 90f);
-
-            Transform link = chainLinks[i];
-            link.SetPositionAndRotation(pos, rot);
-        }
-    }
-
-    private void RenderChain(Vector3 start, Vector3 end, List<Vector3> path)
-    {
-        EnsureChainPool();
-
-        if (path.Count < 2)
-        {
-            RenderChain(start, end);
-            return;
-        }
-
-        path[0] = start;
-        path[^1] = end;
-
-        float pathLength = GetPathLength(path);
-        if (pathLength <= 0.01f)
-        {
-            SetVisibleLinkCount(0);
-            return;
-        }
-
-        int count = Mathf.Clamp(Mathf.FloorToInt(pathLength / linkSpacing) + 1, 1, maxLinkCount);
-        SetVisibleLinkCount(count);
-
-        for (int i = 0; i < count; i++)
-        {
-            float distance = count > 1 ? pathLength * i / (count - 1) : 0f;
-            GetPointOnPath(path, distance, out Vector3 pos, out Vector3 tangent);
+            float t = count > 1 ? (float)i / (count - 1) : 0f;
+            Vector3 pos = GetSaggedRopePoint(start, end, sag, t);
+            Vector3 tangent = GetSaggedRopeTangent(start, end, sag, t);
 
             Quaternion rot = Quaternion.LookRotation(tangent, Vector3.up);
             rot *= Quaternion.Euler(linkRotationOffsetEuler);
@@ -458,41 +352,17 @@ public sealed class TitanClawWireController : MonoBehaviour
         }
     }
 
-    private static float GetPathLength(List<Vector3> path)
+    private static Vector3 GetSaggedRopePoint(Vector3 start, Vector3 end, float sag, float t)
     {
-        float length = 0f;
-
-        for (int i = 1; i < path.Count; i++)
-            length += Vector3.Distance(path[i - 1], path[i]);
-
-        return length;
+        Vector3 straight = Vector3.Lerp(start, end, t);
+        return straight + Vector3.down * (Mathf.Sin(t * Mathf.PI) * sag);
     }
 
-    private static void GetPointOnPath(List<Vector3> path, float distance, out Vector3 point, out Vector3 tangent)
+    private static Vector3 GetSaggedRopeTangent(Vector3 start, Vector3 end, float sag, float t)
     {
-        for (int i = 1; i < path.Count; i++)
-        {
-            Vector3 from = path[i - 1];
-            Vector3 to = path[i];
-            Vector3 segment = to - from;
-            float segmentLength = segment.magnitude;
-
-            if (segmentLength <= 0.001f)
-                continue;
-
-            if (distance <= segmentLength)
-            {
-                tangent = segment / segmentLength;
-                point = Vector3.Lerp(from, to, distance / segmentLength);
-                return;
-            }
-
-            distance -= segmentLength;
-        }
-
-        point = path[^1];
-        Vector3 fallback = path[^1] - path[^2];
-        tangent = fallback.sqrMagnitude > 0.0001f ? fallback.normalized : Vector3.forward;
+        Vector3 tangent = end - start;
+        tangent += Vector3.down * (Mathf.Cos(t * Mathf.PI) * Mathf.PI * sag);
+        return tangent.sqrMagnitude > 0.0001f ? tangent.normalized : Vector3.forward;
     }
 
     private void ShowChain()
@@ -544,8 +414,6 @@ public sealed class TitanClawWireController : MonoBehaviour
         if (spawnedClaw != null)
         {
             spawnedClaw.transform.SetPositionAndRotation(snapshot.ClawPosition, snapshot.ClawRotation);
-            if (phase == TitanClawWirePhase.Launching || phase == TitanClawWirePhase.HitBlocked)
-                AddClawPathPoint(snapshot.ClawPosition);
             ShowChain();
         }
     }
@@ -559,7 +427,6 @@ public sealed class TitanClawWireController : MonoBehaviour
         clawBody = null;
         SetPhase(TitanClawWirePhase.Idle);
         currentLength = 0f;
-        clawPath.Clear();
 
         HideChain();
     }
@@ -627,6 +494,7 @@ public enum TitanClawWirePhase
     Idle = 0,
     Launching = 1,
     HitBlocked = 2,
+    TetheredRetracting = 3,
     Retracting = 3,
 }
 
