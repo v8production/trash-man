@@ -51,4 +51,20 @@ public class BossController : MonoBehaviour
 
         return (transform.position - origin).sqrMagnitude <= sqrRadius;
     }
+
+    public bool IsWithinHitSegment(Vector3 start, Vector3 end, float radius)
+    {
+        float distance = Vector3.Distance(start, end);
+        float sampleSpacing = Mathf.Max(radius * 0.5f, 0.05f);
+        int sampleCount = Mathf.Max(1, Mathf.CeilToInt(distance / sampleSpacing));
+
+        for (int i = 0; i <= sampleCount; i++)
+        {
+            Vector3 sample = Vector3.Lerp(start, end, (float)i / sampleCount);
+            if (IsWithinHitRadius(sample, radius))
+                return true;
+        }
+
+        return false;
+    }
 }

@@ -19,6 +19,9 @@ public sealed class TitanClawWireController : MonoBehaviour
     [SerializeField] private float retractSpeed = 5f;
     [SerializeField] private float recoverDistance = 0.2f;
 
+    [Header("Hit")]
+    [SerializeField] private float hitRadius = 0.35f;
+
     [Header("Chain Mesh")]
     [SerializeField] private string chainPrefabPath = "Prefabs/Chain";
     [SerializeField] private float linkSpacing = 0.02f;
@@ -40,6 +43,8 @@ public sealed class TitanClawWireController : MonoBehaviour
     private Quaternion mountedClawOriginalLocalRotation;
     private Vector3 mountedClawOriginalLocalScale;
     private bool hasMountedClawOriginalPose;
+    private Stat attackStat;
+    private bool hasHitBoss;
 
     private float currentLength;
 
@@ -135,6 +140,8 @@ public sealed class TitanClawWireController : MonoBehaviour
         spawnedClaw = Instantiate(source, clawMount.position, Quaternion.LookRotation(launchDirection, Vector3.up));
         spawnedClaw.name = $"{source.name}_Launched";
         spawnedClaw.SetActive(true);
+        attackStat = stat;
+        hasHitBoss = false;
 
         clawBody = spawnedClaw.GetComponent<Rigidbody>();
         if (clawBody == null)
@@ -158,6 +165,8 @@ public sealed class TitanClawWireController : MonoBehaviour
 
         spawnedClaw = null;
         clawBody = null;
+        attackStat = null;
+        hasHitBoss = false;
         SetPhase(TitanClawWirePhase.Idle);
         currentLength = 0f;
         HideChain();
@@ -165,9 +174,31 @@ public sealed class TitanClawWireController : MonoBehaviour
 
     private void IntegrateClawMotion(float dt, float allowedLength)
     {
+        Vector3 previousPosition = clawBody.position;
         clawBody.linearVelocity += Physics.gravity * dt;
         clawBody.position += clawBody.linearVelocity * dt;
         ApplyLengthConstraint(allowedLength);
+        TryApplyClawHit(previousPosition, clawBody.position);
+    }
+
+    private void TryApplyClawHit(Vector3 previousPosition, Vector3 currentPosition)
+    {
+        if (hasHitBoss || phase != TitanClawWirePhase.Launching || attackStat == null)
+            return;
+
+        BossController[] bosses = Object.FindObjectsByType<BossController>();
+        for (int i = 0; i < bosses.Length; i++)
+        {
+            BossController boss = bosses[i];
+            if (boss == null || !boss.IsWithinHitSegment(previousPosition, currentPosition, hitRadius))
+                continue;
+
+            boss.ReceiveClawAttach(attackStat);
+            hasHitBoss = true;
+            currentLength = Vector3.Distance(GetAnchorPosition(), currentPosition);
+            SetPhase(TitanClawWirePhase.TetheredRetracting);
+            return;
+        }
     }
 
     private void ApplyLengthConstraint(float allowedLength)
@@ -425,6 +456,8 @@ public sealed class TitanClawWireController : MonoBehaviour
 
         spawnedClaw = null;
         clawBody = null;
+        attackStat = null;
+        hasHitBoss = false;
         SetPhase(TitanClawWirePhase.Idle);
         currentLength = 0f;
 
