@@ -3,6 +3,8 @@ using UnityEngine;
 
 public sealed class TitanClawWireController : MonoBehaviour
 {
+    private static readonly Quaternion ClawLocalForwardAxisToUnityForward = Quaternion.FromToRotation(Vector3.up, Vector3.forward);
+
     [Header("Claw References")]
     [SerializeField] private Transform wireAnchor;
     [SerializeField] private Transform clawMount;
@@ -137,9 +139,10 @@ public sealed class TitanClawWireController : MonoBehaviour
 
         GameObject source = clawPrefab != null ? clawPrefab : clawMount.gameObject;
         Vector3 launchDirection = GetLaunchDirection();
-        spawnedClaw = Instantiate(source, clawMount.position, Quaternion.LookRotation(launchDirection, Vector3.up));
+        spawnedClaw = Instantiate(source, clawMount.position, GetClawRotation(launchDirection));
         spawnedClaw.name = $"{source.name}_Launched";
         spawnedClaw.SetActive(true);
+        EnsureCameraBoundsIgnored(spawnedClaw);
         attackStat = stat;
         hasHitBoss = false;
 
@@ -236,7 +239,15 @@ public sealed class TitanClawWireController : MonoBehaviour
         if (clawBody == null || direction.sqrMagnitude <= 0.0001f)
             return;
 
-        clawBody.MoveRotation(Quaternion.LookRotation(direction.normalized, Vector3.up));
+        clawBody.MoveRotation(GetClawRotation(direction));
+    }
+
+    private static Quaternion GetClawRotation(Vector3 direction)
+    {
+        Vector3 forward = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
+        Vector3 up = Mathf.Abs(Vector3.Dot(forward, Vector3.up)) > 0.98f ? Vector3.forward : Vector3.up;
+
+        return Quaternion.LookRotation(forward, up) * ClawLocalForwardAxisToUnityForward;
     }
 
     private Vector3 GetLaunchDirection()
@@ -302,6 +313,7 @@ public sealed class TitanClawWireController : MonoBehaviour
         if (chainRoot == null)
         {
             GameObject root = new GameObject("RightClaw_ChainMesh");
+            EnsureCameraBoundsIgnored(root);
             chainRoot = root.transform;
             chainRoot.SetParent(transform, false);
         }
@@ -475,6 +487,7 @@ public sealed class TitanClawWireController : MonoBehaviour
             spawnedClaw = Instantiate(source, snapshot.ClawPosition, snapshot.ClawRotation);
             spawnedClaw.name = $"{source.name}_RemoteLaunched";
             spawnedClaw.SetActive(true);
+            EnsureCameraBoundsIgnored(spawnedClaw);
         }
 
         clawBody = spawnedClaw.GetComponent<Rigidbody>();
@@ -519,6 +532,12 @@ public sealed class TitanClawWireController : MonoBehaviour
     {
         phase = nextPhase;
         SetMountedClawVisible(nextPhase == TitanClawWirePhase.Idle);
+    }
+
+    private static void EnsureCameraBoundsIgnored(GameObject target)
+    {
+        if (target != null && target.GetComponent<CameraBoundsIgnore>() == null)
+            target.AddComponent<CameraBoundsIgnore>();
     }
 }
 
