@@ -18,11 +18,14 @@ public sealed class TitanClawWireController : MonoBehaviour
     [SerializeField] private float wireAnchorBackwardOffset = 0.05f;
 
     [Header("Retract")]
-    [SerializeField] private float retractSpeed = 5f;
+    [SerializeField] private float retractSpeed = 1f;
     [SerializeField] private float recoverDistance = 0.2f;
 
     [Header("Hit")]
     [SerializeField] private float hitRadius = 0.35f;
+
+    [Header("Collision")]
+    [SerializeField] private LayerMask clawCollisionMask = 1 << 6;
 
     [Header("Chain Mesh")]
     [SerializeField] private string chainPrefabPath = "Prefabs/Chain";
@@ -179,9 +182,31 @@ public sealed class TitanClawWireController : MonoBehaviour
     {
         Vector3 previousPosition = clawBody.position;
         clawBody.linearVelocity += Physics.gravity * dt;
-        clawBody.position += clawBody.linearVelocity * dt;
+        Vector3 targetPosition = previousPosition + clawBody.linearVelocity * dt;
+
+        ResolveClawCollision(previousPosition, ref targetPosition);
+
+        clawBody.position = targetPosition;
         ApplyLengthConstraint(allowedLength);
         TryApplyClawHit(previousPosition, clawBody.position);
+    }
+
+    private void ResolveClawCollision(Vector3 previousPosition, ref Vector3 targetPosition)
+    {
+        Vector3 movement = targetPosition - previousPosition;
+        float distance = movement.magnitude;
+
+        if (distance <= 0.001f)
+            return;
+
+        if (!Physics.SphereCast(previousPosition, hitRadius, movement / distance, out RaycastHit hit, distance, clawCollisionMask, QueryTriggerInteraction.Ignore))
+            return;
+
+        targetPosition = hit.point + hit.normal * hitRadius;
+
+        float surfaceSpeed = Vector3.Dot(clawBody.linearVelocity, hit.normal);
+        if (surfaceSpeed < 0f)
+            clawBody.linearVelocity -= hit.normal * surfaceSpeed;
     }
 
     private void TryApplyClawHit(Vector3 previousPosition, Vector3 currentPosition)

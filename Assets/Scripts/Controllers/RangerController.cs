@@ -242,10 +242,21 @@ public class RangerController : MonoBehaviour
 
                 Color targetColor = isFaceMaterial ? _faceColor : _rangerColor;
                 targetRenderer.GetPropertyBlock(_materialPropertyBlock, m);
-                _materialPropertyBlock.SetColor("_Color", targetColor);
-                _materialPropertyBlock.SetColor("_BaseColor", targetColor);
-                if (isFaceMaterial)
+
+                if (isRangerColorMaterial)
+                {
+                    _materialPropertyBlock.SetColor("_Color", targetColor);
+                    _materialPropertyBlock.SetColor("_BaseColor", targetColor);
+                    _materialPropertyBlock.SetColor("_1st_ShadeColor", targetColor);
+                }
+                else
+                {
+                    _materialPropertyBlock.SetColor("_Color", targetColor);
+                    _materialPropertyBlock.SetColor("_BaseColor", targetColor);
                     _materialPropertyBlock.SetFloat("_emissive", _faceEmissive);
+
+                }
+
                 targetRenderer.SetPropertyBlock(_materialPropertyBlock, m);
             }
         }
@@ -302,6 +313,9 @@ public class RangerController : MonoBehaviour
 
         if (material.HasProperty("_BaseColor"))
             return material.GetColor("_BaseColor");
+
+        if (material.HasProperty("_1st_ShadeColor"))
+            return material.GetColor("_1st_ShadeColor");
 
         return Color.white;
     }
