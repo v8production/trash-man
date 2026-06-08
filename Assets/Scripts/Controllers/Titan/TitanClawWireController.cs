@@ -3,6 +3,10 @@ using UnityEngine;
 
 public sealed class TitanClawWireController : MonoBehaviour
 {
+    private const int FloorLayer = 6;
+    private const int FloorCollisionMask = 1 << FloorLayer;
+    private const float FloorProbeHeight = 100f;
+    private const float FloorProbeDistance = FloorProbeHeight * 2f;
     private static readonly Quaternion ClawLocalForwardAxisToUnityForward = Quaternion.FromToRotation(Vector3.up, Vector3.forward);
 
     [Header("Claw References")]
@@ -25,7 +29,12 @@ public sealed class TitanClawWireController : MonoBehaviour
     [SerializeField] private float hitRadius = 0.35f;
 
     [Header("Collision")]
-    [SerializeField] private LayerMask clawCollisionMask = 1 << 6;
+    [SerializeField] private float floorProbeRadius = 0.05f;
+    [SerializeField] private float floorSurfaceOffset = 0.03f;
+
+    [Header("Rotation")]
+    [SerializeField] private float launchFallRotationLerpSpeed = 1.5f;
+    [SerializeField] private float retractRotationLerpSpeed = 14f;
 
     [Header("Chain Mesh")]
     [SerializeField] private string chainPrefabPath = "Prefabs/Chain";
@@ -87,7 +96,7 @@ public sealed class TitanClawWireController : MonoBehaviour
 
         currentLength = Mathf.Max(currentLength, maxChainLength);
         IntegrateClawMotion(dt, currentLength);
-        AlignClawToVelocity();
+        AlignClawToVelocity(dt);
 
         if (Vector3.Distance(GetAnchorPosition(), clawBody.position) >= currentLength - 0.01f)
             SetPhase(TitanClawWirePhase.TetheredRetracting);
@@ -101,10 +110,16 @@ public sealed class TitanClawWireController : MonoBehaviour
             return;
         }
 
+        Vector3 previousPosition = clawBody.position;
         IntegrateClawMotion(dt, currentLength);
         currentLength = Mathf.Max(0f, currentLength - retractSpeed * dt);
+        Vector3 beforeConstraintPosition = clawBody.position;
         ApplyLengthConstraint(currentLength);
-        AlignClawToVelocity();
+        Vector3 targetPosition = clawBody.position;
+        ResolveClawCollision(beforeConstraintPosition, ref targetPosition);
+        ResolveClawFloorSupport(ref targetPosition);
+        clawBody.position = targetPosition;
+        AlignClawOppositeTravel(previousPosition, dt);
 
         if (currentLength <= recoverDistance || Vector3.Distance(GetAnchorPosition(), clawBody.position) <= recoverDistance)
             FinishRetract();
@@ -185,9 +200,15 @@ public sealed class TitanClawWireController : MonoBehaviour
         Vector3 targetPosition = previousPosition + clawBody.linearVelocity * dt;
 
         ResolveClawCollision(previousPosition, ref targetPosition);
+        ResolveClawFloorSupport(ref targetPosition);
 
         clawBody.position = targetPosition;
+        Vector3 beforeConstraintPosition = clawBody.position;
         ApplyLengthConstraint(allowedLength);
+        targetPosition = clawBody.position;
+        ResolveClawCollision(beforeConstraintPosition, ref targetPosition);
+        ResolveClawFloorSupport(ref targetPosition);
+        clawBody.position = targetPosition;
         TryApplyClawHit(previousPosition, clawBody.position);
     }
 
@@ -199,14 +220,32 @@ public sealed class TitanClawWireController : MonoBehaviour
         if (distance <= 0.001f)
             return;
 
-        if (!Physics.SphereCast(previousPosition, hitRadius, movement / distance, out RaycastHit hit, distance, clawCollisionMask, QueryTriggerInteraction.Ignore))
+        if (!Physics.SphereCast(previousPosition, floorProbeRadius, movement / distance, out RaycastHit hit, distance, FloorCollisionMask, QueryTriggerInteraction.Ignore))
             return;
 
-        targetPosition = hit.point + hit.normal * hitRadius;
+        targetPosition = hit.point + hit.normal * floorSurfaceOffset;
+        RemoveVelocityIntoSurface(hit.normal);
+    }
 
-        float surfaceSpeed = Vector3.Dot(clawBody.linearVelocity, hit.normal);
+    private void ResolveClawFloorSupport(ref Vector3 targetPosition)
+    {
+        Vector3 probeOrigin = targetPosition + Vector3.up * FloorProbeHeight;
+        if (!Physics.Raycast(probeOrigin, Vector3.down, out RaycastHit hit, FloorProbeDistance, FloorCollisionMask, QueryTriggerInteraction.Ignore))
+            return;
+
+        float signedDistance = Vector3.Dot(targetPosition - hit.point, hit.normal);
+        if (signedDistance >= floorSurfaceOffset)
+            return;
+
+        targetPosition += hit.normal * (floorSurfaceOffset - signedDistance);
+        RemoveVelocityIntoSurface(hit.normal);
+    }
+
+    private void RemoveVelocityIntoSurface(Vector3 surfaceNormal)
+    {
+        float surfaceSpeed = Vector3.Dot(clawBody.linearVelocity, surfaceNormal);
         if (surfaceSpeed < 0f)
-            clawBody.linearVelocity -= hit.normal * surfaceSpeed;
+            clawBody.linearVelocity -= surfaceNormal * surfaceSpeed;
     }
 
     private void TryApplyClawHit(Vector3 previousPosition, Vector3 currentPosition)
@@ -251,20 +290,31 @@ public sealed class TitanClawWireController : MonoBehaviour
             clawBody.linearVelocity -= dir * outwardSpeed;
     }
 
-    private void AlignClawToVelocity()
+    private void AlignClawToVelocity(float dt)
     {
         if (clawBody == null)
             return;
 
-        AlignClawTowards(clawBody.linearVelocity);
+        AlignClawTowards(clawBody.linearVelocity, dt, launchFallRotationLerpSpeed);
     }
 
-    private void AlignClawTowards(Vector3 direction)
+    private void AlignClawOppositeTravel(Vector3 previousPosition, float dt)
+    {
+        if (clawBody == null)
+            return;
+
+        Vector3 movement = clawBody.position - previousPosition;
+        AlignClawTowards(-movement, dt, retractRotationLerpSpeed);
+    }
+
+    private void AlignClawTowards(Vector3 direction, float dt, float lerpSpeed)
     {
         if (clawBody == null || direction.sqrMagnitude <= 0.0001f)
             return;
 
-        clawBody.MoveRotation(GetClawRotation(direction));
+        Quaternion targetRotation = GetClawRotation(direction);
+        float t = 1f - Mathf.Exp(-Mathf.Max(0f, lerpSpeed) * dt);
+        clawBody.MoveRotation(Quaternion.Slerp(clawBody.rotation, targetRotation, t));
     }
 
     private static Quaternion GetClawRotation(Vector3 direction)
