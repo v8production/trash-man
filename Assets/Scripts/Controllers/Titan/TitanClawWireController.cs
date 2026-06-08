@@ -39,7 +39,7 @@ public sealed class TitanClawWireController : MonoBehaviour
     [Header("Chain Mesh")]
     [SerializeField] private string chainPrefabPath = "Prefabs/Chain";
     [SerializeField] private float linkSpacing = 0.02f;
-    [SerializeField] private int maxLinkCount = 100;
+    [SerializeField] private int maxLinkCount = 300;
     [SerializeField] private Vector3 linkRotationOffsetEuler = Vector3.zero;
 
     private TitanClawWirePhase phase = TitanClawWirePhase.Idle;
@@ -455,7 +455,7 @@ public sealed class TitanClawWireController : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            float t = count > 1 ? (float)i / (count - 1) : 0f;
+            float t = count > 1 ? 1f - (float)i / (count - 1) : 1f;
             Vector3 pos = GetSaggedRopePoint(start, end, sag, t);
             Vector3 tangent = GetSaggedRopeTangent(start, end, sag, t);
 
