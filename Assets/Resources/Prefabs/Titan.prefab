@@ -598,7 +598,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 561e940732ad890499d371ca38baf139, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TitanController
-  attachControllersOnAwake: 1
+  shieldPrefabName: Shield
+  shieldLocalPosition: {x: 0, y: 0.5, z: 0}
+  shieldLocalEulerAngles: {x: 0, y: 0, z: 0}
+  shieldLocalScale: {x: 1, y: 1.2, z: 1}
 --- !u!114 &205533375885368703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -729,10 +732,6 @@ MonoBehaviour:
   shoulderRollLimit: {x: -15, y: 45}
   elbowSpeed: 120
   elbowPitchLimit: {x: -130, y: 15}
-  passiveStabilizationSpeed: 3
-  passiveShoulderPitchTarget: 35
-  passiveShoulderRollTarget: 0
-  passiveElbowPitchTarget: -35
 --- !u!114 &3344556677889901005
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -752,10 +751,6 @@ MonoBehaviour:
   shoulderRollLimit: {x: -15, y: 45}
   elbowSpeed: 120
   elbowPitchLimit: {x: -130, y: 15}
-  passiveStabilizationSpeed: 3
-  passiveShoulderPitchTarget: 35
-  passiveShoulderRollTarget: 0
-  passiveElbowPitchTarget: -35
 --- !u!114 &3344556677889901006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -841,7 +836,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7864ea2554c9d9468e48984beb11adc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TitanLeftFootAttachmentController
-  side: 0
   footTransform: {fileID: 6989488937968845983}
   bottomProbe: {fileID: 7994426978885428570}
   attachableGroundLayers:
@@ -854,7 +848,6 @@ MonoBehaviour:
   footSurfaceNormalToleranceDegrees: 35
   drawDebugGizmos: 0
   logAttachDetachTransitions: 1
-  characterRoot: {fileID: 0}
 --- !u!114 &758194761437020032
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -867,7 +860,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 82b1ce25f4e101a468b26793af7133b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TitanRightFootAttachmentController
-  side: 1
   footTransform: {fileID: 4006448067675433985}
   bottomProbe: {fileID: 2576084941873172364}
   attachableGroundLayers:
@@ -880,7 +872,6 @@ MonoBehaviour:
   footSurfaceNormalToleranceDegrees: 35
   drawDebugGizmos: 0
   logAttachDetachTransitions: 1
-  characterRoot: {fileID: 0}
 --- !u!4 &6782418227976457030 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8201243596049249177, guid: 7bd5342e1d2f38c4d823edf668badc2a, type: 3}
