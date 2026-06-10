@@ -253,12 +253,6 @@ public class TitanRoleNetworkDriver : MonoBehaviour
 
     private void TickPassiveStabilization(bool hasLeftLegInput, bool hasRightLegInput, float dt)
     {
-        if (_leftArmController != null && !Managers.TitanRole.TryGetRoleInput(Define.TitanRole.LeftArm, out _))
-            _leftArmController.TickIdle(dt);
-
-        if (_rightArmController != null && !Managers.TitanRole.TryGetRoleInput(Define.TitanRole.RightArm, out _))
-            _rightArmController.TickIdle(dt);
-
         if (_leftLegController != null && !hasLeftLegInput)
             _leftLegController.TickIdle(dt);
 
