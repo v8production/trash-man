@@ -128,6 +128,7 @@ public class RangerController : MonoBehaviour
         if (Managers.Input.Mode != Define.InputMode.Player)
         {
             _moveInput = Vector2.zero;
+            StopMovementAnimation();
             return;
         }
 
@@ -155,6 +156,14 @@ public class RangerController : MonoBehaviour
             return;
         }
 
+        if (IsEmotionState(AnimState))
+            return;
+
+        AnimState = Define.RangerAnimState.Idle00;
+    }
+
+    private void StopMovementAnimation()
+    {
         if (IsEmotionState(AnimState))
             return;
 
