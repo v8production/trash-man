@@ -181,4 +181,14 @@ public class TitanRoleManager
         return true;
     }
 
+    public bool IsRoleAssigned(Define.TitanRole role)
+    {
+        if (!RefreshRoleMap(false, out string error))
+        {
+            return false;
+        }
+
+        return _playersByRole.TryGetValue(role, out LobbyNetworkPlayer player) && player != null;
+    }
+
 }

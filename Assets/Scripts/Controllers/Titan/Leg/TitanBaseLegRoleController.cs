@@ -45,6 +45,10 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
 
     private float _activationHipYaw;
     private float _activationHipRoll;
+    private float _lastAttachInputTime = -999f;
+    private bool _keepAttachUntilReturnedClickRelease;
+    private bool _returnedAttachClickObserved;
+    private bool _suppressAttachUntilRawReleased;
 
     protected override void Awake()
     {
@@ -78,6 +82,7 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
             input,
             Managers.Input.GetTitanMouseSensitivity()
         );
+        command.AttachHeld = ResolveAttachHeld(input, roleActivated);
 
         legAnchorResolver?.UpdateAttachState(command.Side, command.AttachHeld);
 
@@ -113,9 +118,13 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
 
     public void TickAttachInput(in TitanAggregatedInput input)
     {
+        float now = Time.unscaledTime;
+        bool roleActivated = (now - _lastAttachInputTime) > 0.25f;
+        _lastAttachInputTime = now;
+
         legAnchorResolver.UpdateAttachState(
             IsLeftLeg ? LegSide.Left : LegSide.Right,
-            input.RightMouseHeld || input.RightMouseAttachBuffered
+            ResolveAttachHeld(input, roleActivated)
         );
     }
 
@@ -198,6 +207,50 @@ public abstract class TitanBaseLegRoleController : TitanBaseController
             HipRollDelta = rollDelta,
             AttachHeld = input.RightMouseHeld || input.RightMouseAttachBuffered,
         };
+    }
+
+    private bool ResolveAttachHeld(in TitanAggregatedInput input, bool roleActivated)
+    {
+        LegSide side = IsLeftLeg ? LegSide.Left : LegSide.Right;
+        bool rawHeld = input.RightMouseHeld || input.RightMouseAttachBuffered;
+
+        if (_suppressAttachUntilRawReleased)
+        {
+            if (!rawHeld)
+            {
+                _suppressAttachUntilRawReleased = false;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        if (roleActivated && legAnchorResolver != null && legAnchorResolver.IsFootAttached(side) && !input.RightMouseHeld)
+        {
+            _keepAttachUntilReturnedClickRelease = true;
+            _returnedAttachClickObserved = false;
+        }
+
+        if (!_keepAttachUntilReturnedClickRelease)
+        {
+            return rawHeld;
+        }
+
+        if (input.RightMouseHeld)
+        {
+            _returnedAttachClickObserved = true;
+        }
+
+        if (_returnedAttachClickObserved && !input.RightMouseHeld)
+        {
+            _keepAttachUntilReturnedClickRelease = false;
+            _returnedAttachClickObserved = false;
+            _suppressAttachUntilRawReleased = rawHeld;
+            return false;
+        }
+
+        return true;
     }
 }
 

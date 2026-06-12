@@ -234,7 +234,11 @@ public class TitanRoleNetworkDriver : MonoBehaviour
             return;
         }
 
-        controller.TickAttachInput(default);
+        Define.TitanRole role = left ? Define.TitanRole.LeftLeg : Define.TitanRole.RightLeg;
+        if (!Managers.TitanRole.IsRoleAssigned(role))
+        {
+            controller.TickAttachInput(default);
+        }
     }
 
     private void TickLegRole(bool left, bool hasInput, in TitanAggregatedInput input, float dt)
@@ -253,10 +257,10 @@ public class TitanRoleNetworkDriver : MonoBehaviour
 
     private void TickPassiveStabilization(bool hasLeftLegInput, bool hasRightLegInput, float dt)
     {
-        if (_leftLegController != null && !hasLeftLegInput)
+        if (_leftLegController != null && !hasLeftLegInput && !Managers.TitanRole.IsRoleAssigned(Define.TitanRole.LeftLeg))
             _leftLegController.TickIdle(dt);
 
-        if (_rightLegController != null && !hasRightLegInput)
+        if (_rightLegController != null && !hasRightLegInput && !Managers.TitanRole.IsRoleAssigned(Define.TitanRole.RightLeg))
             _rightLegController.TickIdle(dt);
     }
 
