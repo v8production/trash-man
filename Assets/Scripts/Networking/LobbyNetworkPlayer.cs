@@ -190,6 +190,11 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
+        string lobbyUserId = GetLobbyUserId();
+        bool preserveLobbyScene = Managers.LobbySession.ShouldPreserveLobbyUserObjectsDuringHostMigration(lobbyUserId)
+            && Managers.Scene.CurrentScene != null
+            && Managers.Scene.CurrentScene.SceneType == Define.Scene.Lobby;
+
         _userId.OnValueChanged -= HandleIdentityChanged;
         _displayName.OnValueChanged -= HandleIdentityChanged;
         _selectedTitanRoleMask.OnValueChanged -= HandleSelectedRoleChanged;
@@ -203,8 +208,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             _subscribedLobbyRangerEmotion = false;
         }
 
-        string lobbyUserId = GetLobbyUserId();
-        if (!string.IsNullOrWhiteSpace(lobbyUserId))
+        if (!preserveLobbyScene && !string.IsNullOrWhiteSpace(lobbyUserId))
         {
             Managers.LobbySession.UnregisterLobbyUserObjects(lobbyUserId, _lobbyRanger, _nicknameUI);
 
@@ -212,13 +216,13 @@ public class LobbyNetworkPlayer : NetworkBehaviour
                 LobbyScene.RegisterUserPartSelection(lobbyUserId, 0);
         }
 
-        if (_nicknameUI != null)
+        if (_nicknameUI != null && !preserveLobbyScene)
             Destroy(_nicknameUI.gameObject);
 
         if (_localCamera != null)
             Destroy(_localCamera.gameObject);
 
-        if (_lobbyRanger != null)
+        if (_lobbyRanger != null && !preserveLobbyScene)
             Destroy(_lobbyRanger.gameObject);
 
         ClearRangerFaceTexture();
@@ -881,6 +885,31 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (_lobbyRanger != null)
             return;
 
+        if (Managers.LobbySession.IsPreservingHostMigrationScene)
+        {
+            string lobbyUserId = GetLobbyUserId();
+            if (string.IsNullOrWhiteSpace(lobbyUserId))
+                return;
+
+            if (Managers.LobbySession.TryGetRegisteredLobbyUserObjects(lobbyUserId, out RangerController cachedRanger, out UI_Nickname cachedNickname)
+                && cachedRanger != null)
+            {
+                _lobbyRanger = cachedRanger;
+                _nicknameUI = cachedNickname;
+                _lobbyRangerCharacterController = _lobbyRanger.GetComponent<CharacterController>();
+                SubscribeLobbyRangerEmotion();
+                ApplyOwnershipState();
+                UpdateLobbyRangerName();
+                ApplyRangerColorPresentation();
+                ApplyRangerFacePresentation();
+
+                if (IsOwner)
+                    transform.SetPositionAndRotation(_lobbyRanger.transform.position, _lobbyRanger.transform.rotation);
+
+                return;
+            }
+        }
+
         GameObject rangerObject = Managers.Resource.Instantiate(LobbyRangerPrefabName);
         if (rangerObject == null)
             return;
@@ -1197,6 +1226,18 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         if (_lobbyRanger == null)
             return;
+
+        if (Managers.LobbySession.IsPreservingHostMigrationScene)
+        {
+            string lobbyUserId = GetLobbyUserId();
+            if (!string.IsNullOrWhiteSpace(lobbyUserId)
+                && Managers.LobbySession.TryGetRegisteredLobbyUserObjects(lobbyUserId, out _, out UI_Nickname cachedNickname)
+                && cachedNickname != null)
+            {
+                _nicknameUI = cachedNickname;
+                return;
+            }
+        }
 
         _nicknameUI = Managers.UI.CreateWorldSpaceUI<UI_Nickname>(_lobbyRanger.transform);
         if (_nicknameUI == null)
