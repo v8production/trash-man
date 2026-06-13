@@ -20,6 +20,7 @@ public class LobbySessionManager
 
     private bool _steamCallbacksReady;
     private Callback<LobbyEnter_t> _lobbyEnterCallback;
+    private Callback<LobbyChatUpdate_t> _lobbyChatUpdateCallback;
     private Callback<GameLobbyJoinRequested_t> _gameLobbyJoinRequestedCallback;
     private Callback<NewUrlLaunchParameters_t> _newUrlLaunchParametersCallback;
     private CallResult<LobbyCreated_t> _lobbyCreatedResult;
@@ -29,6 +30,11 @@ public class LobbySessionManager
     private bool _pendingSteamClientConnect;
     private bool _hasRequestedSteamClientStart;
     private float _pendingSteamClientConnectDeadline;
+    private bool _handlingHostMigration;
+    private int _pendingMigratedHostRoleMask;
+    private float _pendingMigratedHostRoleMaskDeadline;
+    private int _pendingRestoredLocalRoleMask;
+    private float _pendingRestoredLocalRoleMaskDeadline;
 
     private static bool s_loggedNetcodeMissing;
     private static bool s_loggedNetworkManagerMissing;
@@ -54,10 +60,16 @@ public class LobbySessionManager
         EnsureSteamCallbacks();
         TryHandleSteamLaunchParameters(force: false);
 
-        if (Managers.Scene.CurrentScene == null || Managers.Scene.CurrentScene.SceneType != Define.Scene.Lobby)
+        if (Managers.Scene.CurrentScene == null)
+            return;
+
+        Define.Scene sceneType = Managers.Scene.CurrentScene.SceneType;
+        if (sceneType != Define.Scene.Lobby && sceneType != Define.Scene.Game)
             return;
 
         TryResolvePendingSteamClientConnect();
+        TryApplyPendingMigratedHostRoleMask();
+        TryApplyPendingRestoredLocalRoleMask();
     }
 
     public void Clear()
@@ -73,6 +85,11 @@ public class LobbySessionManager
         _pendingSteamClientConnect = false;
         _hasRequestedSteamClientStart = false;
         _pendingSteamClientConnectDeadline = 0f;
+        _handlingHostMigration = false;
+        _pendingMigratedHostRoleMask = 0;
+        _pendingMigratedHostRoleMaskDeadline = 0f;
+        _pendingRestoredLocalRoleMask = 0;
+        _pendingRestoredLocalRoleMaskDeadline = 0f;
         ResetClientConnectionTracking();
     }
 
@@ -186,6 +203,9 @@ public class LobbySessionManager
     {
         if (Managers.Steam.IsInitialized && _currentSteamLobbyId.IsValid())
         {
+            if (IsHosting)
+                TryAssignHostToRemainingLobbyMember();
+
             SteamMatchmaking.LeaveLobby(_currentSteamLobbyId);
             _currentSteamLobbyId = CSteamID.Nil;
         }
@@ -201,6 +221,11 @@ public class LobbySessionManager
         _pendingSteamClientConnect = false;
         _hasRequestedSteamClientStart = false;
         _pendingSteamClientConnectDeadline = 0f;
+        _handlingHostMigration = false;
+        _pendingMigratedHostRoleMask = 0;
+        _pendingMigratedHostRoleMaskDeadline = 0f;
+        _pendingRestoredLocalRoleMask = 0;
+        _pendingRestoredLocalRoleMaskDeadline = 0f;
         ResetClientConnectionTracking();
     }
 
@@ -296,6 +321,13 @@ public class LobbySessionManager
         if (!_pendingSteamClientConnect || _hasRequestedSteamClientStart)
             return;
 
+        if (_currentSteamLobbyId.IsValid())
+        {
+            CSteamID owner = SteamMatchmaking.GetLobbyOwner(_currentSteamLobbyId);
+            if (owner.m_SteamID != 0)
+                _currentHostSteamId = owner.m_SteamID;
+        }
+
         if (_currentHostSteamId != 0)
         {
             if (!TryStartSteamClient(_currentHostSteamId))
@@ -323,6 +355,82 @@ public class LobbySessionManager
         }
     }
 
+    private void TryApplyPendingMigratedHostRoleMask()
+    {
+        if (_pendingMigratedHostRoleMask == 0)
+            return;
+
+        if (!IsHosting)
+            return;
+
+        if (Managers.Scene.CurrentScene == null || Managers.Scene.CurrentScene.SceneType != Define.Scene.Game)
+        {
+            _pendingMigratedHostRoleMask = 0;
+            _pendingMigratedHostRoleMaskDeadline = 0f;
+            return;
+        }
+
+        LobbyNetworkPlayer[] players = LobbyNetworkPlayer.FindAllSpawnedPlayers();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || !player.IsOwner)
+                continue;
+
+            if (!player.TryApplyMigratedTitanRoleMask(_pendingMigratedHostRoleMask))
+                continue;
+
+            Debug.Log($"[Lobby] Migrated host role mask applied. clientId={player.OwnerClientId}, roleMask=0x{_pendingMigratedHostRoleMask:X}");
+            _pendingMigratedHostRoleMask = 0;
+            _pendingMigratedHostRoleMaskDeadline = 0f;
+            Managers.TitanRole.RefreshRoleMap(requireAllRoles: false, out _);
+            return;
+        }
+
+        if (Time.unscaledTime < _pendingMigratedHostRoleMaskDeadline)
+            return;
+
+        Debug.LogWarning($"[Lobby] Timed out applying migrated host role mask. roleMask=0x{_pendingMigratedHostRoleMask:X}");
+        _pendingMigratedHostRoleMask = 0;
+        _pendingMigratedHostRoleMaskDeadline = 0f;
+    }
+
+    private void TryApplyPendingRestoredLocalRoleMask()
+    {
+        if (_pendingRestoredLocalRoleMask == 0)
+            return;
+
+        if (Managers.Scene.CurrentScene == null || Managers.Scene.CurrentScene.SceneType != Define.Scene.Game)
+        {
+            _pendingRestoredLocalRoleMask = 0;
+            _pendingRestoredLocalRoleMaskDeadline = 0f;
+            return;
+        }
+
+        LobbyNetworkPlayer[] players = LobbyNetworkPlayer.FindAllSpawnedPlayers();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || !player.IsOwner)
+                continue;
+
+            if (!player.TrySubmitRestoredTitanRoleMask(_pendingRestoredLocalRoleMask))
+                continue;
+
+            Debug.Log($"[Lobby] Restored local role mask after game host migration. clientId={player.OwnerClientId}, roleMask=0x{_pendingRestoredLocalRoleMask:X}");
+            _pendingRestoredLocalRoleMask = 0;
+            _pendingRestoredLocalRoleMaskDeadline = 0f;
+            return;
+        }
+
+        if (Time.unscaledTime < _pendingRestoredLocalRoleMaskDeadline)
+            return;
+
+        Debug.LogWarning($"[Lobby] Timed out restoring local role mask after game host migration. roleMask=0x{_pendingRestoredLocalRoleMask:X}");
+        _pendingRestoredLocalRoleMask = 0;
+        _pendingRestoredLocalRoleMaskDeadline = 0f;
+    }
+
     private void EnsureSteamCallbacks()
     {
         if (_steamCallbacksReady)
@@ -334,6 +442,7 @@ public class LobbySessionManager
         _steamCallbacksReady = true;
 
         _lobbyEnterCallback = Callback<LobbyEnter_t>.Create(HandleLobbyEnter);
+        _lobbyChatUpdateCallback = Callback<LobbyChatUpdate_t>.Create(HandleLobbyChatUpdate);
         _gameLobbyJoinRequestedCallback = Callback<GameLobbyJoinRequested_t>.Create(HandleGameLobbyJoinRequested);
         _newUrlLaunchParametersCallback = Callback<NewUrlLaunchParameters_t>.Create(HandleNewUrlLaunchParameters);
         _lobbyCreatedResult = CallResult<LobbyCreated_t>.Create(HandleLobbyCreated);
@@ -365,6 +474,27 @@ public class LobbySessionManager
         SteamMatchmaking.SetLobbyData(_currentSteamLobbyId, LobbyHostSteamIdKey, _currentHostSteamId.ToString());
 
         Debug.Log($"[Lobby] Steam lobby created. lobbyId={_currentSteamLobbyId.m_SteamID}, joinCode={CurrentJoinCode}");
+    }
+
+    private void HandleLobbyChatUpdate(LobbyChatUpdate_t callback)
+    {
+        if (!_currentSteamLobbyId.IsValid() || callback.m_ulSteamIDLobby != _currentSteamLobbyId.m_SteamID)
+            return;
+
+        EChatMemberStateChange state = (EChatMemberStateChange)callback.m_rgfChatMemberStateChange;
+        bool memberLeft = (state & EChatMemberStateChange.k_EChatMemberStateChangeLeft) != 0
+            || (state & EChatMemberStateChange.k_EChatMemberStateChangeDisconnected) != 0
+            || (state & EChatMemberStateChange.k_EChatMemberStateChangeKicked) != 0
+            || (state & EChatMemberStateChange.k_EChatMemberStateChangeBanned) != 0;
+
+        if (!memberLeft)
+            return;
+
+        ulong changedSteamId = callback.m_ulSteamIDUserChanged;
+        if (changedSteamId == 0 || changedSteamId != _currentHostSteamId)
+            return;
+
+        TryRecoverFromHostMigration("Steam lobby host left");
     }
 
     private void HandleLobbyMatchList(LobbyMatchList_t callback, bool ioFailure)
@@ -456,6 +586,181 @@ public class LobbySessionManager
 
         steamLobbyId = new CSteamID(rawLobbyId);
         return steamLobbyId.IsValid();
+    }
+
+    private bool TryAssignHostToRemainingLobbyMember()
+    {
+        if (!Managers.Steam.IsInitialized || !_currentSteamLobbyId.IsValid())
+            return false;
+
+        CSteamID localSteamId = Managers.Steam.LocalSteamId;
+        if (SteamMatchmaking.GetLobbyOwner(_currentSteamLobbyId) != localSteamId)
+            return false;
+
+        if (!TrySelectNextHostSteamId(localSteamId.m_SteamID, out ulong nextHostSteamId))
+            return false;
+
+        CSteamID nextHost = new CSteamID(nextHostSteamId);
+        SteamMatchmaking.SetLobbyData(_currentSteamLobbyId, LobbyHostSteamIdKey, nextHostSteamId.ToString());
+        bool assigned = SteamMatchmaking.SetLobbyOwner(_currentSteamLobbyId, nextHost);
+
+        Debug.Log($"[Lobby] Host migration requested. previousHost={localSteamId.m_SteamID}, nextHost={nextHostSteamId}, assigned={assigned}");
+        return assigned;
+    }
+
+    private bool TrySelectNextHostSteamId(ulong leavingHostSteamId, out ulong nextHostSteamId)
+    {
+        nextHostSteamId = 0;
+
+        int memberCount = SteamMatchmaking.GetNumLobbyMembers(_currentSteamLobbyId);
+        for (int i = 0; i < memberCount; i++)
+        {
+            CSteamID member = SteamMatchmaking.GetLobbyMemberByIndex(_currentSteamLobbyId, i);
+            ulong memberSteamId = member.m_SteamID;
+            if (memberSteamId == 0 || memberSteamId == leavingHostSteamId)
+                continue;
+
+            if (nextHostSteamId == 0 || memberSteamId < nextHostSteamId)
+                nextHostSteamId = memberSteamId;
+        }
+
+        return nextHostSteamId != 0;
+    }
+
+    private bool TrySelectCurrentHostSteamId(out ulong hostSteamId)
+    {
+        hostSteamId = 0;
+
+        int memberCount = SteamMatchmaking.GetNumLobbyMembers(_currentSteamLobbyId);
+        for (int i = 0; i < memberCount; i++)
+        {
+            CSteamID member = SteamMatchmaking.GetLobbyMemberByIndex(_currentSteamLobbyId, i);
+            ulong memberSteamId = member.m_SteamID;
+            if (memberSteamId == 0)
+                continue;
+
+            if (hostSteamId == 0 || memberSteamId < hostSteamId)
+                hostSteamId = memberSteamId;
+        }
+
+        return hostSteamId != 0;
+    }
+
+    private void TryRecoverFromHostMigration(string reason)
+    {
+        if (_handlingHostMigration || IsHosting)
+            return;
+
+        if (!Managers.Steam.IsInitialized || !_currentSteamLobbyId.IsValid())
+            return;
+
+        CSteamID owner = SteamMatchmaking.GetLobbyOwner(_currentSteamLobbyId);
+        ulong ownerSteamId = owner.m_SteamID;
+        if (ownerSteamId == 0)
+            return;
+
+        Define.Scene sceneType = Managers.Scene.CurrentScene != null ? Managers.Scene.CurrentScene.SceneType : Define.Scene.Unknown;
+        bool isGameScene = sceneType == Define.Scene.Game;
+        int migratedHostRoleMask = 0;
+        if (isGameScene && _currentHostSteamId != 0)
+            LobbyScene.TryGetRegisteredUserSelectedRoleMask(_currentHostSteamId.ToString(), out migratedHostRoleMask);
+
+        _handlingHostMigration = true;
+        if (sceneType == Define.Scene.Lobby)
+        {
+            LobbyScene.ClearRegisteredUserPartSelections();
+            CleanupExistingLobbyObjects();
+        }
+
+        CSteamID localSteamId = Managers.Steam.LocalSteamId;
+        if (ownerSteamId == localSteamId.m_SteamID
+            && TrySelectCurrentHostSteamId(out ulong electedHostSteamId)
+            && electedHostSteamId != localSteamId.m_SteamID)
+        {
+            CSteamID electedHost = new CSteamID(electedHostSteamId);
+            SteamMatchmaking.SetLobbyData(_currentSteamLobbyId, LobbyHostSteamIdKey, electedHostSteamId.ToString());
+            SteamMatchmaking.SetLobbyOwner(_currentSteamLobbyId, electedHost);
+            TryReconnectToMigratedHost(electedHostSteamId, migratedHostRoleMask, $"{reason}; reassigned by deterministic host election");
+            return;
+        }
+
+        if (ownerSteamId == localSteamId.m_SteamID)
+        {
+            TryPromoteLocalClientToHost(migratedHostRoleMask, reason);
+            return;
+        }
+
+        TryReconnectToMigratedHost(ownerSteamId, migratedHostRoleMask, reason);
+    }
+
+    private void TryPromoteLocalClientToHost(int migratedHostRoleMask, string reason)
+    {
+        if (Managers.Scene.CurrentScene != null
+            && Managers.Scene.CurrentScene.SceneType == Define.Scene.Game
+            && LobbyScene.TryGetRegisteredUserSelectedRoleMask(Managers.Steam.LocalUserId, out int localRoleMask))
+        {
+            migratedHostRoleMask |= localRoleMask;
+        }
+
+        TryStopNetwork();
+
+        HostUserId = Managers.Steam.LocalUserId;
+        _currentHostSteamId = Managers.Steam.LocalSteamId.m_SteamID;
+        SteamMatchmaking.SetLobbyData(_currentSteamLobbyId, LobbyHostSteamIdKey, _currentHostSteamId.ToString());
+
+        IsHosting = TryStartSteamHost();
+        _handlingHostMigration = false;
+
+        if (IsHosting && migratedHostRoleMask != 0 && Managers.Scene.CurrentScene != null && Managers.Scene.CurrentScene.SceneType == Define.Scene.Game)
+        {
+            _pendingMigratedHostRoleMask = migratedHostRoleMask;
+            _pendingMigratedHostRoleMaskDeadline = Time.unscaledTime + 5f;
+        }
+
+        if (!IsHosting)
+        {
+            HasLobbyNetworkConnectionFailed = true;
+            LastLobbyNetworkError = $"Failed to promote local client to lobby host. reason={reason}";
+            Debug.LogWarning($"[Lobby] {LastLobbyNetworkError}");
+            Managers.Toast.EnqueueMessage("Failed to take over lobby host.", 2.5f);
+            Managers.Scene.LoadScene(Define.Scene.Intro);
+            return;
+        }
+
+        HasLobbyNetworkConnectionFailed = false;
+        LastLobbyNetworkError = string.Empty;
+        Debug.Log($"[Lobby] Local client promoted to lobby host. hostSteamId={_currentHostSteamId}, reason={reason}");
+        Managers.Toast.EnqueueMessage(migratedHostRoleMask != 0 ? "Game host transferred to you. Previous host roles were assigned." : "Lobby host transferred to you. Roles were reset.", 2.5f);
+    }
+
+    private void TryReconnectToMigratedHost(ulong hostSteamId, int migratedHostRoleMask, string reason)
+    {
+        int localRoleMask = 0;
+        bool shouldRestoreLocalRoleMask = Managers.Scene.CurrentScene != null
+            && Managers.Scene.CurrentScene.SceneType == Define.Scene.Game
+            && LobbyScene.TryGetRegisteredUserSelectedRoleMask(Managers.Steam.LocalUserId, out localRoleMask);
+
+        TryStopNetwork();
+
+        IsHosting = false;
+        HostUserId = string.Empty;
+        _currentHostSteamId = hostSteamId;
+        _handlingHostMigration = false;
+
+        HasLobbyNetworkConnectionFailed = false;
+        LastLobbyNetworkError = string.Empty;
+        _pendingSteamClientConnect = true;
+        _hasRequestedSteamClientStart = false;
+        _pendingSteamClientConnectDeadline = Time.unscaledTime + 5f;
+
+        if (shouldRestoreLocalRoleMask)
+        {
+            _pendingRestoredLocalRoleMask = localRoleMask;
+            _pendingRestoredLocalRoleMaskDeadline = Time.unscaledTime + 5f;
+        }
+
+        Debug.Log($"[Lobby] Scheduled reconnect to migrated lobby host. hostSteamId={hostSteamId}, reason={reason}");
+        Managers.Toast.EnqueueMessage(migratedHostRoleMask != 0 ? "Game host changed. Reconnecting... Host roles were transferred." : "Lobby host changed. Reconnecting... Roles were reset.", 2.5f);
     }
 
     private void HandleLobbyEnter(LobbyEnter_t callback)
@@ -634,9 +939,18 @@ public class LobbySessionManager
         if (IsHosting)
             return;
 
+        ulong previousHostSteamId = _currentHostSteamId;
+
         NetworkManager networkManager = UnityEngine.Object.FindAnyObjectByType<NetworkManager>();
         if (networkManager != null && networkManager.IsConnectedClient)
             return;
+
+        if (previousHostSteamId != 0)
+        {
+            TryRecoverFromHostMigration($"Netcode host disconnected. clientId={clientId}");
+            if (_currentHostSteamId != previousHostSteamId || IsHosting)
+                return;
+        }
 
         HasLobbyNetworkConnectionFailed = true;
         LastLobbyNetworkError = $"Disconnected from lobby host. clientId={clientId}";

@@ -78,6 +78,17 @@ public class LobbyScene : BaseScene
         return roleMask != 0;
     }
 
+    public static void ClearRegisteredUserPartSelections()
+    {
+        foreach (LobbyUserEntry entry in s_userEntriesByUserId.Values)
+        {
+            if (entry == null)
+                continue;
+
+            entry.SelectedRoleMask = 0;
+        }
+    }
+
     public static void UnregisterUserObjects(string userId, RangerController ranger, UI_Nickname nickname)
     {
         if (string.IsNullOrWhiteSpace(userId))

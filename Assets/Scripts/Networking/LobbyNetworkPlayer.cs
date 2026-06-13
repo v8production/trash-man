@@ -207,7 +207,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (!string.IsNullOrWhiteSpace(lobbyUserId))
         {
             Managers.LobbySession.UnregisterLobbyUserObjects(lobbyUserId, _lobbyRanger, _nicknameUI);
-            LobbyScene.RegisterUserPartSelection(lobbyUserId, 0);
+
+            if (Managers.Scene.CurrentScene != null && Managers.Scene.CurrentScene.SceneType == Define.Scene.Lobby)
+                LobbyScene.RegisterUserPartSelection(lobbyUserId, 0);
         }
 
         if (_nicknameUI != null)
@@ -771,8 +773,48 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     private void HandleSelectedRoleChanged(int previousValue, int newValue)
     {
+        string lobbyUserId = GetLobbyUserId();
+        if (!string.IsNullOrWhiteSpace(lobbyUserId))
+            LobbyScene.RegisterUserPartSelection(lobbyUserId, newValue);
+
         RefreshRoleSelectionPresentation();
         ApplyRangerColorPresentation();
+    }
+
+    public bool TryApplyMigratedTitanRoleMask(int titanRoleMask)
+    {
+        if (!IsServer || !IsOwner || !IsSpawned)
+            return false;
+
+        int normalizedMask = NormalizeTitanRoleMask(titanRoleMask);
+        _selectedTitanRoleMask.Value = normalizedMask;
+        _rangerColorRgba.Value = ResolveRangerColorRgbaFromRoleMask(normalizedMask);
+
+        if (normalizedMask == 0)
+        {
+            _activeTitanRole.Value = 0;
+            return true;
+        }
+
+        int activeRoleValue = NormalizeTitanRoleValue(_activeTitanRole.Value);
+        int activeBit = activeRoleValue != 0 ? (1 << (activeRoleValue - FirstTitanRoleValue)) : 0;
+        if (activeBit == 0 || (normalizedMask & activeBit) == 0)
+            _activeTitanRole.Value = (int)GetFirstRoleFromMask(normalizedMask);
+
+        return true;
+    }
+
+    public bool TrySubmitRestoredTitanRoleMask(int titanRoleMask)
+    {
+        if (!IsOwner || !IsSpawned)
+            return false;
+
+        int normalizedMask = NormalizeTitanRoleMask(titanRoleMask);
+        if (normalizedMask == NormalizeTitanRoleMask(_selectedTitanRoleMask.Value))
+            return true;
+
+        SubmitSelectedTitanRoleMaskServerRpc(normalizedMask);
+        return true;
     }
 
     private void HandleActiveRoleChanged(int previousValue, int newValue)

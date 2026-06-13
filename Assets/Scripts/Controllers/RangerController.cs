@@ -54,6 +54,12 @@ public class RangerController : MonoBehaviour
         Init();
     }
 
+    private void OnDisable()
+    {
+        _moveInput = Vector2.zero;
+        StopMovementAnimation();
+    }
+
     private void Init()
     {
         if (_initialized)
