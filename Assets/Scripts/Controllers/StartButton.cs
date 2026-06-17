@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class StartButton : MonoBehaviour, ILobbyWorldButtonInteractionTarget
 {
-    [SerializeField] private float _outlineTriggerDistance = 3.5f;
+    [SerializeField] private float _outlineTriggerDistance = 5.0f;
     [SerializeField] private float _interactionTriggerDistance = 1.5f;
 
     bool ILobbyWorldButtonInteractionTarget.IsProximityInteractable => IsWithinInteractionDistance();

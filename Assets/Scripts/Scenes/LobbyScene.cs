@@ -7,18 +7,25 @@ public class LobbyScene : BaseScene
     private UI_LobbyMenu _lobbyMenu;
     private UI_RoleSelectMenu _roleSelectMenu;
     private UI_Loading _loadingUi;
+    private UI_MainScreen _mainScreen;
+    private UI_KioskScreen _leftKioskScreen;
+    private UI_KioskScreen _rightKioskScreen;
     private bool _pendingHostBootstrap;
     private bool _isLobbySetupPending;
     private string _pendingJoinCode = string.Empty;
-    private UI_HostStartButton _screenHostStartButton;
-    private UI_RoleSelectButton _screenRoleSelectButton;
     private LobbyCameraController _localLobbyCamera;
     private const string LobbyCameraPrefabName = "Lobby_Camera";
-    private const string ScreenHostStartButtonName = "UI_HostStartButton";
-    private const string ScreenRoleSelectButtonName = "UI_RoleSelectButton";
-    private static readonly Vector3 s_hostStartButtonWorldPosition = new(1.49f, 1.8f, 1.5f);
-    private static readonly Vector3 s_roleSelectButtonWorldPosition = new(1.49f, 1.8f, -1.5f);
-    private static readonly Quaternion s_screenButtonWorldRotation = Quaternion.Euler(0f, -90f, 0f);
+    private const string MainScreenPrefabName = "UI_MainScreen";
+    private const string KioskScreenPrefabName = "UI_KioskScreen";
+
+    private static readonly Vector3 s_mainScreenWorldPosition = new(4.14777f, 3.008f, 0f);
+    private static readonly Quaternion s_mainScreenWorldRotation = new(0f, -0.7071068f, 0f, 0.7071068f);
+    private static readonly Vector3 s_screenWorldScale = new(0.01f, 0.01f, 0.01f);
+
+    private static readonly Vector3 s_leftKioskScreenWorldPosition = new(2.24777f, 1.467f, 5.73f);
+    private static readonly Quaternion s_leftKioskScreenWorldRotation = new(-0.1488057f, -0.8396882f, -0.2858532f, 0.437114f);
+    private static readonly Vector3 s_rightKioskScreenWorldPosition = new(2.24777f, 1.467f, -5.73f);
+    private static readonly Quaternion s_rightKioskScreenWorldRotation = new(0.1488057f, 0.8396882f, -0.2858532f, 0.437114f);
 
     private static readonly Dictionary<string, LobbyUserEntry> s_userEntriesByUserId = new();
 
@@ -124,8 +131,7 @@ public class LobbyScene : BaseScene
         Managers.Input.SetMode(Define.InputMode.Player);
         EnsureLobbyMenu();
         EnsureLoadingUI();
-        EnsureScreenHostStartButton();
-        EnsureScreenRoleSelectButton();
+        EnsureWorldScreens();
 
         _pendingHostBootstrap = Managers.Scene.ConsumeLobbyHostRequest();
         _pendingJoinCode = Managers.Scene.ConsumeLobbyJoinCodeRequest(out string joinCode) ? joinCode : string.Empty;
@@ -146,7 +152,6 @@ public class LobbyScene : BaseScene
     {
         EnsureLocalLobbyCameraReady();
         UpdateLobbyLoadingState();
-        UpdateScreenButtonTransforms();
         if (!IsEscapePressedThisFrame())
             return;
 
@@ -158,12 +163,6 @@ public class LobbyScene : BaseScene
 
     private void OnDestroy()
     {
-
-        if (_screenHostStartButton != null)
-            _screenHostStartButton.StartButtonClicked -= HandleHostStartButtonClicked;
-
-        if (_screenRoleSelectButton != null)
-            _screenRoleSelectButton.RoleSelectButtonClicked -= HandleRoleSelectButtonClicked;
 
         if (_roleSelectMenu != null)
         {
@@ -283,49 +282,35 @@ public class LobbyScene : BaseScene
         _loadingUi.gameObject.SetActive(false);
     }
 
-    private void EnsureScreenHostStartButton()
+    private void EnsureWorldScreens()
     {
-        if (_screenHostStartButton != null)
-            return;
+        if (_mainScreen == null)
+        {
+            _mainScreen = Managers.UI.CreateWorldSpaceUI<UI_MainScreen>(null, MainScreenPrefabName);
+            ApplyWorldScreenTransform(_mainScreen.transform, s_mainScreenWorldPosition, s_mainScreenWorldRotation);
+        }
 
-        _screenHostStartButton = Managers.UI.CreateWorldSpaceUI<UI_HostStartButton>(null, ScreenHostStartButtonName);
+        if (_leftKioskScreen == null)
+        {
+            _leftKioskScreen = Managers.UI.CreateWorldSpaceUI<UI_KioskScreen>(null, KioskScreenPrefabName);
+            ApplyWorldScreenTransform(_leftKioskScreen.transform, s_leftKioskScreenWorldPosition, s_leftKioskScreenWorldRotation);
+        }
 
-        ApplyFixedScreenButtonTransform(_screenHostStartButton.transform, s_hostStartButtonWorldPosition);
-        _screenHostStartButton.transform.SetParent(null, true);
-
-        _screenHostStartButton.StartButtonClicked -= HandleHostStartButtonClicked;
-        _screenHostStartButton.StartButtonClicked += HandleHostStartButtonClicked;
+        if (_rightKioskScreen == null)
+        {
+            _rightKioskScreen = Managers.UI.CreateWorldSpaceUI<UI_KioskScreen>(null, KioskScreenPrefabName);
+            ApplyWorldScreenTransform(_rightKioskScreen.transform, s_rightKioskScreenWorldPosition, s_rightKioskScreenWorldRotation);
+        }
     }
 
-    private void EnsureScreenRoleSelectButton()
+    private static void ApplyWorldScreenTransform(Transform targetTransform, Vector3 worldPosition, Quaternion worldRotation)
     {
-        if (_screenRoleSelectButton != null)
-            return;
-
-        _screenRoleSelectButton = Managers.UI.CreateWorldSpaceUI<UI_RoleSelectButton>(null, ScreenRoleSelectButtonName);
-
-        ApplyFixedScreenButtonTransform(_screenRoleSelectButton.transform, s_roleSelectButtonWorldPosition);
-        _screenRoleSelectButton.transform.SetParent(null, true);
-
-        _screenRoleSelectButton.RoleSelectButtonClicked -= HandleRoleSelectButtonClicked;
-        _screenRoleSelectButton.RoleSelectButtonClicked += HandleRoleSelectButtonClicked;
+        targetTransform.SetPositionAndRotation(worldPosition, worldRotation);
+        targetTransform.localScale = s_screenWorldScale;
+        targetTransform.SetParent(null, true);
     }
 
-    private void UpdateScreenButtonTransforms()
-    {
-        if (_screenHostStartButton != null)
-            ApplyFixedScreenButtonTransform(_screenHostStartButton.transform, s_hostStartButtonWorldPosition);
-
-        if (_screenRoleSelectButton != null)
-            ApplyFixedScreenButtonTransform(_screenRoleSelectButton.transform, s_roleSelectButtonWorldPosition);
-    }
-
-    private static void ApplyFixedScreenButtonTransform(Transform targetTransform, Vector3 worldPosition)
-    {
-        targetTransform.SetPositionAndRotation(worldPosition, s_screenButtonWorldRotation);
-    }
-
-    private void HandleRoleSelectButtonClicked()
+    public void RequestShowRoleSelectMenu()
     {
         if (_isLobbySetupPending || !Managers.LobbySession.HasJoinedLobbySession)
             return;
@@ -438,27 +423,6 @@ public class LobbyScene : BaseScene
     private static LobbyNetworkPlayer FindLocalOwnedNetworkPlayer()
     {
         return LobbyNetworkPlayer.FindLocalOwnedPlayer();
-    }
-
-    private void HandleHostStartButtonClicked()
-    {
-        if (!Managers.LobbySession.IsHosting)
-        {
-            Managers.Toast.EnqueueMessage("Only the host can start this action.", 2.5f);
-            return;
-        }
-
-        // Validate using network-synced role masks, not the lobby UI registry.
-        // The UI registry can be stale while identities/objects are still syncing.
-        if (!Managers.TitanRole.CanStartGameWithAllRolesAssigned(out string roleError))
-        {
-            string label = string.IsNullOrWhiteSpace(roleError) ? "role requirements" : roleError;
-            Managers.Toast.EnqueueMessage($"Cannot start game: {label}", 2.8f);
-            return;
-        }
-
-        if (!LobbyNetworkPlayer.RequestLoadGameForAll())
-            Managers.Scene.LoadScene(Define.Scene.Game);
     }
 
     private static bool AreAllLobbyUsersReadyForGame(out string missingUserId)
@@ -598,20 +562,24 @@ public class LobbyScene : BaseScene
             _roleSelectMenu = null;
         }
 
-        if (_screenHostStartButton != null)
+        if (_mainScreen != null)
         {
-            _screenHostStartButton.StartButtonClicked -= HandleHostStartButtonClicked;
-            Managers.Resource.Destory(_screenHostStartButton.gameObject);
+            Managers.Resource.Destory(_mainScreen.gameObject);
+            _mainScreen = null;
         }
 
-        if (_screenRoleSelectButton != null)
+        if (_leftKioskScreen != null)
         {
-            _screenRoleSelectButton.RoleSelectButtonClicked -= HandleRoleSelectButtonClicked;
-            Managers.Resource.Destory(_screenRoleSelectButton.gameObject);
-            _screenRoleSelectButton = null;
+            Managers.Resource.Destory(_leftKioskScreen.gameObject);
+            _leftKioskScreen = null;
+        }
+
+        if (_rightKioskScreen != null)
+        {
+            Managers.Resource.Destory(_rightKioskScreen.gameObject);
+            _rightKioskScreen = null;
         }
 
         _localLobbyCamera = null;
-        _screenHostStartButton = null;
     }
 }
