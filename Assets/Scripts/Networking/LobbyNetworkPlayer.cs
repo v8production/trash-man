@@ -320,6 +320,18 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         Managers.Scene.LoadScene(Define.Scene.Game);
     }
 
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void RequestLoadGameForAllServerRpc()
+    {
+        if (!Managers.TitanRole.CanStartGameWithAllRolesAssigned(out string roleError))
+        {
+            InputDebug.LogWarning($"Start game request rejected: {roleError}");
+            return;
+        }
+
+        RequestLoadGameForAll();
+    }
+
     public void SubmitLocalFaceTexture(Texture2D faceTexture)
     {
         if (!IsOwner)
@@ -790,6 +802,19 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         }
 
         return false;
+    }
+
+    public static bool RequestLoadGameFromLocalPlayer()
+    {
+        if (RequestLoadGameForAll())
+            return true;
+
+        LobbyNetworkPlayer localPlayer = FindLocalOwnedPlayer();
+        if (localPlayer == null || !localPlayer.IsSpawned)
+            return false;
+
+        localPlayer.RequestLoadGameForAllServerRpc();
+        return true;
     }
 
     private bool TryLoadGameSceneForSession()

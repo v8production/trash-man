@@ -29,7 +29,7 @@ public static class LobbyWorldButtonInteractionRegistry
         s_targets.Remove(target);
     }
 
-    public static bool IsClosestAvailable(ILobbyWorldButtonInteractionTarget requester)
+    public static bool CanInteract(ILobbyWorldButtonInteractionTarget requester)
     {
         if (requester == null || !requester.IsProximityInteractable)
             return false;

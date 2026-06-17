@@ -450,7 +450,7 @@ public class LobbyScene : BaseScene
 
         // Validate using network-synced role masks, not the lobby UI registry.
         // The UI registry can be stale while identities/objects are still syncing.
-        if (!Managers.TitanRole.CanStartGameWithCurrentLobbyPlayers(out string roleError))
+        if (!Managers.TitanRole.CanStartGameWithAllRolesAssigned(out string roleError))
         {
             string label = string.IsNullOrWhiteSpace(roleError) ? "role requirements" : roleError;
             Managers.Toast.EnqueueMessage($"Cannot start game: {label}", 2.8f);

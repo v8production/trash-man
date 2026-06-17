@@ -133,6 +133,39 @@ public class TitanRoleManager
         return true;
     }
 
+    public bool CanStartGameWithAllRolesAssigned(out string error)
+    {
+        error = string.Empty;
+
+        LobbyNetworkPlayer[] players = LobbyNetworkPlayer.FindAllSpawnedPlayers();
+        if (players == null || players.Length == 0)
+        {
+            error = "No lobby players were found.";
+            return false;
+        }
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || !player.IsSpawned)
+                continue;
+
+            if (!player.HasSelectedTitanRole)
+            {
+                error = $"{player.DisplayName} must select at least one role.";
+                return false;
+            }
+        }
+
+        if (!RefreshRoleMap(requireAllRoles: true, out error))
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(error))
+            return false;
+
+        return true;
+    }
+
     public bool TryGetLocalRole(out Define.TitanRole role)
     {
         role = Define.TitanRole.Torso;
