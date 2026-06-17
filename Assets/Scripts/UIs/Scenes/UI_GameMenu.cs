@@ -13,18 +13,20 @@ public class UI_GameMenu : UI_Menu
 
     enum Buttons
     {
-        SystemSettings,
+        Settings,
+        Controls,
         TempButton,
         TempButton2,
-        BackToLobby,
+        LeaveGame,
     }
 
     enum Texts
     {
-        SystemSettings,
+        Settings,
+        Controls,
         TempButton,
         TempButton2,
-        BackToLobby,
+        LeaveGame,
     }
 
     public override void Init()
@@ -34,10 +36,11 @@ public class UI_GameMenu : UI_Menu
         Bind<Button>(typeof(Buttons));
         Bind<TextMeshProUGUI>(typeof(Texts));
 
-        GetButton((int)Buttons.SystemSettings).gameObject.BindEvent(OnSystemSettingsButtonClicked);
+        GetButton((int)Buttons.Settings).gameObject.BindEvent(OnSettingsButtonClicked);
+        GetButton((int)Buttons.Settings).gameObject.BindEvent(OnControlsButtonClicked);
         GetButton((int)Buttons.TempButton).gameObject.BindEvent(OnTempButtonClicked);
         GetButton((int)Buttons.TempButton2).gameObject.BindEvent(OnTempButtonClicked);
-        GetButton((int)Buttons.BackToLobby).gameObject.BindEvent(OnBackToLobbyButtonClicked);
+        GetButton((int)Buttons.LeaveGame).gameObject.BindEvent(OnLeaveGameButtonClicked);
     }
 
     private void OnDestroy()
@@ -48,16 +51,22 @@ public class UI_GameMenu : UI_Menu
     {
     }
 
-    private void OnSystemSettingsButtonClicked(PointerEventData eventData)
+    private void OnSettingsButtonClicked(PointerEventData eventData)
     {
         Managers.Toast.EnqueueMessage("System settings UI is not ready yet.", 2.5f);
     }
 
-    private void OnTempButtonClicked(PointerEventData eventData)
+    private void OnControlsButtonClicked(PointerEventData eventData)
     {
+        Managers.Toast.EnqueueMessage("Controls UI is not ready yet.", 2.5f);
     }
 
-    private void OnBackToLobbyButtonClicked(PointerEventData eventData)
+    private void OnTempButtonClicked(PointerEventData eventData)
+    {
+        Managers.Toast.EnqueueMessage("There is no functions on this button.", 2.5f);
+    }
+
+    private void OnLeaveGameButtonClicked(PointerEventData eventData)
     {
         Managers.LobbySession.QuitCurrentRoom();
         Managers.Scene.LoadScene(Define.Scene.Intro);

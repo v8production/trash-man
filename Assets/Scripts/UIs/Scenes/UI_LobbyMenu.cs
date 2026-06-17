@@ -16,21 +16,21 @@ public class UI_LobbyMenu : UI_Menu
 
     enum Buttons
     {
-        SystemSettings,
         DrawFace,
-        ShowCode,
         InviteRoom,
-        BackToLobby,
+        ShowCode,
+        Settings,
+        LeaveGame,
     }
 
     enum Texts
     {
-        SystemSettings,
         DrawFace,
+        InviteRoom,
         ShowCode,
         Code,
-        InviteRoom,
-        BackToLobby,
+        Settings,
+        LeaveGame,
     }
 
     private bool _isCodeVisible;
@@ -45,11 +45,11 @@ public class UI_LobbyMenu : UI_Menu
         Bind<Button>(typeof(Buttons));
         Bind<TextMeshProUGUI>(typeof(Texts));
 
-        GetButton((int)Buttons.SystemSettings).gameObject.BindEvent(OnSystemSettingsButtonClicked);
         GetButton((int)Buttons.DrawFace).gameObject.BindEvent(OnDrawFaceButtonClicked);
-        GetButton((int)Buttons.ShowCode).gameObject.BindEvent(OnShowCodeButtonClicked);
         GetButton((int)Buttons.InviteRoom).gameObject.BindEvent(OnInviteRoomButtonClicked);
-        GetButton((int)Buttons.BackToLobby).gameObject.BindEvent(OnBackToLobbyButtonClicked);
+        GetButton((int)Buttons.ShowCode).gameObject.BindEvent(OnShowCodeButtonClicked);
+        GetButton((int)Buttons.Settings).gameObject.BindEvent(OnSettingsButtonClicked);
+        GetButton((int)Buttons.LeaveGame).gameObject.BindEvent(OnLeaveGameButtonClicked);
 
         ApplyJoinCodeState();
     }
@@ -69,7 +69,7 @@ public class UI_LobbyMenu : UI_Menu
         ApplyJoinCodeState();
     }
 
-    private void OnSystemSettingsButtonClicked(PointerEventData eventData)
+    private void OnSettingsButtonClicked(PointerEventData eventData)
     {
         Managers.Toast.EnqueueMessage("System settings UI is not ready yet.", 2.5f);
     }
@@ -122,7 +122,7 @@ public class UI_LobbyMenu : UI_Menu
         Managers.LobbySession.OpenSteamFriendsOverlay();
     }
 
-    private void OnBackToLobbyButtonClicked(PointerEventData eventData)
+    private void OnLeaveGameButtonClicked(PointerEventData eventData)
     {
         Managers.LobbySession.QuitCurrentRoom();
         Managers.Scene.LoadScene(Define.Scene.Intro);
