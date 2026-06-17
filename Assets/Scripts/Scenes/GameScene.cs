@@ -15,6 +15,7 @@ public class GameScene : BaseScene
     private UI_Boss _bossUi;
     private UI_TitanStat _titanStatUi;
     private UI_GameMenu _gameMenuUi;
+    private UI_RoleMapping _roleMappingUi;
 
     private void EnsureTitanRuntime()
     {
@@ -36,7 +37,9 @@ public class GameScene : BaseScene
         _bossUi = Managers.UI.ShowSceneUI<UI_Boss>(nameof(UI_Boss));
         _titanStatUi = Managers.UI.ShowSceneUI<UI_TitanStat>(nameof(UI_TitanStat));
         _gameMenuUi = Managers.UI.ShowSceneUI<UI_GameMenu>(nameof(UI_GameMenu));
+        _roleMappingUi = Managers.UI.ShowSceneUI<UI_RoleMapping>(nameof(UI_RoleMapping));
         _gameMenuUi.gameObject.SetActive(false);
+        _roleMappingUi.gameObject.SetActive(false);
     }
 
     private void MapStatsToUIs()
@@ -60,15 +63,30 @@ public class GameScene : BaseScene
         EnsureUI();
         MapStatsToUIs();
         CleanupLobbyRangers();
+        _roleMappingUi.CaptureCurrentRoleMapping();
         Managers.Input.SetMode(Define.InputMode.Player);
     }
 
     private void Update()
     {
+        UpdateRoleMappingVisibility();
+
         if (!IsEscapePressedThisFrame())
             return;
 
         ToggleMenuInputMode();
+    }
+
+    private void UpdateRoleMappingVisibility()
+    {
+        if (_roleMappingUi == null)
+            return;
+
+        bool shouldShow = IsTabPressed();
+        if (_roleMappingUi.gameObject.activeSelf == shouldShow)
+            return;
+
+        _roleMappingUi.gameObject.SetActive(shouldShow);
     }
 
     private void ToggleMenuInputMode()
@@ -90,6 +108,11 @@ public class GameScene : BaseScene
     private static bool IsEscapePressedThisFrame()
     {
         return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
+    }
+
+    private static bool IsTabPressed()
+    {
+        return Keyboard.current != null && Keyboard.current.tabKey.isPressed;
     }
 
     private static void CleanupLobbyRangers()
@@ -114,5 +137,6 @@ public class GameScene : BaseScene
         _bossUi = null;
         _titanStatUi = null;
         _gameMenuUi = null;
+        _roleMappingUi = null;
     }
 }

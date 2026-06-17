@@ -50,6 +50,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     public int CurrentTitanGauge => _titanGauge.Value;
     public TitanAbilityStatePayload CurrentTitanAbilityState => _titanAbilityState.Value;
     public string DisplayName => GetDisplayName();
+    public static event System.Action GameRoleMappingChanged;
 
     private float _nextPublishLogTime;
     private const float PublishLogIntervalSeconds = 0.50f;
@@ -821,6 +822,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         RefreshRoleSelectionPresentation();
         ApplyRangerColorPresentation();
+
+        if (Managers.Scene.CurrentScene != null && Managers.Scene.CurrentScene.SceneType == Define.Scene.Game)
+            GameRoleMappingChanged?.Invoke();
     }
 
     public bool TryApplyMigratedTitanRoleMask(int titanRoleMask)
