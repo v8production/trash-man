@@ -1,5 +1,4 @@
 using TMPro;
-using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -35,8 +34,10 @@ public class UI_LobbyMenu : UI_Menu
 
     private bool _isCodeVisible;
     private UI_DrawFace _drawFace;
+    private UI_Settings _settings;
 
     public bool IsDrawFaceVisible => _drawFace != null && _drawFace.gameObject.activeSelf;
+    public bool IsSettingsVisible => _settings != null && _settings.gameObject.activeSelf;
 
     public override void Init()
     {
@@ -56,12 +57,8 @@ public class UI_LobbyMenu : UI_Menu
 
     private void OnDestroy()
     {
-        if (_drawFace != null)
-        {
-            _drawFace.Closed -= HandleDrawFaceClosed;
-            Managers.Resource.Destory(_drawFace.gameObject);
-            _drawFace = null;
-        }
+        DestroyDrawFaceUI();
+        DestroySettingsUI();
     }
 
     private void OnEnable()
@@ -71,7 +68,9 @@ public class UI_LobbyMenu : UI_Menu
 
     private void OnSettingsButtonClicked(PointerEventData eventData)
     {
-        Managers.Toast.EnqueueMessage("System settings UI is not ready yet.", 2.5f);
+        EnsureSettingsUI();
+        _settings.gameObject.SetActive(true);
+        gameObject.SetActive(false);
     }
 
     private void OnDrawFaceButtonClicked(PointerEventData eventData)
@@ -87,22 +86,68 @@ public class UI_LobbyMenu : UI_Menu
             return;
 
         _drawFace = Managers.UI.ShowSceneUI<UI_DrawFace>(nameof(UI_DrawFace));
-        _drawFace.Closed -= HandleDrawFaceClosed;
-        _drawFace.Closed += HandleDrawFaceClosed;
+        _drawFace.Closed -= HandleSubMenuClosed;
+        _drawFace.Closed += HandleSubMenuClosed;
         _drawFace.gameObject.SetActive(false);
     }
 
-    private void HandleDrawFaceClosed()
+    private void HandleSubMenuClosed()
     {
-        HideDrawFace();
-
+        HideSubMenus();
         gameObject.SetActive(true);
     }
 
-    public void HideDrawFace()
+    private void EnsureSettingsUI()
     {
-        if (_drawFace != null)
-            _drawFace.gameObject.SetActive(false);
+        if (_settings != null)
+            return;
+
+        _settings = Managers.UI.ShowSceneUI<UI_Settings>(nameof(UI_Settings));
+        _settings.Closed -= HandleSubMenuClosed;
+        _settings.Closed += HandleSubMenuClosed;
+        _settings.gameObject.SetActive(false);
+    }
+
+    public void HideSubMenus()
+    {
+        HideDrawFaceUI();
+        HideSettingsUI();
+    }
+
+    private void HideDrawFaceUI()
+    {
+        if (_drawFace == null)
+            return;
+
+        _drawFace.gameObject.SetActive(false);
+    }
+
+    private void DestroyDrawFaceUI()
+    {
+        if (_drawFace == null)
+            return;
+
+        _drawFace.Closed -= HandleSubMenuClosed;
+        Managers.Resource.Destory(_drawFace.gameObject);
+        _drawFace = null;
+    }
+
+    private void HideSettingsUI()
+    {
+        if (_settings == null)
+            return;
+
+        _settings.gameObject.SetActive(false);
+    }
+
+    private void DestroySettingsUI()
+    {
+        if (_settings == null)
+            return;
+
+        _settings.Closed -= HandleSubMenuClosed;
+        Managers.Resource.Destory(_settings.gameObject);
+        _settings = null;
     }
 
     private void OnShowCodeButtonClicked(PointerEventData eventData)
