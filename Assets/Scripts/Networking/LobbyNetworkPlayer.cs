@@ -7,7 +7,6 @@ using System.Collections.Generic;
 [RequireComponent(typeof(NetworkObject))]
 public class LobbyNetworkPlayer : NetworkBehaviour
 {
-    private const string LobbyCameraPrefabName = "Lobby_Camera";
     private const string LobbyRangerPrefabName = "Ranger";
     private const int FirstTitanRoleValue = (int)Define.TitanRole.Torso;
     private const int LastTitanRoleValue = (int)Define.TitanRole.RightLeg;
@@ -29,7 +28,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private RangerController _lobbyRanger;
     private CharacterController _lobbyRangerCharacterController;
     private UI_Nickname _nicknameUI;
-    private LobbyCameraController _localCamera;
 
     private Texture2D _rangerFaceTexture;
 
@@ -106,8 +104,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         if (IsOwner)
         {
-            EnsureLocalCamera();
-
             if (!_submittedIdentity)
             {
                 _submittedIdentity = true;
@@ -177,7 +173,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         {
             if (isLobbyScene)
             {
-                EnsureLocalCamera();
                 SubmitIdentityServerRpc(Managers.Steam.LocalUserId, Managers.Steam.LocalDisplayName);
                 SubmitLocalSavedFace();
                 _submittedIdentity = true;
@@ -220,9 +215,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         if (_nicknameUI != null && !preserveLobbyScene)
             Destroy(_nicknameUI.gameObject);
-
-        if (_localCamera != null)
-            Destroy(_localCamera.gameObject);
 
         if (_lobbyRanger != null && !preserveLobbyScene)
             Destroy(_lobbyRanger.gameObject);
@@ -1254,35 +1246,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _remoteAnimator.CrossFade(state.ToString(), transitionDuration, 0, normalizedTime);
     }
 
-    private void EnsureLocalCamera()
-    {
-        if (_lobbyRanger == null)
-            EnsureLobbyRanger();
-
-        if (_localCamera != null)
-        {
-            _localCamera.SetTarget(_lobbyRanger != null ? _lobbyRanger.transform : transform);
-            return;
-        }
-
-        // Prefer reusing an authored/existing lobby camera when present.
-        LobbyCameraController existingCamera = Object.FindAnyObjectByType<LobbyCameraController>();
-        if (existingCamera != null)
-        {
-            _localCamera = existingCamera;
-            _localCamera.SetTarget(_lobbyRanger != null ? _lobbyRanger.transform : transform);
-            return;
-        }
-
-        GameObject cameraObject = Managers.Resource.Instantiate(LobbyCameraPrefabName);
-        if (cameraObject == null)
-            return;
-
-        _localCamera = cameraObject.GetComponent<LobbyCameraController>();
-        if (_localCamera != null)
-            _localCamera.SetTarget(_lobbyRanger != null ? _lobbyRanger.transform : transform);
-    }
-
     private void EnsureNicknameUI()
     {
         if (_nicknameUI != null)
@@ -1346,9 +1309,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         if (_nicknameUI != null)
             Destroy(_nicknameUI.gameObject);
-
-        if (_localCamera != null)
-            Destroy(_localCamera.gameObject);
 
         if (_lobbyRanger != null)
             Destroy(_lobbyRanger.gameObject);

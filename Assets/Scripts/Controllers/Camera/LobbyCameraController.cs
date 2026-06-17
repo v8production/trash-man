@@ -20,6 +20,18 @@ public class LobbyCameraController : MonoBehaviour
     private float _yaw;
     private float _pitch = 18f;
     private readonly int _cameraBlockMask = 1 << WallLayer;
+    private AudioListener _audioListener;
+
+    private void Awake()
+    {
+        _audioListener = GetComponent<AudioListener>();
+        ClaimAudioListener();
+    }
+
+    private void OnEnable()
+    {
+        ClaimAudioListener();
+    }
 
     private void Start()
     {
@@ -65,6 +77,23 @@ public class LobbyCameraController : MonoBehaviour
     public void SetTarget(Transform target)
     {
         _target = target;
+        ClaimAudioListener();
+    }
+
+    private void ClaimAudioListener()
+    {
+        if (_audioListener == null)
+            _audioListener = GetComponent<AudioListener>();
+
+        AudioListener[] listeners = Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Include);
+        for (int i = 0; i < listeners.Length; i++)
+        {
+            AudioListener listener = listeners[i];
+            if (listener == null)
+                continue;
+
+            listener.enabled = listener == _audioListener;
+        }
     }
 
     private Vector3 ResolveCameraPosition(Vector3 pivot, Vector3 cameraOffset)
