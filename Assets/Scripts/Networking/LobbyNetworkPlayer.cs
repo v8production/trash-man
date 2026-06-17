@@ -156,10 +156,11 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             // This avoids a frame of (0,0,0) before the first NetworkTransform tick.
             if (IsServer)
             {
-                Vector3 initial = GetInitialSpawnPosition();
-                transform.SetPositionAndRotation(initial, Quaternion.identity);
+                Vector3 initial = _lobbyRanger != null ? _lobbyRanger.transform.position : GetInitialSpawnPosition();
+                Quaternion initialRotation = _lobbyRanger != null ? _lobbyRanger.transform.rotation : Quaternion.identity;
+                transform.SetPositionAndRotation(initial, initialRotation);
                 if (_lobbyRanger != null)
-                    _lobbyRanger.transform.SetPositionAndRotation(initial, Quaternion.identity);
+                    _lobbyRanger.transform.SetPositionAndRotation(initial, initialRotation);
             }
         }
         else if (isGameScene)
@@ -604,6 +605,40 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         return true;
     }
 
+    public static bool TrySeedServerGameState(
+        bool hasTitanPose,
+        TitanRigPosePayload titanPose,
+        bool hasTitanStat,
+        TitanStatPayload titanStat,
+        bool hasTitanGauge,
+        int titanGauge,
+        bool hasTitanAbilityState,
+        TitanAbilityStatePayload titanAbilityState,
+        bool hasGrolarState,
+        GrolarStatePayload grolarState)
+    {
+        LobbyNetworkPlayer publisher = FindServerPosePublisher();
+        if (publisher == null || !publisher.IsServer || !publisher.IsSpawned)
+            return false;
+
+        if (hasTitanPose)
+            publisher._titanPose.Value = titanPose;
+
+        if (hasTitanStat)
+            publisher._titanStat.Value = titanStat;
+
+        if (hasTitanGauge)
+            publisher._titanGauge.Value = titanGauge;
+
+        if (hasTitanAbilityState)
+            publisher._titanAbilityState.Value = titanAbilityState;
+
+        if (hasGrolarState)
+            publisher._grolarState.Value = grolarState;
+
+        return true;
+    }
+
     public static bool TryGetLatestTitanPose(out TitanRigPosePayload posePayload)
     {
         posePayload = default;
@@ -770,6 +805,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     private void HandleIdentityChanged(FixedString64Bytes previousValue, FixedString64Bytes newValue)
     {
+        if (Managers.Scene.CurrentScene != null && Managers.Scene.CurrentScene.SceneType == Define.Scene.Lobby)
+            EnsureLobbyRanger();
+
         UpdateRuntimeObjectName();
         UpdateLobbyRangerName();
         RefreshIdentityPresentation();
@@ -903,7 +941,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
                 ApplyRangerColorPresentation();
                 ApplyRangerFacePresentation();
 
-                if (IsOwner)
+                if (IsOwner || IsServer)
                     transform.SetPositionAndRotation(_lobbyRanger.transform.position, _lobbyRanger.transform.rotation);
 
                 return;
@@ -1264,7 +1302,13 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (string.IsNullOrWhiteSpace(lobbyUserId))
             return;
 
-        LobbyScene.RegisterUserPartSelection(lobbyUserId, NormalizeTitanRoleMask(_selectedTitanRoleMask.Value));
+        int roleMask = NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
+        if (roleMask == 0
+            && Managers.LobbySession.IsPreservingHostMigrationScene
+            && LobbyScene.TryGetRegisteredUserSelectedRoleMask(lobbyUserId, out _))
+            return;
+
+        LobbyScene.RegisterUserPartSelection(lobbyUserId, roleMask);
     }
 
     public void PrepareForGameScene(Transform runtimeRoot)

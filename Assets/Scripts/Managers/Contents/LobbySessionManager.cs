@@ -38,6 +38,18 @@ public class LobbySessionManager
     private float _pendingMigratedHostRoleMaskDeadline;
     private int _pendingRestoredLocalRoleMask;
     private float _pendingRestoredLocalRoleMaskDeadline;
+    private bool _pendingGameStateRestore;
+    private float _pendingGameStateRestoreDeadline;
+    private bool _pendingHasTitanPose;
+    private TitanRigPosePayload _pendingTitanPose;
+    private bool _pendingHasTitanStat;
+    private TitanStatPayload _pendingTitanStat;
+    private bool _pendingHasTitanGauge;
+    private int _pendingTitanGauge;
+    private bool _pendingHasTitanAbilityState;
+    private TitanAbilityStatePayload _pendingTitanAbilityState;
+    private bool _pendingHasGrolarState;
+    private GrolarStatePayload _pendingGrolarState;
 
     private static bool s_loggedNetcodeMissing;
     private static bool s_loggedNetworkManagerMissing;
@@ -74,6 +86,7 @@ public class LobbySessionManager
         TryResolvePendingSteamClientConnect();
         TryApplyPendingMigratedHostRoleMask();
         TryApplyPendingRestoredLocalRoleMask();
+        TryApplyPendingGameStateRestore();
     }
 
     public void Clear()
@@ -96,6 +109,7 @@ public class LobbySessionManager
         _pendingMigratedHostRoleMaskDeadline = 0f;
         _pendingRestoredLocalRoleMask = 0;
         _pendingRestoredLocalRoleMaskDeadline = 0f;
+        ClearPendingGameStateRestore();
         ResetClientConnectionTracking();
     }
 
@@ -258,6 +272,7 @@ public class LobbySessionManager
         _pendingMigratedHostRoleMaskDeadline = 0f;
         _pendingRestoredLocalRoleMask = 0;
         _pendingRestoredLocalRoleMaskDeadline = 0f;
+        ClearPendingGameStateRestore();
         ResetClientConnectionTracking();
     }
 
@@ -469,6 +484,109 @@ public class LobbySessionManager
         Debug.LogWarning($"[Lobby] Timed out restoring local role mask after game host migration. roleMask=0x{_pendingRestoredLocalRoleMask:X}");
         _pendingRestoredLocalRoleMask = 0;
         _pendingRestoredLocalRoleMaskDeadline = 0f;
+    }
+
+    private void CapturePendingGameStateRestore(Define.Scene sceneType)
+    {
+        ClearPendingGameStateRestore();
+
+        if (sceneType != Define.Scene.Game)
+            return;
+
+        _pendingHasTitanPose = LobbyNetworkPlayer.TryGetLatestTitanPose(out _pendingTitanPose);
+        _pendingHasTitanStat = LobbyNetworkPlayer.TryGetLatestTitanStat(out _pendingTitanStat);
+        _pendingHasTitanGauge = LobbyNetworkPlayer.TryGetLatestTitanGauge(out _pendingTitanGauge);
+        _pendingHasTitanAbilityState = LobbyNetworkPlayer.TryGetLatestTitanAbilityState(out _pendingTitanAbilityState);
+        _pendingHasGrolarState = LobbyNetworkPlayer.TryGetLatestGrolarState(out _pendingGrolarState);
+
+        _pendingGameStateRestore = _pendingHasTitanPose
+            || _pendingHasTitanStat
+            || _pendingHasTitanGauge
+            || _pendingHasTitanAbilityState
+            || _pendingHasGrolarState;
+
+        if (_pendingGameStateRestore)
+            _pendingGameStateRestoreDeadline = Time.unscaledTime + 5f;
+    }
+
+    private void TryApplyPendingGameStateRestore()
+    {
+        if (!_pendingGameStateRestore)
+            return;
+
+        if (!IsHosting)
+            return;
+
+        if (Managers.Scene.CurrentScene == null || Managers.Scene.CurrentScene.SceneType != Define.Scene.Game)
+        {
+            ClearPendingGameStateRestore();
+            return;
+        }
+
+        if (LobbyNetworkPlayer.TrySeedServerGameState(
+            _pendingHasTitanPose,
+            _pendingTitanPose,
+            _pendingHasTitanStat,
+            _pendingTitanStat,
+            _pendingHasTitanGauge,
+            _pendingTitanGauge,
+            _pendingHasTitanAbilityState,
+            _pendingTitanAbilityState,
+            _pendingHasGrolarState,
+            _pendingGrolarState))
+        {
+            if (_pendingHasTitanPose)
+                Managers.TitanRig.ApplyPoseSnapshot(_pendingTitanPose.ToSnapshot());
+
+            TitanStat titanStat = UnityEngine.Object.FindAnyObjectByType<TitanStat>();
+            if (titanStat != null)
+            {
+                if (_pendingHasTitanStat)
+                    _pendingTitanStat.ApplyTo(titanStat);
+                else if (_pendingHasTitanGauge)
+                    titanStat.Gauge = _pendingTitanGauge;
+            }
+
+            if (_pendingHasTitanAbilityState)
+            {
+                TitanController titanController = UnityEngine.Object.FindAnyObjectByType<TitanController>();
+                if (titanController != null)
+                    _pendingTitanAbilityState.ApplyTo(titanController);
+            }
+
+            if (_pendingHasGrolarState)
+            {
+                GrolarController grolarController = UnityEngine.Object.FindAnyObjectByType<GrolarController>();
+                if (grolarController != null)
+                    _pendingGrolarState.ApplyTo(grolarController);
+            }
+
+            Debug.Log("[Lobby] Restored GameScene state after host migration.");
+            ClearPendingGameStateRestore();
+            return;
+        }
+
+        if (Time.unscaledTime < _pendingGameStateRestoreDeadline)
+            return;
+
+        Debug.LogWarning("[Lobby] Timed out restoring GameScene state after host migration.");
+        ClearPendingGameStateRestore();
+    }
+
+    private void ClearPendingGameStateRestore()
+    {
+        _pendingGameStateRestore = false;
+        _pendingGameStateRestoreDeadline = 0f;
+        _pendingHasTitanPose = false;
+        _pendingTitanPose = default;
+        _pendingHasTitanStat = false;
+        _pendingTitanStat = default;
+        _pendingHasTitanGauge = false;
+        _pendingTitanGauge = 0;
+        _pendingHasTitanAbilityState = false;
+        _pendingTitanAbilityState = default;
+        _pendingHasGrolarState = false;
+        _pendingGrolarState = default;
     }
 
     private void EnsureSteamCallbacks()
@@ -742,6 +860,7 @@ public class LobbySessionManager
             migratedHostRoleMask |= localRoleMask;
         }
 
+        CapturePendingGameStateRestore(sceneType);
         TryStopNetwork();
 
         HostUserId = Managers.Steam.LocalUserId;
