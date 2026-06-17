@@ -114,6 +114,21 @@ public class UI_LobbyMenu : UI_Menu
         HideSettingsUI();
     }
 
+    public bool CloseActiveSubMenu()
+    {
+        if (!HasActiveSubMenu())
+            return false;
+
+        HideSubMenus();
+        gameObject.SetActive(true);
+        return true;
+    }
+
+    private bool HasActiveSubMenu()
+    {
+        return IsDrawFaceVisible || IsSettingsVisible;
+    }
+
     private void HideDrawFaceUI()
     {
         if (_drawFace == null)

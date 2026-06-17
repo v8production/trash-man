@@ -75,6 +75,9 @@ public class GameScene : BaseScene
     {
         if (Managers.Input.Mode == Define.InputMode.UI)
         {
+            if (_gameMenuUi != null && _gameMenuUi.CloseActiveSubMenu())
+                return;
+
             Managers.UI.HideAllMenuUIs();
             Managers.Input.SetMode(Define.InputMode.Player);
             return;

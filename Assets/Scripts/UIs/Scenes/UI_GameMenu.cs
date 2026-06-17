@@ -113,6 +113,22 @@ public class UI_GameMenu : UI_Menu
         HideControlsUI();
     }
 
+    public bool CloseActiveSubMenu()
+    {
+        if (!HasActiveSubMenu())
+            return false;
+
+        HideSubMenus();
+        gameObject.SetActive(true);
+        return true;
+    }
+
+    private bool HasActiveSubMenu()
+    {
+        return _settings != null && _settings.gameObject.activeSelf
+            || _controls != null && _controls.gameObject.activeSelf;
+    }
+
     private void HideSettingsUI()
     {
         if (_settings == null)

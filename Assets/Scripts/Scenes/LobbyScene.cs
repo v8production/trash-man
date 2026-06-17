@@ -543,6 +543,9 @@ public class LobbyScene : BaseScene
     {
         if (Managers.Input.Mode == Define.InputMode.UI)
         {
+            if (_lobbyMenu != null && _lobbyMenu.CloseActiveSubMenu())
+                return;
+
             HideAllMenus();
             Managers.Input.SetMode(Define.InputMode.Player);
             return;
