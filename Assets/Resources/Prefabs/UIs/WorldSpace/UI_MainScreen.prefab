@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 2292409407}
   - component: {fileID: 2292409406}
   m_Layer: 5
-  m_Name: UI_RoleSelectButton
+  m_Name: UI_MainScreen
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
