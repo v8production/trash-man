@@ -7,6 +7,8 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
 
     [SerializeField] private float _outlineTriggerDistance = 5.0f;
     [SerializeField] private float _interactionTriggerDistance = 1.5f;
+    [SerializeField] private Vector3 _seatedLocalPosition = new(0.35f, 0f, 0f);
+    [SerializeField] private Vector3 _seatedLocalRotation = new(0f, 90f, 0f);
 
     private readonly List<HighlightMaterialState> _highlightMaterials = new();
     private bool _isHighlightVisible = true;
@@ -136,7 +138,7 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
             if (rangerController.IsSeated)
                 rangerController.StandUp();
             else
-                rangerController.Sit(transform, new Vector3(0.35f, 0f, 0f), Quaternion.Euler(0f, 90f, 0f));
+                rangerController.Sit(transform, _seatedLocalPosition, Quaternion.Euler(_seatedLocalRotation));
         }
     }
 
