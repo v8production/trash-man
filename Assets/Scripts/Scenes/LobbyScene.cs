@@ -17,15 +17,16 @@ public class LobbyScene : BaseScene
     private const string LobbyCameraPrefabName = "Lobby_Camera";
     private const string MainScreenPrefabName = "UI_MainScreen";
     private const string KioskScreenPrefabName = "UI_KioskScreen";
+    private const string MainScreenParentName = "ML_hall";
+    private const string LeftKioskScreenParentName = "ML_roleconsoleL";
+    private const string RightKioskScreenParentName = "ML_roleconsoleR";
 
-    private static readonly Vector3 s_mainScreenWorldPosition = new(4.14777f, 3.008f, 0f);
-    private static readonly Quaternion s_mainScreenWorldRotation = new(0f, -0.7071068f, 0f, 0.7071068f);
+    private static readonly Vector3 s_mainScreenLocalPosition = new(0f, 8.3f, 3f);
+    private static readonly Quaternion s_mainScreenLocalRotation = Quaternion.Euler(-90f, 0f, 180f);
     private static readonly Vector3 s_screenWorldScale = new(0.01f, 0.01f, 0.01f);
 
-    private static readonly Vector3 s_leftKioskScreenWorldPosition = new(2.24777f, 1.467f, 5.73f);
-    private static readonly Quaternion s_leftKioskScreenWorldRotation = new(-0.1488057f, -0.8396882f, -0.2858532f, 0.437114f);
-    private static readonly Vector3 s_rightKioskScreenWorldPosition = new(2.24777f, 1.467f, -5.73f);
-    private static readonly Quaternion s_rightKioskScreenWorldRotation = new(0.1488057f, 0.8396882f, -0.2858532f, 0.437114f);
+    private static readonly Vector3 s_kioskScreenLocalPosition = new(0f, -0.2f, 1.85f);
+    private static readonly Quaternion s_kioskScreenLocalRotation = Quaternion.Euler(-60f, 180f, 0f);
 
     private static readonly Dictionary<string, LobbyUserEntry> s_userEntriesByUserId = new();
 
@@ -284,30 +285,29 @@ public class LobbyScene : BaseScene
 
     private void EnsureWorldScreens()
     {
-        if (_mainScreen == null)
-        {
-            _mainScreen = Managers.UI.CreateWorldSpaceUI<UI_MainScreen>(null, MainScreenPrefabName);
-            ApplyWorldScreenTransform(_mainScreen.transform, s_mainScreenWorldPosition, s_mainScreenWorldRotation);
-        }
-
-        if (_leftKioskScreen == null)
-        {
-            _leftKioskScreen = Managers.UI.CreateWorldSpaceUI<UI_KioskScreen>(null, KioskScreenPrefabName);
-            ApplyWorldScreenTransform(_leftKioskScreen.transform, s_leftKioskScreenWorldPosition, s_leftKioskScreenWorldRotation);
-        }
-
-        if (_rightKioskScreen == null)
-        {
-            _rightKioskScreen = Managers.UI.CreateWorldSpaceUI<UI_KioskScreen>(null, KioskScreenPrefabName);
-            ApplyWorldScreenTransform(_rightKioskScreen.transform, s_rightKioskScreenWorldPosition, s_rightKioskScreenWorldRotation);
-        }
+        _mainScreen = _mainScreen != null ? _mainScreen : EnsureWorldScreen(_mainScreen, MainScreenParentName, MainScreenPrefabName, s_mainScreenLocalPosition, s_mainScreenLocalRotation, s_screenWorldScale);
+        _leftKioskScreen = _leftKioskScreen != null ? _leftKioskScreen : EnsureWorldScreen(_leftKioskScreen, LeftKioskScreenParentName, KioskScreenPrefabName, s_kioskScreenLocalPosition, s_kioskScreenLocalRotation, s_screenWorldScale);
+        _rightKioskScreen = _rightKioskScreen != null ? _rightKioskScreen : EnsureWorldScreen(_rightKioskScreen, RightKioskScreenParentName, KioskScreenPrefabName, s_kioskScreenLocalPosition, s_kioskScreenLocalRotation, s_screenWorldScale);
     }
 
-    private static void ApplyWorldScreenTransform(Transform targetTransform, Vector3 worldPosition, Quaternion worldRotation)
+    private static T EnsureWorldScreen<T>(T screen, string parentName, string prefabName, Vector3 localPosition, Quaternion localRotation, Vector3 localScale) where T : UI_Base
     {
-        targetTransform.SetPositionAndRotation(worldPosition, worldRotation);
-        targetTransform.localScale = s_screenWorldScale;
-        targetTransform.SetParent(null, true);
+        Transform parent = GameObject.Find(parentName).transform;
+        screen = Managers.UI.CreateWorldSpaceUI<T>(parent, prefabName);
+        ApplyWorldScreenTransform(screen.transform, parent, localPosition, localRotation, localScale);
+        return screen;
+    }
+
+    private static void ApplyWorldScreenTransform(Transform targetTransform, Transform parent, Vector3 localPosition, Quaternion localRotation, Vector3 localScale)
+    {
+        targetTransform.SetParent(parent, false);
+        targetTransform.localPosition = localPosition;
+        targetTransform.localRotation = localRotation;
+        targetTransform.localScale = localScale;
+
+        Canvas canvas = targetTransform.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+        canvas.worldCamera = Camera.main;
     }
 
     public void RequestShowRoleSelectMenu()
