@@ -418,7 +418,7 @@ Material:
     - _OutlineWidth: 12
     - _Outline_BaseColorBlend: 0.5
     - _Outline_LightColorBlend: 0.5
-    - _Outline_Width: 20
+    - _Outline_Width: 30
     - _PPDLodThreshold: 5
     - _PPDMaxSamples: 15
     - _PPDMinSamples: 5
