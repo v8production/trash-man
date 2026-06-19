@@ -8,6 +8,10 @@ public class UI_Toast : UI_Scene
     private const float MinHoldDuration = 1.6f;
     private const float MaxHoldDuration = 5.5f;
     private const float PerCharacterDuration = 0.04f;
+    private const float MaxBackgroundWidth = 1000f;
+    private const float HorizontalPadding = 48f;
+    private const float VerticalPadding = 20f;
+    private const float MinBackgroundHeight = 50f;
 
     enum Texts
     {
@@ -53,6 +57,7 @@ public class UI_Toast : UI_Scene
             return;
 
         messageText.text = message;
+        ApplyMessageLayout(messageText);
 
         _holdDuration = holdDurationOverride > 0f
             ? holdDurationOverride
@@ -64,6 +69,34 @@ public class UI_Toast : UI_Scene
 
         if (_bubbleCanvasGroup != null)
             _bubbleCanvasGroup.alpha = 0f;
+    }
+
+    private void ApplyMessageLayout(TextMeshProUGUI messageText)
+    {
+        RectTransform textRect = messageText.rectTransform;
+        RectTransform backgroundRect = GetImage((int)Images.Background).rectTransform;
+        float maxTextWidth = MaxBackgroundWidth - HorizontalPadding;
+
+        messageText.textWrappingMode = TextWrappingModes.NoWrap;
+        Vector2 preferredSingleLineSize = messageText.GetPreferredValues(messageText.text);
+        bool needsWrap = preferredSingleLineSize.x > maxTextWidth;
+        float textWidth = needsWrap ? maxTextWidth : preferredSingleLineSize.x;
+
+        if (needsWrap)
+            messageText.textWrappingMode = TextWrappingModes.Normal;
+
+        Vector2 preferredTextSize = needsWrap
+            ? messageText.GetPreferredValues(messageText.text, textWidth, 0f)
+            : preferredSingleLineSize;
+
+        float textHeight = Mathf.Ceil(preferredTextSize.y);
+        float backgroundWidth = Mathf.Min(MaxBackgroundWidth, Mathf.Ceil(textWidth + HorizontalPadding));
+        float backgroundHeight = Mathf.Max(MinBackgroundHeight, Mathf.Ceil(textHeight + VerticalPadding));
+
+        textRect.sizeDelta = new Vector2(textWidth, textHeight);
+        backgroundRect.sizeDelta = new Vector2(backgroundWidth, backgroundHeight);
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(textRect);
     }
 
     private void Update()
