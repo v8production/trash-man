@@ -88,5 +88,6 @@ public class Define
         Emote00,
         Emote01,
         Emote02,
+        Sit00,
     }
 }

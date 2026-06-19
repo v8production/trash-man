@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public class StartButton : MonoBehaviour, ILobbyWorldButtonInteractionTarget
+public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
 {
     private const string OutlineShaderPass = "SRPDEFAULTUNLIT";
 
