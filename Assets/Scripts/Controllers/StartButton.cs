@@ -4,7 +4,6 @@ using System.Collections.Generic;
 public class StartButton : MonoBehaviour, ILobbyWorldButtonInteractionTarget
 {
     private const string OutlineShaderPass = "SRPDEFAULTUNLIT";
-    private const string RimLightProperty = "_RimLight";
 
     [SerializeField] private float _outlineTriggerDistance = 5.0f;
     [SerializeField] private float _interactionTriggerDistance = 1.5f;
@@ -57,21 +56,16 @@ public class StartButton : MonoBehaviour, ILobbyWorldButtonInteractionTarget
                 if (material == null)
                     continue;
 
-                if (!HasHighlightProperties(material))
-                    continue;
-
                 _highlightMaterials.Add(new HighlightMaterialState(material));
             }
         }
     }
 
-    private static bool HasHighlightProperties(Material material)
-    {
-        return material.HasProperty(RimLightProperty);
-    }
-
     private void RefreshHighlightVisibility()
     {
+        if (_highlightMaterials.Count == 0)
+            CacheHighlightMaterials();
+
         SetHighlightVisible(IsWithinOutlineDistance());
     }
 
@@ -144,18 +138,15 @@ public class StartButton : MonoBehaviour, ILobbyWorldButtonInteractionTarget
     private sealed class HighlightMaterialState
     {
         private readonly Material _material;
-        private readonly float _rimLight;
 
         public HighlightMaterialState(Material material)
         {
             _material = material;
-            _rimLight = material.GetFloat(RimLightProperty);
         }
 
         public void Apply(bool visible)
         {
             _material.SetShaderPassEnabled(OutlineShaderPass, visible);
-            _material.SetFloat(RimLightProperty, visible ? Mathf.Max(1f, _rimLight) : 0f);
         }
     }
 }
