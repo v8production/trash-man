@@ -1950,6 +1950,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1936382281}
   - component: {fileID: 1936382282}
+  - component: {fileID: 1936382283}
   m_Layer: 0
   m_Name: '@LobbyScene'
   m_TagString: Untagged
@@ -1984,6 +1985,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23837c1f514a26241982e1a6f89c27e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LobbyScene
+--- !u!114 &1936382283
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1936382280}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f0d64333d964dcf96eea981627d924a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LobbySceneQuickStartRunner
+  _runOnStart: 1
+  _editorOnly: 1
+  _initialDelaySeconds: 1
 --- !u!1001 &1954372493
 PrefabInstance:
   m_ObjectHideFlags: 0
