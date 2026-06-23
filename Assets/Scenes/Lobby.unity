@@ -582,6 +582,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
+  _rangerSitAnimation: 6
 --- !u!1001 &243679632
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -641,7 +642,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 648468432}
   m_SourcePrefab: {fileID: 100100000, guid: 0afbb388762808f45a02e914834965c1, type: 3}
 --- !u!4 &243679633 stripped
 Transform:
@@ -1239,18 +1243,18 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 6ca7c9a020d5c32458663c88fc8cc828, type: 3}
   m_PrefabInstance: {fileID: 466210069}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &503107778 stripped
+--- !u!1 &648468429 stripped
 GameObject:
-  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 6bcd5779f06d74d429a10ef724913de6, type: 3}
-  m_PrefabInstance: {fileID: 1872426299}
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
+  m_PrefabInstance: {fileID: 243679632}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &503107781
+--- !u!114 &648468432
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 503107778}
+  m_GameObject: {fileID: 648468429}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
@@ -1260,6 +1264,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
+  _rangerSitAnimation: 6
 --- !u!1001 &679832948
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1431,6 +1436,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
+  _rangerSitAnimation: 6
 --- !u!1001 &694789875
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1690,6 +1696,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b0d5bd0198caad846aba0cc6b588843f, type: 3}
   m_PrefabInstance: {fileID: 773415731}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &840942813 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
+  m_PrefabInstance: {fileID: 1569634067}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &970454278
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1749,7 +1760,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1287639150}
   m_SourcePrefab: {fileID: 100100000, guid: 0afbb388762808f45a02e914834965c1, type: 3}
 --- !u!4 &970454279 stripped
 Transform:
@@ -1923,6 +1937,28 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 400000, guid: f0f2148b9e2303a4592e5161fa1e6532, type: 3}
   m_PrefabInstance: {fileID: 679832948}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1287639147 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
+  m_PrefabInstance: {fileID: 970454278}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1287639150
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1287639147}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChairController
+  _outlineTriggerDistance: 5
+  _interactionTriggerDistance: 1.5
+  _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
+  _seatedLocalRotation: {x: -90, y: 90, z: 90}
+  _rangerSitAnimation: 6
 --- !u!1001 &1364209730
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2083,6 +2119,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
+  _rangerSitAnimation: 6
 --- !u!1001 &1392042151
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2150,37 +2187,13 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 6bcd5779f06d74d429a10ef724913de6, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1392042154}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6bcd5779f06d74d429a10ef724913de6, type: 3}
 --- !u!4 &1392042152 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 6bcd5779f06d74d429a10ef724913de6, type: 3}
   m_PrefabInstance: {fileID: 1392042151}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1392042153 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 6bcd5779f06d74d429a10ef724913de6, type: 3}
-  m_PrefabInstance: {fileID: 1392042151}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1392042154
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1392042153}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ChairController
-  _outlineTriggerDistance: 5
-  _interactionTriggerDistance: 1.5
-  _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
-  _seatedLocalRotation: {x: -90, y: 90, z: 90}
 --- !u!1001 &1393415069
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2471,6 +2484,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StartButton
   _outlineTriggerDistance: 5
   _interactionTriggerDistance: 1.5
+--- !u!1 &1552590557 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
+  m_PrefabInstance: {fileID: 2143872165}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1569634067
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2530,13 +2548,33 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1569634071}
   m_SourcePrefab: {fileID: 100100000, guid: 0afbb388762808f45a02e914834965c1, type: 3}
 --- !u!4 &1569634068 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 0afbb388762808f45a02e914834965c1, type: 3}
   m_PrefabInstance: {fileID: 1569634067}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1569634071
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 840942813}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChairController
+  _outlineTriggerDistance: 5
+  _interactionTriggerDistance: 1.5
+  _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
+  _seatedLocalRotation: {x: -90, y: 90, z: 90}
+  _rangerSitAnimation: 6
 --- !u!1001 &1675794732
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3151,6 +3189,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
+  _rangerSitAnimation: 6
 --- !u!1001 &1872426299
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3218,10 +3257,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 6bcd5779f06d74d429a10ef724913de6, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 503107781}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6bcd5779f06d74d429a10ef724913de6, type: 3}
 --- !u!1 &1936382280
 GameObject:
@@ -3749,6 +3785,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
+  _rangerSitAnimation: 6
 --- !u!1001 &2143872165
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3808,13 +3845,33 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2143872169}
   m_SourcePrefab: {fileID: 100100000, guid: 0afbb388762808f45a02e914834965c1, type: 3}
 --- !u!4 &2143872166 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 0afbb388762808f45a02e914834965c1, type: 3}
   m_PrefabInstance: {fileID: 2143872165}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &2143872169
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1552590557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChairController
+  _outlineTriggerDistance: 5
+  _interactionTriggerDistance: 1.5
+  _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
+  _seatedLocalRotation: {x: -90, y: 90, z: 90}
+  _rangerSitAnimation: 6
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

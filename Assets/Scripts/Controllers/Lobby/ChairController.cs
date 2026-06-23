@@ -9,6 +9,7 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
     [SerializeField] private float _interactionTriggerDistance = 1.5f;
     [SerializeField] private Vector3 _seatedLocalPosition = new(0.35f, 0f, 0f);
     [SerializeField] private Vector3 _seatedLocalRotation = new(0f, 90f, 0f);
+    [SerializeField] private Define.RangerAnimState _rangerSitAnimation = Define.RangerAnimState.Sit00;
 
     private readonly List<HighlightMaterialState> _highlightMaterials = new();
     private bool _isHighlightVisible = true;
@@ -76,6 +77,9 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
         if (Managers.Input.Mode != Define.InputMode.Player)
             return false;
 
+        if (TryGetOccupant(out _))
+            return false;
+
         if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform) || rangerTransform == null)
             return false;
 
@@ -135,11 +139,34 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
         RangerController rangerController = rangerTransform.GetComponent<RangerController>();
         if (rangerController != null)
         {
-            if (rangerController.IsSeated)
+            if (rangerController.IsSeatedAt(transform))
+            {
                 rangerController.StandUp();
-            else
-                rangerController.Sit(transform, _seatedLocalPosition, Quaternion.Euler(_seatedLocalRotation));
+                return;
+            }
+
+            if (TryGetOccupant(out RangerController seatedRanger) && seatedRanger != rangerController)
+                return;
+
+            rangerController.Sit(transform, _seatedLocalPosition, Quaternion.Euler(_seatedLocalRotation), _rangerSitAnimation);
         }
+    }
+
+    private bool TryGetOccupant(out RangerController occupant)
+    {
+        RangerController[] rangers = FindObjectsByType<RangerController>();
+        for (int i = 0; i < rangers.Length; i++)
+        {
+            RangerController ranger = rangers[i];
+            if (ranger != null && ranger.IsSeatedAt(transform))
+            {
+                occupant = ranger;
+                return true;
+            }
+        }
+
+        occupant = null;
+        return false;
     }
 
     private sealed class HighlightMaterialState

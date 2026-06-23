@@ -31,12 +31,18 @@ public class RangerController : MonoBehaviour
     private Vector2 _moveInput;
     private bool _initialized;
     private bool _isSeated;
+    private Define.RangerAnimState _seatedAnimState = Define.RangerAnimState.Sit00;
 
     Animator Anim;
     public event System.Action<Define.RangerAnimState> EmotionRequested;
 
     private Define.RangerAnimState _animState;
     public bool IsSeated => _isSeated;
+
+    public bool IsSeatedAt(Transform chairTransform)
+    {
+        return _isSeated && transform.parent == chairTransform;
+    }
 
     public Define.RangerAnimState AnimState
     {
@@ -137,7 +143,7 @@ public class RangerController : MonoBehaviour
         if (_isSeated)
         {
             _moveInput = Vector2.zero;
-            AnimState = Define.RangerAnimState.Sit00;
+            AnimState = _seatedAnimState;
             return;
         }
 
@@ -186,14 +192,15 @@ public class RangerController : MonoBehaviour
         AnimState = Define.RangerAnimState.Idle00;
     }
 
-    public void Sit(Transform chairTransform, Vector3 localPosition, Quaternion localRotation)
+    public void Sit(Transform chairTransform, Vector3 localPosition, Quaternion localRotation, Define.RangerAnimState seatedAnimState)
     {
         _isSeated = true;
+        _seatedAnimState = seatedAnimState;
         _moveInput = Vector2.zero;
         transform.SetParent(chairTransform);
         transform.localPosition = localPosition;
         transform.localRotation = localRotation;
-        AnimState = Define.RangerAnimState.Sit00;
+        AnimState = _seatedAnimState;
     }
 
     public void StandUp()
@@ -202,6 +209,7 @@ public class RangerController : MonoBehaviour
             return;
 
         _isSeated = false;
+        _seatedAnimState = Define.RangerAnimState.Sit00;
         _moveInput = Vector2.zero;
         transform.SetParent(null, true);
         AnimState = Define.RangerAnimState.Idle00;
