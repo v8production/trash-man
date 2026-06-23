@@ -25,8 +25,8 @@ public class LobbyScene : BaseScene
     private static readonly Quaternion s_mainScreenLocalRotation = Quaternion.Euler(-90f, 0f, 180f);
     private static readonly Vector3 s_screenWorldScale = new(0.01f, 0.01f, 0.01f);
 
-    private static readonly Vector3 s_kioskScreenLocalPosition = new(0f, -0.2f, 1.85f);
-    private static readonly Quaternion s_kioskScreenLocalRotation = Quaternion.Euler(-60f, 180f, 0f);
+    private static readonly Vector3 s_kioskScreenLocalPosition = new(0f, -0.2f, 1.45f);
+    private static readonly Quaternion s_kioskScreenLocalRotation = Quaternion.Euler(-53f, 180f, 0f);
 
     private static readonly Dictionary<string, LobbyUserEntry> s_userEntriesByUserId = new();
 
