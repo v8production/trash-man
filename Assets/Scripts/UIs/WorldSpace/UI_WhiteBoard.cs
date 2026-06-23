@@ -16,10 +16,11 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
         Image,
     }
 
-    [SerializeField] private float _interactionTriggerDistance = 5f;
-    [SerializeField] private float _outlineTriggerDistance = 10f;
+    [SerializeField] private float _interactionTriggerDistance = 5.0f;
+    [SerializeField] private float _outlineTriggerDistance = 10.0f;
 
     private Button _whiteBoardButton;
+    private Image _boardImage;
     private readonly List<HighlightMaterialState> _highlightMaterials = new();
     private bool _isBound;
     private bool _isInitialized;
@@ -37,12 +38,14 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
         Bind<Button>(typeof(Buttons));
         Bind<Image>(typeof(Images));
         _whiteBoardButton = GetButton((int)Buttons.WhiteBoardButton);
+        _boardImage = GetImage((int)Images.Image);
 
         if (_whiteBoardButton == null)
             _whiteBoardButton = GetComponentInChildren<Button>(true);
 
         CacheHighlightMaterials();
         SetHighlightVisible(false);
+        ApplyBoardSprite();
         BindButtonIfNeeded();
         _isInitialized = true;
     }
@@ -53,11 +56,14 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
             Init();
 
         LobbyWorldButtonInteractionRegistry.Register(this);
+        WhiteBoardDrawingSurface.Changed += ApplyBoardSprite;
+        ApplyBoardSprite();
     }
 
     private void OnDisable()
     {
         LobbyWorldButtonInteractionRegistry.Unregister(this);
+        WhiteBoardDrawingSurface.Changed -= ApplyBoardSprite;
         SetHighlightVisible(false);
     }
 
@@ -94,6 +100,15 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
                 _highlightMaterials.Add(new HighlightMaterialState(material));
             }
         }
+    }
+
+    private void ApplyBoardSprite()
+    {
+        if (_boardImage == null)
+            return;
+
+        _boardImage.sprite = WhiteBoardDrawingSurface.Sprite;
+        _boardImage.preserveAspect = true;
     }
 
     private void RefreshHighlightVisibility()
@@ -178,7 +193,7 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
         if (Managers.Input.Mode != Define.InputMode.Player)
             return;
 
-        if (!LobbyWorldButtonInteractionRegistry.CanInteract(this))
+        if (!IsWithinInteractionDistance())
             return;
 
         if (Managers.Scene.CurrentScene is LobbyScene lobbyScene)

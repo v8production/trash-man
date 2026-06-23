@@ -331,7 +331,7 @@ public class LobbyScene : BaseScene
 
     public void RequestShowWhiteBoardMenu()
     {
-        if (_isLobbySetupPending || !Managers.LobbySession.HasJoinedLobbySession)
+        if (_isLobbySetupPending)
             return;
 
         ShowWhiteBoardMenu();
