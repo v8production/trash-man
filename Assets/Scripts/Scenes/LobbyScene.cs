@@ -6,10 +6,12 @@ public class LobbyScene : BaseScene
 {
     private UI_LobbyMenu _lobbyMenu;
     private UI_RoleSelectMenu _roleSelectMenu;
+    private UI_WhiteBoardMenu _whiteBoardMenu;
     private UI_Loading _loadingUi;
     private UI_MainScreen _mainScreen;
     private UI_KioskScreen _leftKioskScreen;
     private UI_KioskScreen _rightKioskScreen;
+    private UI_WhiteBoard _whiteBoard;
     private bool _pendingHostBootstrap;
     private bool _isLobbySetupPending;
     private string _pendingJoinCode = string.Empty;
@@ -17,9 +19,11 @@ public class LobbyScene : BaseScene
     private const string LobbyCameraPrefabName = "Lobby_Camera";
     private const string MainScreenPrefabName = "UI_MainScreen";
     private const string KioskScreenPrefabName = "UI_KioskScreen";
+    private const string WhiteBoardPrefabName = "UI_WhiteBoard";
     private const string MainScreenParentName = "ML_hall";
     private const string LeftKioskScreenParentName = "ML_roleconsoleL";
     private const string RightKioskScreenParentName = "ML_roleconsoleR";
+    private const string WhiteBoardParentName = "ML_board";
 
     private static readonly Vector3 s_mainScreenLocalPosition = new(0f, 8.3f, 3f);
     private static readonly Quaternion s_mainScreenLocalRotation = Quaternion.Euler(-90f, 0f, 180f);
@@ -27,6 +31,9 @@ public class LobbyScene : BaseScene
 
     private static readonly Vector3 s_kioskScreenLocalPosition = new(0f, -0.2f, 1.45f);
     private static readonly Quaternion s_kioskScreenLocalRotation = Quaternion.Euler(-53f, 180f, 0f);
+
+    private static readonly Vector3 s_whiteBoardLocalPosition = new(-0.1f, 0f, 1.93f);
+    private static readonly Quaternion s_whiteBoardLocalRotation = Quaternion.Euler(0f, 90f, 90f);
 
     private static readonly Dictionary<string, LobbyUserEntry> s_userEntriesByUserId = new();
 
@@ -170,6 +177,9 @@ public class LobbyScene : BaseScene
             _roleSelectMenu.RoleSelected -= HandleRoleSelected;
             _roleSelectMenu.Closed -= HandleRoleSelectMenuClosed;
         }
+
+        if (_whiteBoardMenu != null)
+            _whiteBoardMenu.Closed -= HandleWhiteBoardMenuClosed;
     }
 
     private void ProcessPendingLobbyRequest()
@@ -288,6 +298,7 @@ public class LobbyScene : BaseScene
         _mainScreen = _mainScreen != null ? _mainScreen : EnsureWorldScreen(_mainScreen, MainScreenParentName, MainScreenPrefabName, s_mainScreenLocalPosition, s_mainScreenLocalRotation, s_screenWorldScale);
         _leftKioskScreen = _leftKioskScreen != null ? _leftKioskScreen : EnsureWorldScreen(_leftKioskScreen, LeftKioskScreenParentName, KioskScreenPrefabName, s_kioskScreenLocalPosition, s_kioskScreenLocalRotation, s_screenWorldScale);
         _rightKioskScreen = _rightKioskScreen != null ? _rightKioskScreen : EnsureWorldScreen(_rightKioskScreen, RightKioskScreenParentName, KioskScreenPrefabName, s_kioskScreenLocalPosition, s_kioskScreenLocalRotation, s_screenWorldScale);
+        _whiteBoard = _whiteBoard != null ? _whiteBoard : EnsureWorldScreen(_whiteBoard, WhiteBoardParentName, WhiteBoardPrefabName, s_whiteBoardLocalPosition, s_whiteBoardLocalRotation, s_screenWorldScale);
     }
 
     private static T EnsureWorldScreen<T>(T screen, string parentName, string prefabName, Vector3 localPosition, Quaternion localRotation, Vector3 localScale) where T : UI_Base
@@ -318,6 +329,14 @@ public class LobbyScene : BaseScene
         ShowRoleSelectMenu();
     }
 
+    public void RequestShowWhiteBoardMenu()
+    {
+        if (_isLobbySetupPending || !Managers.LobbySession.HasJoinedLobbySession)
+            return;
+
+        ShowWhiteBoardMenu();
+    }
+
     private void HandleRoleSelected(Define.TitanRole role)
     {
         if (_isLobbySetupPending || !Managers.LobbySession.HasJoinedLobbySession)
@@ -330,6 +349,11 @@ public class LobbyScene : BaseScene
     private void HandleRoleSelectMenuClosed()
     {
         CloseRoleSelectMenu();
+    }
+
+    private void HandleWhiteBoardMenuClosed()
+    {
+        CloseWhiteBoardMenu();
     }
 
     private bool TryToggleLocalRole(Define.TitanRole selectedRole)
@@ -388,6 +412,36 @@ public class LobbyScene : BaseScene
             return false;
 
         _roleSelectMenu.gameObject.SetActive(false);
+        RefreshInputMode();
+        return true;
+    }
+
+    private void EnsureWhiteBoardMenu()
+    {
+        if (_whiteBoardMenu != null)
+            return;
+
+        _whiteBoardMenu = Managers.UI.ShowSceneUI<UI_WhiteBoardMenu>(nameof(UI_WhiteBoardMenu));
+
+        _whiteBoardMenu.Closed -= HandleWhiteBoardMenuClosed;
+        _whiteBoardMenu.Closed += HandleWhiteBoardMenuClosed;
+        _whiteBoardMenu.gameObject.SetActive(false);
+    }
+
+    private void ShowWhiteBoardMenu()
+    {
+        EnsureWhiteBoardMenu();
+
+        _whiteBoardMenu.gameObject.SetActive(true);
+        Managers.Input.SetMode(Define.InputMode.UI);
+    }
+
+    private bool CloseWhiteBoardMenu()
+    {
+        if (_whiteBoardMenu == null || !_whiteBoardMenu.gameObject.activeSelf)
+            return false;
+
+        _whiteBoardMenu.gameObject.SetActive(false);
         RefreshInputMode();
         return true;
     }
@@ -562,6 +616,13 @@ public class LobbyScene : BaseScene
             _roleSelectMenu = null;
         }
 
+        if (_whiteBoardMenu != null)
+        {
+            _whiteBoardMenu.Closed -= HandleWhiteBoardMenuClosed;
+            Managers.Resource.Destory(_whiteBoardMenu.gameObject);
+            _whiteBoardMenu = null;
+        }
+
         if (_mainScreen != null)
         {
             Managers.Resource.Destory(_mainScreen.gameObject);
@@ -578,6 +639,12 @@ public class LobbyScene : BaseScene
         {
             Managers.Resource.Destory(_rightKioskScreen.gameObject);
             _rightKioskScreen = null;
+        }
+
+        if (_whiteBoard != null)
+        {
+            Managers.Resource.Destory(_whiteBoard.gameObject);
+            _whiteBoard = null;
         }
 
         _localLobbyCamera = null;
