@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class UI_WhiteBoardMenu : UI_Menu
 {
     private const int CanvasOrder = 10;
     private const float BoardAspect = 16f / 9f;
+    private const float BoardMargin = 10f;
     private const int MaxPayloadPoints = 180;
 
     private enum GameObjects
@@ -106,6 +108,7 @@ public class UI_WhiteBoardMenu : UI_Menu
             return;
 
         ConfigureBoardPanel();
+        RefreshPointerOverPanel();
         UpdateCursorPosition();
         RefreshCursorVisibility();
     }
@@ -130,16 +133,18 @@ public class UI_WhiteBoardMenu : UI_Menu
         if (anchorSize.x <= 0f || anchorSize.y <= 0f)
             return;
 
-        float width = anchorSize.x;
+        float availableWidth = Mathf.Max(0f, anchorSize.x - BoardMargin);
+        float availableHeight = Mathf.Max(0f, anchorSize.y - BoardMargin * 2f);
+        float width = availableWidth;
         float height = width / BoardAspect;
-        if (height > anchorSize.y)
+        if (height > availableHeight)
         {
-            height = anchorSize.y;
+            height = availableHeight;
             width = height * BoardAspect;
         }
 
         _panelRect.sizeDelta = new Vector2(width - anchorSize.x, height - anchorSize.y);
-        _panelRect.anchoredPosition = Vector2.zero;
+        _panelRect.anchoredPosition = new Vector2((-anchorSize.x * 0.5f) + BoardMargin + (width * 0.5f), 0f);
     }
 
     private void ConfigureCursor()
@@ -194,6 +199,7 @@ public class UI_WhiteBoardMenu : UI_Menu
         relay.PointerDown += _ =>
         {
             _activeColor = color;
+            _activeTool = WhiteBoardTool.Pen;
             _isColorButtonHeld = true;
             RefreshSelectionVisuals();
             RefreshCursorVisual();
@@ -206,6 +212,7 @@ public class UI_WhiteBoardMenu : UI_Menu
         button.onClick.AddListener(() =>
         {
             _activeColor = color;
+            _activeTool = WhiteBoardTool.Pen;
             RefreshSelectionVisuals();
             RefreshCursorVisual();
         });
@@ -330,11 +337,12 @@ public class UI_WhiteBoardMenu : UI_Menu
 
     private void ApplyBoardSprite()
     {
-        if (_panelImage == null)
-            return;
-
-        _panelImage.sprite = WhiteBoardDrawingSurface.Sprite;
-        _panelImage.preserveAspect = true;
+        if (_panelImage != null)
+        {
+            _panelImage.sprite = WhiteBoardDrawingSurface.Sprite;
+            _panelImage.color = Color.white;
+            _panelImage.preserveAspect = true;
+        }
     }
 
     private void RefreshSelectionVisuals()
@@ -384,12 +392,51 @@ public class UI_WhiteBoardMenu : UI_Menu
         _cursorImage.gameObject.SetActive(visible);
     }
 
+    private void RefreshPointerOverPanel()
+    {
+        _isPointerOverPanel = TryGetMousePosition(out Vector2 mousePosition)
+            && RectTransformUtility.RectangleContainsScreenPoint(_panelRect, mousePosition, GetEventCamera());
+    }
+
     private void UpdateCursorPosition()
     {
         if (!_cursorImage.gameObject.activeSelf)
             return;
 
-        _cursorRect.position = Input.mousePosition;
+        if (!TryGetMousePosition(out Vector2 mousePosition))
+            return;
+
+        RectTransform cursorParent = _cursorRect.parent as RectTransform;
+        if (cursorParent == null)
+        {
+            _cursorRect.position = mousePosition;
+            return;
+        }
+
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(cursorParent, mousePosition, GetEventCamera(), out Vector2 localPoint))
+            _cursorRect.anchoredPosition = localPoint;
+    }
+
+    private static bool TryGetMousePosition(out Vector2 mousePosition)
+    {
+        Mouse mouse = Mouse.current;
+        if (mouse == null)
+        {
+            mousePosition = default;
+            return false;
+        }
+
+        mousePosition = mouse.position.ReadValue();
+        return true;
+    }
+
+    private Camera GetEventCamera()
+    {
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            return null;
+
+        return canvas.worldCamera;
     }
 
     private int GetActiveThickness()
