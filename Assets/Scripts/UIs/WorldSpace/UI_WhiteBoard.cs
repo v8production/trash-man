@@ -65,7 +65,7 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
     private void Update()
     {
         RefreshHighlightVisibility();
-        TryHandleDirectClick();
+        TryHandleDirectInteraction();
     }
 
     private void OnDestroy()
@@ -135,12 +135,12 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
         return (rangerTransform.position - transform.position).sqrMagnitude <= triggerDistance * triggerDistance;
     }
 
-    private void TryHandleDirectClick()
+    private void TryHandleDirectInteraction()
     {
         if (Managers.Input.Mode != Define.InputMode.Player)
             return;
 
-        if (!Managers.Input.WasLeftMousePressedThisFrame())
+        if (!Managers.Input.WasLeftMousePressedThisFrame() && !Managers.Input.WasInteractKeyPressedThisFrame())
             return;
 
         NotifyWhiteBoardButtonClicked();
@@ -151,7 +151,7 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
         if (Managers.Input.Mode != Define.InputMode.Player)
             return;
 
-        if (!IsWithinInteractionDistance())
+        if (!LobbyWorldButtonInteractionRegistry.CanInteract(this))
             return;
 
         if (Managers.Scene.CurrentScene is LobbyScene lobbyScene)

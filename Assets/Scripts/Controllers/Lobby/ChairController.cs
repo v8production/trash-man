@@ -33,7 +33,7 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
     private void Update()
     {
         RefreshHighlightVisibility();
-        TryHandleDirectClick();
+        TryHandleDirectInteraction();
     }
 
     private void RefreshHighlightVisibility()
@@ -55,7 +55,7 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
         return _outlineController.IsWithinTriggerDistance(rangerTransform);
     }
 
-    private void TryHandleDirectClick()
+    private void TryHandleDirectInteraction()
     {
         if (Managers.Input.Mode != Define.InputMode.Player)
             return;
@@ -63,7 +63,7 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
         if (!LobbyWorldButtonInteractionRegistry.CanInteract(this))
             return;
 
-        if (!Managers.Input.WasLeftMousePressedThisFrame())
+        if (!Managers.Input.WasLeftMousePressedThisFrame() && !Managers.Input.WasInteractKeyPressedThisFrame())
             return;
 
         HandleChairClicked();

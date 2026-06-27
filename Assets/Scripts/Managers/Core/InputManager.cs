@@ -184,6 +184,14 @@ public class InputManager
         return mouse != null && mouse.leftButton.wasPressedThisFrame;
     }
 
+    public bool WasInteractKeyPressedThisFrame()
+    {
+        if (Mode != Define.InputMode.Player)
+            return false;
+
+        return WasPressedThisFrame(Key.E);
+    }
+
     private bool IsShiftHeld()
     {
         Keyboard keyboard = Keyboard.current;
