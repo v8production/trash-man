@@ -3,11 +3,11 @@ using UnityEngine;
 
 public class OutlineController : MonoBehaviour
 {
-    private const int OutlineLayer = 3;
+    private const uint OutlineRenderingLayerMask = 1 << 1;
 
     [SerializeField] private float _outlineTriggerDistance = 5.0f;
 
-    private readonly List<LayerState> _layerStates = new();
+    private readonly List<RenderingLayerState> _renderingLayerStates = new();
     private bool _isVisible = true;
 
     private void Awake()
@@ -27,10 +27,10 @@ public class OutlineController : MonoBehaviour
             return;
 
         _isVisible = visible;
-        for (int i = 0; i < _layerStates.Count; i++)
+        for (int i = 0; i < _renderingLayerStates.Count; i++)
         {
-            LayerState layerState = _layerStates[i];
-            layerState.GameObject.layer = visible ? OutlineLayer : layerState.OriginLayer;
+            RenderingLayerState renderingLayerState = _renderingLayerStates[i];
+            renderingLayerState.Renderer.renderingLayerMask = visible ? renderingLayerState.OriginRenderingLayerMask | OutlineRenderingLayerMask : renderingLayerState.OriginRenderingLayerMask;
         }
     }
 
@@ -45,25 +45,25 @@ public class OutlineController : MonoBehaviour
 
     private void CacheLayerStates()
     {
-        _layerStates.Clear();
+        _renderingLayerStates.Clear();
 
-        Transform[] targets = GetComponentsInChildren<Transform>(true);
+        Renderer[] targets = GetComponentsInChildren<Renderer>(true);
         for (int i = 0; i < targets.Length; i++)
         {
-            GameObject targetObject = targets[i].gameObject;
-            _layerStates.Add(new LayerState(targetObject, targetObject.layer));
+            Renderer targetRenderer = targets[i];
+            _renderingLayerStates.Add(new RenderingLayerState(targetRenderer, targetRenderer.renderingLayerMask));
         }
     }
 
-    private readonly struct LayerState
+    private readonly struct RenderingLayerState
     {
-        public readonly GameObject GameObject;
-        public readonly int OriginLayer;
+        public readonly Renderer Renderer;
+        public readonly uint OriginRenderingLayerMask;
 
-        public LayerState(GameObject gameObject, int originLayer)
+        public RenderingLayerState(Renderer renderer, uint originRenderingLayerMask)
         {
-            GameObject = gameObject;
-            OriginLayer = originLayer;
+            Renderer = renderer;
+            OriginRenderingLayerMask = originRenderingLayerMask;
         }
     }
 

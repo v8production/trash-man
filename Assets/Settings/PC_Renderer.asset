@@ -26,10 +26,11 @@ MonoBehaviour:
     probeVolumeBlendStatesCS: {fileID: 7200000, guid: b9a23f869c4fd45f19c5ada54dd82176, type: 3}
   m_RendererFeatures:
   - {fileID: 7833122117494664109}
+  - {fileID: 3194477289075298122}
   - {fileID: 7079101363637593232}
   - {fileID: 5246566476128140410}
   - {fileID: 6693538741211194490}
-  m_RendererFeatureMap: ad6b866f10d7b46c90249afc2e053e627a3c179c698ccf487a643570053ae45c
+  m_RendererFeatureMap: ad6b866f10d7b46c4acf625a2b10552c90249afc2e053e627a3c179c698ccf487a643570053ae45c
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -58,6 +59,30 @@ MonoBehaviour:
   m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
+--- !u!114 &3194477289075298122
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4bdb57ea79f4b8d8d9a2d92d6cb81d1, type: 3}
+  m_Name: RenderingLayerRenderObjectsFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  passTag: RenderingLayerRenderObjects
+  outlineEvent: 400
+  depthEvent: 450
+  renderQueueType: 0
+  gameObjectLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  renderingLayerMask: 2
+  overrideMaterial: {fileID: 2100000, guid: 9ad39e0acfe16224dbdb07deaed2a313, type: 2}
+  overrideMaterialPassIndex: 0
+  outlineDepthCompareFunction: 4
 --- !u!114 &5246566476128140410
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -70,7 +95,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6b3d386ba5cd94485973aee1479b272e, type: 3}
   m_Name: RenderObjects
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.RenderObjects
-  m_Active: 1
+  m_Active: 0
   settings:
     passTag: RenderObjects
     Event: 400
@@ -112,7 +137,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6b3d386ba5cd94485973aee1479b272e, type: 3}
   m_Name: RenderObjects
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.RenderObjects
-  m_Active: 1
+  m_Active: 0
   settings:
     passTag: RenderObjects
     Event: 450
