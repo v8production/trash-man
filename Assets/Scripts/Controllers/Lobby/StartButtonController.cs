@@ -4,7 +4,7 @@ public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteraction
 {
     [SerializeField] private float _interactionTriggerDistance = 1.5f;
 
-    private OutlineController _outlineController;
+    private InteractionGuideController _interactionGuideController;
 
     bool ILobbyWorldButtonInteractionTarget.IsProximityInteractable => IsWithinInteractionDistance();
     float ILobbyWorldButtonInteractionTarget.ProximitySqrDistance => GetInteractionSqrDistance();
@@ -12,8 +12,8 @@ public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteraction
 
     private void Awake()
     {
-        _outlineController = GetComponentInParent<OutlineController>();
-        _outlineController.SetVisible(false);
+        _interactionGuideController = GetComponentInParent<InteractionGuideController>();
+        _interactionGuideController.SetVisible(false);
     }
 
     private void OnEnable()
@@ -24,7 +24,7 @@ public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteraction
     private void OnDisable()
     {
         LobbyWorldButtonInteractionRegistry.Unregister(this);
-        _outlineController.SetVisible(false);
+        _interactionGuideController.SetVisible(false);
     }
 
     private void Update()
@@ -35,7 +35,7 @@ public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteraction
 
     private void RefreshHighlightVisibility()
     {
-        _outlineController.SetVisible(IsWithinOutlineDistance());
+        _interactionGuideController.SetVisible(IsWithinOutlineDistance());
     }
 
     private bool IsWithinOutlineDistance()
@@ -43,7 +43,7 @@ public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteraction
         if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform))
             return false;
 
-        return _outlineController.IsWithinTriggerDistance(rangerTransform);
+        return _interactionGuideController.IsWithinTriggerDistance(rangerTransform);
     }
 
     private void TryHandleDirectInteraction()

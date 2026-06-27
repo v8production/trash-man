@@ -16,7 +16,7 @@ public class UI_KioskScreen : UI_Base, ILobbyWorldButtonInteractionTarget
     [SerializeField] private float _interactionTriggerDistance = 2.5f;
 
     private Button _roleSelectButton;
-    private OutlineController _outlineController;
+    private InteractionGuideController _interactionGuideController;
     private bool _isBound;
     private bool _isInitialized;
 
@@ -36,8 +36,8 @@ public class UI_KioskScreen : UI_Base, ILobbyWorldButtonInteractionTarget
         if (_roleSelectButton == null)
             _roleSelectButton = GetComponentInChildren<Button>(true);
 
-        _outlineController = GetComponentInParent<OutlineController>();
-        _outlineController.SetVisible(false);
+        _interactionGuideController = GetComponentInParent<InteractionGuideController>();
+        _interactionGuideController.SetVisible(false);
         BindButtonIfNeeded();
         _isInitialized = true;
     }
@@ -53,7 +53,7 @@ public class UI_KioskScreen : UI_Base, ILobbyWorldButtonInteractionTarget
     private void OnDisable()
     {
         LobbyWorldButtonInteractionRegistry.Unregister(this);
-        _outlineController.SetVisible(false);
+        _interactionGuideController.SetVisible(false);
     }
 
     private void Update()
@@ -70,7 +70,7 @@ public class UI_KioskScreen : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private void RefreshHighlightVisibility()
     {
-        _outlineController.SetVisible(IsWithinOutlineDistance());
+        _interactionGuideController.SetVisible(IsWithinOutlineDistance());
     }
 
     private bool IsWithinOutlineDistance()
@@ -84,7 +84,7 @@ public class UI_KioskScreen : UI_Base, ILobbyWorldButtonInteractionTarget
         if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform) || rangerTransform == null)
             return false;
 
-        return _outlineController.IsWithinTriggerDistance(rangerTransform);
+        return _interactionGuideController.IsWithinTriggerDistance(rangerTransform);
     }
 
     private void BindButtonIfNeeded()

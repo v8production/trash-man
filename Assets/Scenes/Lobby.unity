@@ -827,7 +827,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1001 &243679632
 PrefabInstance:
@@ -1717,7 +1717,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1 &648468429 stripped
 GameObject:
@@ -1751,7 +1751,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1001 &679832948
 PrefabInstance:
@@ -1942,7 +1942,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1001 &694789875
 PrefabInstance:
@@ -2037,7 +2037,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1 &714759177
 GameObject:
@@ -7504,7 +7504,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1001 &1364209730
 PrefabInstance:
@@ -7689,7 +7689,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1001 &1392042151
 PrefabInstance:
@@ -7889,7 +7889,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1001 &1446052858
 PrefabInstance:
@@ -8128,7 +8128,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1001 &1541100549
 PrefabInstance:
@@ -8320,7 +8320,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1001 &1675794732
 PrefabInstance:
@@ -8968,7 +8968,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1001 &1872426299
 PrefabInstance:
@@ -9587,7 +9587,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1001 &2143872165
 PrefabInstance:
@@ -9692,7 +9692,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

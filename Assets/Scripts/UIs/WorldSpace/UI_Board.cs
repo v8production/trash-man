@@ -17,7 +17,7 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private Button _boardButton;
     private Image _boardImage;
-    private OutlineController _outlineController;
+    private InteractionGuideController _interactionGuideController;
     private bool _isBound;
     private bool _isInitialized;
 
@@ -38,8 +38,8 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
         if (_boardButton == null)
             _boardButton = GetComponentInChildren<Button>(true);
 
-        _outlineController = GetComponentInParent<OutlineController>();
-        _outlineController.SetVisible(false);
+        _interactionGuideController = GetComponentInParent<InteractionGuideController>();
+        _interactionGuideController.SetVisible(false);
         ApplyBoardSprite();
         BindButtonIfNeeded();
         _isInitialized = true;
@@ -59,7 +59,7 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
     {
         LobbyWorldButtonInteractionRegistry.Unregister(this);
         BoardDrawingSurface.Changed -= ApplyBoardSprite;
-        _outlineController.SetVisible(false);
+        _interactionGuideController.SetVisible(false);
     }
 
     private void Update()
@@ -85,7 +85,7 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private void RefreshHighlightVisibility()
     {
-        _outlineController.SetVisible(IsWithinOutlineDistance());
+        _interactionGuideController.SetVisible(IsWithinOutlineDistance());
     }
 
     private bool IsWithinOutlineDistance()
@@ -99,7 +99,7 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
         if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform) || rangerTransform == null)
             return false;
 
-        return _outlineController.IsWithinTriggerDistance(rangerTransform);
+        return _interactionGuideController.IsWithinTriggerDistance(rangerTransform);
     }
 
     private void BindButtonIfNeeded()

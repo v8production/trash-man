@@ -7,7 +7,7 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
     [SerializeField] private Vector3 _seatedLocalRotation = new(0f, 90f, 0f);
     [SerializeField] private Define.RangerAnimState _rangerSitAnimation = Define.RangerAnimState.Sit00;
 
-    private OutlineController _outlineController;
+    private InteractionGuideController _interactionGuideController;
 
     bool ILobbyWorldButtonInteractionTarget.IsProximityInteractable => IsWithinInteractionDistance();
     float ILobbyWorldButtonInteractionTarget.ProximitySqrDistance => GetInteractionSqrDistance();
@@ -15,8 +15,8 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
 
     private void Awake()
     {
-        _outlineController = GetComponent<OutlineController>();
-        _outlineController.SetVisible(false);
+        _interactionGuideController = GetComponent<InteractionGuideController>();
+        _interactionGuideController.SetVisible(false);
     }
 
     private void OnEnable()
@@ -27,7 +27,7 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
     private void OnDisable()
     {
         LobbyWorldButtonInteractionRegistry.Unregister(this);
-        _outlineController.SetVisible(false);
+        _interactionGuideController.SetVisible(false);
     }
 
     private void Update()
@@ -38,7 +38,7 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
 
     private void RefreshHighlightVisibility()
     {
-        _outlineController.SetVisible(IsWithinOutlineDistance());
+        _interactionGuideController.SetVisible(IsWithinOutlineDistance());
     }
 
     private bool IsWithinOutlineDistance()
@@ -52,7 +52,7 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
         if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform) || rangerTransform == null)
             return false;
 
-        return _outlineController.IsWithinTriggerDistance(rangerTransform);
+        return _interactionGuideController.IsWithinTriggerDistance(rangerTransform);
     }
 
     private void TryHandleDirectInteraction()
