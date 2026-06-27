@@ -949,7 +949,7 @@ GameObject:
   - component: {fileID: 2241327259067178576}
   - component: {fileID: 3051580011667031098}
   m_Layer: 5
-  m_Name: UI_WhiteBoardMenu
+  m_Name: UI_BoardMenu
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

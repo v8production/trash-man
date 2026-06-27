@@ -1,21 +1,21 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
+public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
 {
     private enum Buttons
     {
-        WhiteBoardButton,
+        BoardButton,
     }
 
     private enum Images
     {
-        Image,
+        Board,
     }
 
     [SerializeField] private float _interactionTriggerDistance = 5.0f;
 
-    private Button _whiteBoardButton;
+    private Button _boardButton;
     private Image _boardImage;
     private OutlineController _outlineController;
     private bool _isBound;
@@ -32,11 +32,11 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
 
         Bind<Button>(typeof(Buttons));
         Bind<Image>(typeof(Images));
-        _whiteBoardButton = GetButton((int)Buttons.WhiteBoardButton);
-        _boardImage = GetImage((int)Images.Image);
+        _boardButton = GetButton((int)Buttons.BoardButton);
+        _boardImage = GetImage((int)Images.Board);
 
-        if (_whiteBoardButton == null)
-            _whiteBoardButton = GetComponentInChildren<Button>(true);
+        if (_boardButton == null)
+            _boardButton = GetComponentInChildren<Button>(true);
 
         _outlineController = GetComponentInParent<OutlineController>();
         _outlineController.SetVisible(false);
@@ -51,14 +51,14 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
             Init();
 
         LobbyWorldButtonInteractionRegistry.Register(this);
-        WhiteBoardDrawingSurface.Changed += ApplyBoardSprite;
+        BoardDrawingSurface.Changed += ApplyBoardSprite;
         ApplyBoardSprite();
     }
 
     private void OnDisable()
     {
         LobbyWorldButtonInteractionRegistry.Unregister(this);
-        WhiteBoardDrawingSurface.Changed -= ApplyBoardSprite;
+        BoardDrawingSurface.Changed -= ApplyBoardSprite;
         _outlineController.SetVisible(false);
     }
 
@@ -79,7 +79,7 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
         if (_boardImage == null)
             return;
 
-        _boardImage.sprite = WhiteBoardDrawingSurface.Sprite;
+        _boardImage.sprite = BoardDrawingSurface.Sprite;
         _boardImage.preserveAspect = true;
     }
 
@@ -104,19 +104,19 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private void BindButtonIfNeeded()
     {
-        if (_isBound || _whiteBoardButton == null)
+        if (_isBound || _boardButton == null)
             return;
 
-        _whiteBoardButton.onClick.AddListener(NotifyWhiteBoardButtonClicked);
+        _boardButton.onClick.AddListener(NotifyBoardButtonClicked);
         _isBound = true;
     }
 
     private void UnbindButton()
     {
-        if (!_isBound || _whiteBoardButton == null)
+        if (!_isBound || _boardButton == null)
             return;
 
-        _whiteBoardButton.onClick.RemoveListener(NotifyWhiteBoardButtonClicked);
+        _boardButton.onClick.RemoveListener(NotifyBoardButtonClicked);
         _isBound = false;
     }
 
@@ -143,10 +143,10 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
         if (!Managers.Input.WasLeftMousePressedThisFrame() && !Managers.Input.WasInteractKeyPressedThisFrame())
             return;
 
-        NotifyWhiteBoardButtonClicked();
+        NotifyBoardButtonClicked();
     }
 
-    private void NotifyWhiteBoardButtonClicked()
+    private void NotifyBoardButtonClicked()
     {
         if (Managers.Input.Mode != Define.InputMode.Player)
             return;
@@ -155,7 +155,7 @@ public class UI_WhiteBoard : UI_Base, ILobbyWorldButtonInteractionTarget
             return;
 
         if (Managers.Scene.CurrentScene is LobbyScene lobbyScene)
-            lobbyScene.RequestShowWhiteBoardMenu();
+            lobbyScene.RequestShowBoardMenu();
     }
 
     private float GetInteractionSqrDistance()

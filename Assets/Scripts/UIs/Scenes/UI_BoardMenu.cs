@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-public class UI_WhiteBoardMenu : UI_Menu
+public class UI_BoardMenu : UI_Menu
 {
     private const int CanvasOrder = 10;
     private const float BoardAspect = 16f / 9f;
@@ -56,7 +56,7 @@ public class UI_WhiteBoardMenu : UI_Menu
     private Image _cursorImage;
     private Slider _penBorderSlider;
     private Slider _eraserBorderSlider;
-    private WhiteBoardTool _activeTool = WhiteBoardTool.Pen;
+    private BoardTool _activeTool = BoardTool.Pen;
     private Color32 _activeColor = new(0, 0, 0, 255);
     private bool _isInitialized;
     private bool _isPointerOverPanel;
@@ -94,7 +94,7 @@ public class UI_WhiteBoardMenu : UI_Menu
         RefreshSelectionVisuals();
         RefreshCursorVisual();
 
-        WhiteBoardDrawingSurface.Changed += ApplyBoardSprite;
+        BoardDrawingSurface.Changed += ApplyBoardSprite;
         _isInitialized = true;
     }
 
@@ -120,7 +120,7 @@ public class UI_WhiteBoardMenu : UI_Menu
 
     private void OnDestroy()
     {
-        WhiteBoardDrawingSurface.Changed -= ApplyBoardSprite;
+        BoardDrawingSurface.Changed -= ApplyBoardSprite;
         Closed = null;
     }
 
@@ -181,8 +181,8 @@ public class UI_WhiteBoardMenu : UI_Menu
     private void BindButtons()
     {
         GetButton((int)Buttons.Cancel).gameObject.BindEvent(OnCancelClicked);
-        BindToolButton(GetButton((int)Buttons.PenButton), WhiteBoardTool.Pen);
-        BindToolButton(GetButton((int)Buttons.EraserButton), WhiteBoardTool.Eraser);
+        BindToolButton(GetButton((int)Buttons.PenButton), BoardTool.Pen);
+        BindToolButton(GetButton((int)Buttons.EraserButton), BoardTool.Eraser);
         BindColorButton(GetButton((int)Buttons.RedButton), new Color32(220, 40, 40, 255));
         BindColorButton(GetButton((int)Buttons.YellowButton), new Color32(245, 210, 45, 255));
         BindColorButton(GetButton((int)Buttons.GreenButton), new Color32(40, 180, 80, 255));
@@ -191,12 +191,12 @@ public class UI_WhiteBoardMenu : UI_Menu
         BindColorButton(GetButton((int)Buttons.WhiteButton), new Color32(255, 255, 255, 255));
     }
 
-    private void BindToolButton(Button button, WhiteBoardTool tool)
+    private void BindToolButton(Button button, BoardTool tool)
     {
         CacheButtonVisuals(button);
         button.onClick.AddListener(() =>
         {
-            _activeTool = _activeTool == tool ? WhiteBoardTool.None : tool;
+            _activeTool = _activeTool == tool ? BoardTool.None : tool;
             RefreshSelectionVisuals();
             RefreshCursorVisual();
         });
@@ -205,11 +205,11 @@ public class UI_WhiteBoardMenu : UI_Menu
     private void BindColorButton(Button button, Color32 color)
     {
         CacheButtonVisuals(button);
-        WhiteBoardPointerRelay relay = button.gameObject.GetorAddComponent<WhiteBoardPointerRelay>();
+        BoardPointerRelay relay = button.gameObject.GetorAddComponent<BoardPointerRelay>();
         relay.PointerDown += _ =>
         {
             _activeColor = color;
-            _activeTool = WhiteBoardTool.Pen;
+            _activeTool = BoardTool.Pen;
             _isColorButtonHeld = true;
             RefreshSelectionVisuals();
             RefreshCursorVisual();
@@ -222,7 +222,7 @@ public class UI_WhiteBoardMenu : UI_Menu
         button.onClick.AddListener(() =>
         {
             _activeColor = color;
-            _activeTool = WhiteBoardTool.Pen;
+            _activeTool = BoardTool.Pen;
             RefreshSelectionVisuals();
             RefreshCursorVisual();
         });
@@ -230,7 +230,7 @@ public class UI_WhiteBoardMenu : UI_Menu
 
     private void BindPointerRelays()
     {
-        WhiteBoardPointerRelay panelRelay = _boardRect.gameObject.GetorAddComponent<WhiteBoardPointerRelay>();
+        BoardPointerRelay panelRelay = _boardRect.gameObject.GetorAddComponent<BoardPointerRelay>();
         panelRelay.PointerEnter += _ => _isPointerOverPanel = true;
         panelRelay.PointerExit += _ =>
         {
@@ -247,7 +247,7 @@ public class UI_WhiteBoardMenu : UI_Menu
 
     private void BindSliderRelay(Slider slider)
     {
-        WhiteBoardPointerRelay relay = slider.gameObject.GetorAddComponent<WhiteBoardPointerRelay>();
+        BoardPointerRelay relay = slider.gameObject.GetorAddComponent<BoardPointerRelay>();
         relay.PointerDown += _ =>
         {
             _isBorderSliderHeld = true;
@@ -272,13 +272,13 @@ public class UI_WhiteBoardMenu : UI_Menu
 
     private void BeginStroke(PointerEventData eventData)
     {
-        if (_activeTool == WhiteBoardTool.None || !TryGetBoardPoint(eventData, out Vector2Int point))
+        if (_activeTool == BoardTool.None || !TryGetBoardPoint(eventData, out Vector2Int point))
             return;
 
         _isDrawing = true;
         _strokePoints.Clear();
         _strokePoints.Add(point);
-        WhiteBoardDrawingSurface.ApplyStroke(_activeTool, GetActiveThickness(), _activeColor, _strokePoints);
+        BoardDrawingSurface.ApplyStroke(_activeTool, GetActiveThickness(), _activeColor, _strokePoints);
     }
 
     private void ContinueStroke(PointerEventData eventData)
@@ -291,7 +291,7 @@ public class UI_WhiteBoardMenu : UI_Menu
             return;
 
         _strokePoints.Add(point);
-        WhiteBoardDrawingSurface.ApplyStroke(_activeTool, GetActiveThickness(), _activeColor, new[] { lastPoint, point });
+        BoardDrawingSurface.ApplyStroke(_activeTool, GetActiveThickness(), _activeColor, new[] { lastPoint, point });
     }
 
     private void EndStroke(PointerEventData eventData)
@@ -306,10 +306,10 @@ public class UI_WhiteBoardMenu : UI_Menu
         if (points.Count == 0)
             return;
 
-        string payload = WhiteBoardDrawingSurface.CreatePayload(_activeTool, GetActiveThickness(), _activeColor, points);
+        string payload = BoardDrawingSurface.CreatePayload(_activeTool, GetActiveThickness(), _activeColor, points);
         LobbyNetworkPlayer localPlayer = LobbyNetworkPlayer.FindLocalOwnedPlayer();
         if (localPlayer != null)
-            localPlayer.SubmitWhiteBoardStroke(payload);
+            localPlayer.SubmitBoardStroke(payload);
     }
 
     private List<Vector2Int> CreatePayloadPoints()
@@ -339,9 +339,9 @@ public class UI_WhiteBoardMenu : UI_Menu
         if (normalizedX < 0f || normalizedX > 1f || normalizedY < 0f || normalizedY > 1f)
             return false;
 
-        point = WhiteBoardDrawingSurface.ClampPoint(new Vector2Int(
-            Mathf.RoundToInt(normalizedX * (WhiteBoardDrawingSurface.Width - 1)),
-            Mathf.RoundToInt(normalizedY * (WhiteBoardDrawingSurface.Height - 1))));
+        point = BoardDrawingSurface.ClampPoint(new Vector2Int(
+            Mathf.RoundToInt(normalizedX * (BoardDrawingSurface.Width - 1)),
+            Mathf.RoundToInt(normalizedY * (BoardDrawingSurface.Height - 1))));
         return true;
     }
 
@@ -349,7 +349,7 @@ public class UI_WhiteBoardMenu : UI_Menu
     {
         if (_boardImage != null)
         {
-            _boardImage.sprite = WhiteBoardDrawingSurface.Sprite;
+            _boardImage.sprite = BoardDrawingSurface.Sprite;
             _boardImage.color = Color.white;
             _boardImage.preserveAspect = true;
         }
@@ -357,8 +357,8 @@ public class UI_WhiteBoardMenu : UI_Menu
 
     private void RefreshSelectionVisuals()
     {
-        SetToolButtonSelected(GetButton((int)Buttons.PenButton), _activeTool == WhiteBoardTool.Pen);
-        SetToolButtonSelected(GetButton((int)Buttons.EraserButton), _activeTool == WhiteBoardTool.Eraser);
+        SetToolButtonSelected(GetButton((int)Buttons.PenButton), _activeTool == BoardTool.Pen);
+        SetToolButtonSelected(GetButton((int)Buttons.EraserButton), _activeTool == BoardTool.Eraser);
 
         SetColorButtonSelected(GetButton((int)Buttons.RedButton), IsActiveColor(new Color32(220, 40, 40, 255)));
         SetColorButtonSelected(GetButton((int)Buttons.YellowButton), IsActiveColor(new Color32(245, 210, 45, 255)));
@@ -390,7 +390,7 @@ public class UI_WhiteBoardMenu : UI_Menu
 
     private void RefreshCursorVisual()
     {
-        _cursorImage.color = _activeTool == WhiteBoardTool.Eraser ? Color.white : _activeColor;
+        _cursorImage.color = _activeTool == BoardTool.Eraser ? Color.white : _activeColor;
         float size = GetActiveThickness();
         _cursorRect.sizeDelta = new Vector2(size, size);
         RefreshCursorVisibility();
@@ -451,7 +451,7 @@ public class UI_WhiteBoardMenu : UI_Menu
 
     private int GetActiveThickness()
     {
-        Slider slider = _activeTool == WhiteBoardTool.Eraser ? _eraserBorderSlider : _penBorderSlider;
+        Slider slider = _activeTool == BoardTool.Eraser ? _eraserBorderSlider : _penBorderSlider;
         return Mathf.Clamp(Mathf.RoundToInt(slider.value), 1, 50);
     }
 

@@ -333,24 +333,24 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         SubmitRangerFacePayloadServerRpc(new FixedString4096Bytes(payload));
     }
 
-    public void SubmitWhiteBoardStroke(string payload)
+    public void SubmitBoardStroke(string payload)
     {
         if (!IsOwner || string.IsNullOrWhiteSpace(payload))
             return;
 
-        SubmitWhiteBoardStrokeServerRpc(new FixedString4096Bytes(payload));
+        SubmitBoardStrokeServerRpc(new FixedString4096Bytes(payload));
     }
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
-    private void SubmitWhiteBoardStrokeServerRpc(FixedString4096Bytes payload)
+    private void SubmitBoardStrokeServerRpc(FixedString4096Bytes payload)
     {
-        ApplyWhiteBoardStrokeClientRpc(payload);
+        ApplyBoardStrokeClientRpc(payload);
     }
 
     [Rpc(SendTo.ClientsAndHost)]
-    private void ApplyWhiteBoardStrokeClientRpc(FixedString4096Bytes payload)
+    private void ApplyBoardStrokeClientRpc(FixedString4096Bytes payload)
     {
-        WhiteBoardDrawingSurface.TryApplyPayload(payload.ToString());
+        BoardDrawingSurface.TryApplyPayload(payload.ToString());
     }
 
     private void SubmitLocalSavedFace()

@@ -4,14 +4,14 @@ using System.Globalization;
 using System.Text;
 using UnityEngine;
 
-public enum WhiteBoardTool
+public enum BoardTool
 {
     None = 0,
     Pen = 1,
     Eraser = 2,
 }
 
-public static class WhiteBoardDrawingSurface
+public static class BoardDrawingSurface
 {
     public const int Width = 1920;
     public const int Height = 1080;
@@ -40,14 +40,14 @@ public static class WhiteBoardDrawingSurface
         }
     }
 
-    public static void ApplyStroke(WhiteBoardTool tool, int thickness, Color32 color, IReadOnlyList<Vector2Int> points)
+    public static void ApplyStroke(BoardTool tool, int thickness, Color32 color, IReadOnlyList<Vector2Int> points)
     {
-        if (tool == WhiteBoardTool.None || points == null || points.Count == 0)
+        if (tool == BoardTool.None || points == null || points.Count == 0)
             return;
 
         EnsureTexture();
 
-        Color32 drawColor = tool == WhiteBoardTool.Eraser ? s_backgroundColor : color;
+        Color32 drawColor = tool == BoardTool.Eraser ? s_backgroundColor : color;
         int radius = Mathf.Max(1, thickness) / 2;
 
         DrawCircle(points[0], radius, drawColor);
@@ -58,7 +58,7 @@ public static class WhiteBoardDrawingSurface
         Changed?.Invoke();
     }
 
-    public static string CreatePayload(WhiteBoardTool tool, int thickness, Color32 color, IReadOnlyList<Vector2Int> points)
+    public static string CreatePayload(BoardTool tool, int thickness, Color32 color, IReadOnlyList<Vector2Int> points)
     {
         StringBuilder builder = new();
         builder.Append((int)tool);
@@ -117,7 +117,7 @@ public static class WhiteBoardDrawingSurface
             points.Add(ClampPoint(new Vector2Int(x, y)));
         }
 
-        ApplyStroke((WhiteBoardTool)toolValue, thickness, color, points);
+        ApplyStroke((BoardTool)toolValue, thickness, color, points);
         return true;
     }
 

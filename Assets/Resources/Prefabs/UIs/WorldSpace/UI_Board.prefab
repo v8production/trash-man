@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 2292409407}
   - component: {fileID: 2292409406}
   m_Layer: 5
-  m_Name: UI_WhiteBoard
+  m_Name: UI_Board
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -116,7 +116,7 @@ GameObject:
   - component: {fileID: 7171079292874904622}
   - component: {fileID: 2385978458369366668}
   m_Layer: 5
-  m_Name: Image
+  m_Name: Board
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -192,7 +192,7 @@ GameObject:
   - component: {fileID: 3886152300065561665}
   - component: {fileID: 2844527711166693338}
   m_Layer: 5
-  m_Name: WhiteBoardButton
+  m_Name: BoardButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
