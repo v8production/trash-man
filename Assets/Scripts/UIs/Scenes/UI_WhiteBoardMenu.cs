@@ -14,6 +14,7 @@ public class UI_WhiteBoardMenu : UI_Menu
 
     private enum GameObjects
     {
+        Board,
         PanelBackground,
     }
 
@@ -47,8 +48,10 @@ public class UI_WhiteBoardMenu : UI_Menu
     private readonly Dictionary<Button, Color> _buttonBaseColors = new();
     private readonly Dictionary<Button, Outline> _buttonOutlines = new();
 
-    private RectTransform _panelRect;
-    private Image _panelImage;
+    private RectTransform _boardRect;
+    private Image _boardImage;
+    private RectTransform _panelBackgroundRect;
+    private Image _panelBackgroundImage;
     private RectTransform _cursorRect;
     private Image _cursorImage;
     private Slider _penBorderSlider;
@@ -73,8 +76,10 @@ public class UI_WhiteBoardMenu : UI_Menu
         Bind<Slider>(typeof(Sliders));
         Bind<Image>(typeof(Images));
 
-        _panelRect = GetObject((int)GameObjects.PanelBackground).GetComponent<RectTransform>();
-        _panelImage = GetObject((int)GameObjects.PanelBackground).GetComponent<Image>();
+        _boardRect = GetObject((int)GameObjects.Board).GetComponent<RectTransform>();
+        _boardImage = GetObject((int)GameObjects.Board).GetComponent<Image>();
+        _panelBackgroundRect = GetObject((int)GameObjects.PanelBackground).GetComponent<RectTransform>();
+        _panelBackgroundImage = GetObject((int)GameObjects.PanelBackground).GetComponent<Image>();
         _cursorImage = GetImage((int)Images.Cursor);
         _cursorRect = _cursorImage.rectTransform;
         _penBorderSlider = Get<Slider>((int)Sliders.PenBorder);
@@ -121,14 +126,14 @@ public class UI_WhiteBoardMenu : UI_Menu
 
     private void ConfigureBoardPanel()
     {
-        RectTransform parent = _panelRect.parent as RectTransform;
+        RectTransform parent = _boardRect.parent as RectTransform;
         if (parent == null)
             return;
 
         Rect parentRect = parent.rect;
         Vector2 anchorSize = new(
-            parentRect.width * (_panelRect.anchorMax.x - _panelRect.anchorMin.x),
-            parentRect.height * (_panelRect.anchorMax.y - _panelRect.anchorMin.y));
+            parentRect.width * (_boardRect.anchorMax.x - _boardRect.anchorMin.x),
+            parentRect.height * (_boardRect.anchorMax.y - _boardRect.anchorMin.y));
 
         if (anchorSize.x <= 0f || anchorSize.y <= 0f)
             return;
@@ -143,8 +148,13 @@ public class UI_WhiteBoardMenu : UI_Menu
             width = height * BoardAspect;
         }
 
-        _panelRect.sizeDelta = new Vector2(width - anchorSize.x, height - anchorSize.y);
-        _panelRect.anchoredPosition = new Vector2((-anchorSize.x * 0.5f) + BoardMargin + (width * 0.5f), 0f);
+        Vector2 sizeDelta = new(width - anchorSize.x, height - anchorSize.y);
+        Vector2 anchoredPosition = new((-anchorSize.x * 0.5f) + BoardMargin + (width * 0.5f), 0f);
+
+        _boardRect.sizeDelta = sizeDelta;
+        _boardRect.anchoredPosition = anchoredPosition;
+        _panelBackgroundRect.sizeDelta = sizeDelta;
+        _panelBackgroundRect.anchoredPosition = anchoredPosition;
     }
 
     private void ConfigureCursor()
@@ -220,7 +230,7 @@ public class UI_WhiteBoardMenu : UI_Menu
 
     private void BindPointerRelays()
     {
-        WhiteBoardPointerRelay panelRelay = _panelRect.gameObject.GetorAddComponent<WhiteBoardPointerRelay>();
+        WhiteBoardPointerRelay panelRelay = _boardRect.gameObject.GetorAddComponent<WhiteBoardPointerRelay>();
         panelRelay.PointerEnter += _ => _isPointerOverPanel = true;
         panelRelay.PointerExit += _ =>
         {
@@ -320,10 +330,10 @@ public class UI_WhiteBoardMenu : UI_Menu
     {
         point = default;
         Camera eventCamera = eventData.pressEventCamera != null ? eventData.pressEventCamera : eventData.enterEventCamera;
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_panelRect, eventData.position, eventCamera, out Vector2 localPoint))
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_boardRect, eventData.position, eventCamera, out Vector2 localPoint))
             return false;
 
-        Rect rect = _panelRect.rect;
+        Rect rect = _boardRect.rect;
         float normalizedX = (localPoint.x - rect.xMin) / rect.width;
         float normalizedY = (localPoint.y - rect.yMin) / rect.height;
         if (normalizedX < 0f || normalizedX > 1f || normalizedY < 0f || normalizedY > 1f)
@@ -337,11 +347,11 @@ public class UI_WhiteBoardMenu : UI_Menu
 
     private void ApplyBoardSprite()
     {
-        if (_panelImage != null)
+        if (_boardImage != null)
         {
-            _panelImage.sprite = WhiteBoardDrawingSurface.Sprite;
-            _panelImage.color = Color.white;
-            _panelImage.preserveAspect = true;
+            _boardImage.sprite = WhiteBoardDrawingSurface.Sprite;
+            _boardImage.color = Color.white;
+            _boardImage.preserveAspect = true;
         }
     }
 
@@ -395,7 +405,7 @@ public class UI_WhiteBoardMenu : UI_Menu
     private void RefreshPointerOverPanel()
     {
         _isPointerOverPanel = TryGetMousePosition(out Vector2 mousePosition)
-            && RectTransformUtility.RectangleContainsScreenPoint(_panelRect, mousePosition, GetEventCamera());
+            && RectTransformUtility.RectangleContainsScreenPoint(_boardRect, mousePosition, GetEventCamera());
     }
 
     private void UpdateCursorPosition()
