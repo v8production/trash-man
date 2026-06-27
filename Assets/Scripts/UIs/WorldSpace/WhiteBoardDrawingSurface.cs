@@ -16,7 +16,7 @@ public static class WhiteBoardDrawingSurface
     public const int Width = 1920;
     public const int Height = 1080;
 
-    private static readonly Color32 s_backgroundColor = new(255, 255, 255, 255);
+    private static readonly Color32 s_backgroundColor = new(255, 255, 255, 0);
     private static Texture2D s_texture;
     private static Sprite s_sprite;
 
