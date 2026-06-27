@@ -786,6 +786,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
       insertIndex: -1
       addedObject: {fileID: 201826508}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 201826509}
   m_SourcePrefab: {fileID: 100100000, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
 --- !u!4 &201826506 stripped
 Transform:
@@ -809,11 +812,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
-  _outlineTriggerDistance: 5
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
   _rangerSitAnimation: 6
+--- !u!114 &201826509
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 201826507}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1001 &243679632
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -881,6 +896,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 648468432}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 648468433}
   m_SourcePrefab: {fileID: 100100000, guid: 0afbb388762808f45a02e914834965c1, type: 3}
 --- !u!4 &243679633 stripped
 Transform:
@@ -1658,6 +1676,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
       insertIndex: -1
       addedObject: {fileID: 533889753}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 533889754}
   m_SourcePrefab: {fileID: 100100000, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
 --- !u!4 &533889751 stripped
 Transform:
@@ -1681,11 +1702,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
-  _outlineTriggerDistance: 5
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
   _rangerSitAnimation: 6
+--- !u!114 &533889754
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 533889752}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1 &648468429 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
@@ -1703,11 +1736,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
-  _outlineTriggerDistance: 5
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
   _rangerSitAnimation: 6
+--- !u!114 &648468433
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 648468429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1001 &679832948
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1856,6 +1901,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
       insertIndex: -1
       addedObject: {fileID: 682415614}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 682415615}
   m_SourcePrefab: {fileID: 100100000, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
 --- !u!4 &682415612 stripped
 Transform:
@@ -1879,11 +1927,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
-  _outlineTriggerDistance: 5
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
   _rangerSitAnimation: 6
+--- !u!114 &682415615
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 682415613}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1001 &694789875
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1951,13 +2011,34 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c398223d1cc7cc946ad4bbce8717db02, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 694789878}
   m_SourcePrefab: {fileID: 100100000, guid: c398223d1cc7cc946ad4bbce8717db02, type: 3}
 --- !u!4 &694789876 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: c398223d1cc7cc946ad4bbce8717db02, type: 3}
   m_PrefabInstance: {fileID: 694789875}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &694789877 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: c398223d1cc7cc946ad4bbce8717db02, type: 3}
+  m_PrefabInstance: {fileID: 694789875}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &694789878
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 694789877}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1 &714759177
 GameObject:
   m_ObjectHideFlags: 0
@@ -7063,6 +7144,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1287639150}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1287639151}
   m_SourcePrefab: {fileID: 100100000, guid: 0afbb388762808f45a02e914834965c1, type: 3}
 --- !u!4 &970454279 stripped
 Transform:
@@ -7405,11 +7489,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
-  _outlineTriggerDistance: 5
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
   _rangerSitAnimation: 6
+--- !u!114 &1287639151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1287639147}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1001 &1364209730
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7552,6 +7648,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1365544240}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1365544241}
   m_SourcePrefab: {fileID: 100100000, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
 --- !u!4 &1365544238 stripped
 Transform:
@@ -7575,11 +7674,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
-  _outlineTriggerDistance: 5
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
   _rangerSitAnimation: 6
+--- !u!114 &1365544241
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1365544239}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1001 &1392042151
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7752,13 +7863,34 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: b927243b29bd1a24f86fbf11c505ec0a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 64421767}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b927243b29bd1a24f86fbf11c505ec0a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1393415072}
   m_SourcePrefab: {fileID: 100100000, guid: b927243b29bd1a24f86fbf11c505ec0a, type: 3}
 --- !u!4 &1393415070 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b927243b29bd1a24f86fbf11c505ec0a, type: 3}
   m_PrefabInstance: {fileID: 1393415069}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1393415071 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: b927243b29bd1a24f86fbf11c505ec0a, type: 3}
+  m_PrefabInstance: {fileID: 1393415069}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1393415072
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1393415071}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1001 &1446052858
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7949,7 +8081,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: c5c979e6013f1334eb50caabb40dcaac, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -7958,6 +8090,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c5c979e6013f1334eb50caabb40dcaac, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1536410805}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c5c979e6013f1334eb50caabb40dcaac, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1536410808}
   m_SourcePrefab: {fileID: 100100000, guid: c5c979e6013f1334eb50caabb40dcaac, type: 3}
 --- !u!4 &1536410803 stripped
 Transform:
@@ -7981,8 +8116,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c9ef7e6a7eca2d04ebd51fe51fe63df0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartButton
-  _outlineTriggerDistance: 5
   _interactionTriggerDistance: 1.5
+--- !u!114 &1536410808
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1536410804}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1001 &1541100549
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8137,6 +8284,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1569634071}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1569634072}
   m_SourcePrefab: {fileID: 100100000, guid: 0afbb388762808f45a02e914834965c1, type: 3}
 --- !u!4 &1569634068 stripped
 Transform:
@@ -8155,11 +8305,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
-  _outlineTriggerDistance: 5
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
   _rangerSitAnimation: 6
+--- !u!114 &1569634072
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 840942813}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1001 &1675794732
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8765,6 +8927,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1835475059}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1835475060}
   m_SourcePrefab: {fileID: 100100000, guid: bdceefde57feee74f855bf2c3736d588, type: 3}
 --- !u!4 &1835475057 stripped
 Transform:
@@ -8788,11 +8953,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
-  _outlineTriggerDistance: 5
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
   _rangerSitAnimation: 6
+--- !u!114 &1835475060
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1835475058}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1001 &1872426299
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9384,13 +9561,34 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: b927243b29bd1a24f86fbf11c505ec0a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 310607659}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b927243b29bd1a24f86fbf11c505ec0a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2077389805}
   m_SourcePrefab: {fileID: 100100000, guid: b927243b29bd1a24f86fbf11c505ec0a, type: 3}
 --- !u!4 &2077389803 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b927243b29bd1a24f86fbf11c505ec0a, type: 3}
   m_PrefabInstance: {fileID: 2077389802}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2077389804 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: b927243b29bd1a24f86fbf11c505ec0a, type: 3}
+  m_PrefabInstance: {fileID: 2077389802}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2077389805
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2077389804}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1001 &2143872165
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9458,6 +9656,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2143872169}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2143872170}
   m_SourcePrefab: {fileID: 100100000, guid: 0afbb388762808f45a02e914834965c1, type: 3}
 --- !u!4 &2143872166 stripped
 Transform:
@@ -9476,11 +9677,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8553c7e05b82c074e946e52ef019aca5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
-  _outlineTriggerDistance: 5
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
   _rangerSitAnimation: 6
+--- !u!114 &2143872170
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1552590557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d7a2470b5104d94fb24f06f16a9d55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutlineController
+  _outlineTriggerDistance: 5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
