@@ -1285,13 +1285,16 @@ public class LobbyNetworkPlayer : NetworkBehaviour
                 && cachedNickname != null)
             {
                 _nicknameUI = cachedNickname;
+                _nicknameUI.SetTarget(_lobbyRanger.transform);
                 return;
             }
         }
 
-        _nicknameUI = Managers.UI.CreateWorldSpaceUI<UI_Nickname>(_lobbyRanger.transform);
+        _nicknameUI = Managers.UI.CreateSceneUI<UI_Nickname>();
         if (_nicknameUI == null)
             return;
+
+        _nicknameUI.SetTarget(_lobbyRanger.transform);
     }
 
     private void RefreshIdentityPresentation()

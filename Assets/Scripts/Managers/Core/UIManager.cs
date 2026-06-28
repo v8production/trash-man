@@ -60,6 +60,18 @@ public class UIManager
         return go.GetOrAddComponent<T>();
     }
 
+    public T CreateSceneUI<T>(string name = null, int order = 0) where T : UI_Base
+    {
+        if (string.IsNullOrEmpty(name))
+            name = typeof(T).Name;
+
+        GameObject go = Managers.Resource.Instantiate($"UIs/Scenes/{name}");
+        go.transform.SetParent(_root.transform, false);
+        ShowCanvas(go, order);
+
+        return go.GetOrAddComponent<T>();
+    }
+
     public T CreateSubItem<T>(Transform parent = null, string name = null) where T : UI_Base
     {
         if (string.IsNullOrEmpty(name))

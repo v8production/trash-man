@@ -7,9 +7,10 @@ public class InteractionGuideController : MonoBehaviour
     private const string InteractionGuidePrefabName = "UI_InteractionGuide";
 
     [SerializeField] private float _outlineTriggerDistance = 5.0f;
+    [SerializeField] private Vector3 _interactionGuideLocalPosition = Vector3.zero;
 
     private readonly List<RenderingLayerState> _renderingLayerStates = new();
-    private Transform _interactionGuide;
+    private UI_InteractionGuide _interactionGuide;
     private bool _isVisible = true;
 
     private void Awake()
@@ -25,7 +26,8 @@ public class InteractionGuideController : MonoBehaviour
 
     private void LateUpdate()
     {
-        RotateGuideToCamera();
+        if (_isVisible && _interactionGuide != null)
+            _interactionGuide.SetWorldPosition(GetInteractionGuideWorldPosition());
     }
 
     public void SetVisible(bool visible)
@@ -72,13 +74,12 @@ public class InteractionGuideController : MonoBehaviour
         if (visible)
         {
             EnsureInteractionGuide();
-            _interactionGuide.gameObject.SetActive(true);
-            RotateGuideToCamera();
+            _interactionGuide.Show();
             return;
         }
 
         if (_interactionGuide != null)
-            _interactionGuide.gameObject.SetActive(false);
+            _interactionGuide.Hide();
     }
 
     private void EnsureInteractionGuide()
@@ -86,20 +87,13 @@ public class InteractionGuideController : MonoBehaviour
         if (_interactionGuide != null)
             return;
 
-        GameObject guideObject = Managers.Resource.Instantiate($"UIs/WorldSpace/{InteractionGuidePrefabName}", transform);
-        _interactionGuide = guideObject.transform;
-        _interactionGuide.localPosition = Vector3.zero;
-
-        Canvas canvas = guideObject.GetComponent<Canvas>();
-        canvas.worldCamera = Camera.main;
+        _interactionGuide = Managers.UI.CreateSceneUI<UI_InteractionGuide>(InteractionGuidePrefabName);
+        _interactionGuide.SetWorldPosition(GetInteractionGuideWorldPosition());
     }
 
-    private void RotateGuideToCamera()
+    private Vector3 GetInteractionGuideWorldPosition()
     {
-        if (!_isVisible || _interactionGuide == null || Camera.main == null)
-            return;
-
-        _interactionGuide.rotation = Camera.main.transform.rotation;
+        return transform.TransformPoint(_interactionGuideLocalPosition);
     }
 
     private readonly struct RenderingLayerState

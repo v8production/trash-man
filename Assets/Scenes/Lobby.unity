@@ -829,6 +829,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: 1, z: 0}
 --- !u!1001 &243679632
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1719,6 +1720,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: 1, z: 0}
 --- !u!1 &648468429 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 0afbb388762808f45a02e914834965c1, type: 3}
@@ -1753,6 +1755,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: 0, z: 0.5}
 --- !u!1001 &679832948
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1944,6 +1947,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: 1, z: 0}
 --- !u!1001 &694789875
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2039,6 +2043,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: 0, z: 0.3}
 --- !u!1 &714759177
 GameObject:
   m_ObjectHideFlags: 0
@@ -7506,6 +7511,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: 0, z: 0.5}
 --- !u!1001 &1364209730
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7691,6 +7697,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: 1, z: 0}
 --- !u!1001 &1392042151
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7891,6 +7898,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: -0.8, z: 0.65}
 --- !u!1001 &1446052858
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8130,6 +8138,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: 0, z: -0.2}
 --- !u!1001 &1541100549
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8322,6 +8331,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: 0, z: 0.5}
 --- !u!1001 &1675794732
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8970,6 +8980,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: 1, z: 0}
 --- !u!1001 &1872426299
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9589,6 +9600,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: -0.8, z: 0.65}
 --- !u!1001 &2143872165
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9694,6 +9706,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
+  _interactionGuideLocalPosition: {x: 0, y: 0, z: 0.5}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
