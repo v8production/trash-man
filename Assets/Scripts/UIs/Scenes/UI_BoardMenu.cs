@@ -11,6 +11,7 @@ public class UI_BoardMenu : UI_Menu
     private const float BoardAspect = 16f / 9f;
     private const float BoardMargin = 10f;
     private const int MaxPayloadPoints = 180;
+    private static readonly Color32 UnassignedPenColor = new(0xE9, 0xE9, 0xE9, 255);
 
     private enum GameObjects
     {
@@ -57,11 +58,10 @@ public class UI_BoardMenu : UI_Menu
     private Slider _penBorderSlider;
     private Slider _eraserBorderSlider;
     private BoardTool _activeTool = BoardTool.Pen;
-    private Color32 _activeColor = new(0, 0, 0, 255);
+    private Color32 _activeColor = UnassignedPenColor;
     private bool _isInitialized;
     private bool _isPointerOverPanel;
     private bool _isDrawing;
-    private bool _isColorButtonHeld;
     private bool _isBorderSliderHeld;
 
     public override void Init()
@@ -91,6 +91,7 @@ public class UI_BoardMenu : UI_Menu
         BindButtons();
         BindPointerRelays();
         ApplyBoardSprite();
+        RefreshActivePenColor(forceVisualRefresh: false);
         RefreshSelectionVisuals();
         RefreshCursorVisual();
 
@@ -104,6 +105,7 @@ public class UI_BoardMenu : UI_Menu
             Init();
 
         ApplyBoardSprite();
+        RefreshActivePenColor(forceVisualRefresh: false);
         RefreshCursorVisual();
     }
 
@@ -113,6 +115,8 @@ public class UI_BoardMenu : UI_Menu
             return;
 
         ConfigureBoardPanel();
+        if (!_isDrawing)
+            RefreshActivePenColor(forceVisualRefresh: false);
         RefreshPointerOverPanel();
         UpdateCursorPosition();
         RefreshCursorVisibility();
@@ -183,12 +187,12 @@ public class UI_BoardMenu : UI_Menu
         GetButton((int)Buttons.Cancel).gameObject.BindEvent(OnCancelClicked);
         BindToolButton(GetButton((int)Buttons.PenButton), BoardTool.Pen);
         BindToolButton(GetButton((int)Buttons.EraserButton), BoardTool.Eraser);
-        BindColorButton(GetButton((int)Buttons.RedButton), new Color32(220, 40, 40, 255));
-        BindColorButton(GetButton((int)Buttons.YellowButton), new Color32(245, 210, 45, 255));
-        BindColorButton(GetButton((int)Buttons.GreenButton), new Color32(40, 180, 80, 255));
-        BindColorButton(GetButton((int)Buttons.BlueButton), new Color32(45, 110, 230, 255));
-        BindColorButton(GetButton((int)Buttons.BlackButton), new Color32(0, 0, 0, 255));
-        BindColorButton(GetButton((int)Buttons.WhiteButton), new Color32(255, 255, 255, 255));
+        CacheButtonVisuals(GetButton((int)Buttons.RedButton));
+        CacheButtonVisuals(GetButton((int)Buttons.YellowButton));
+        CacheButtonVisuals(GetButton((int)Buttons.GreenButton));
+        CacheButtonVisuals(GetButton((int)Buttons.BlueButton));
+        CacheButtonVisuals(GetButton((int)Buttons.BlackButton));
+        CacheButtonVisuals(GetButton((int)Buttons.WhiteButton));
     }
 
     private void BindToolButton(Button button, BoardTool tool)
@@ -197,32 +201,6 @@ public class UI_BoardMenu : UI_Menu
         button.onClick.AddListener(() =>
         {
             _activeTool = _activeTool == tool ? BoardTool.None : tool;
-            RefreshSelectionVisuals();
-            RefreshCursorVisual();
-        });
-    }
-
-    private void BindColorButton(Button button, Color32 color)
-    {
-        CacheButtonVisuals(button);
-        BoardPointerRelay relay = button.gameObject.GetorAddComponent<BoardPointerRelay>();
-        relay.PointerDown += _ =>
-        {
-            _activeColor = color;
-            _activeTool = BoardTool.Pen;
-            _isColorButtonHeld = true;
-            RefreshSelectionVisuals();
-            RefreshCursorVisual();
-        };
-        relay.PointerUp += _ =>
-        {
-            _isColorButtonHeld = false;
-            RefreshCursorVisibility();
-        };
-        button.onClick.AddListener(() =>
-        {
-            _activeColor = color;
-            _activeTool = BoardTool.Pen;
             RefreshSelectionVisuals();
             RefreshCursorVisual();
         });
@@ -275,6 +253,7 @@ public class UI_BoardMenu : UI_Menu
         if (_activeTool == BoardTool.None || !TryGetBoardPoint(eventData, out Vector2Int point))
             return;
 
+        RefreshActivePenColor(forceVisualRefresh: false);
         _isDrawing = true;
         _strokePoints.Clear();
         _strokePoints.Add(point);
@@ -359,13 +338,6 @@ public class UI_BoardMenu : UI_Menu
     {
         SetToolButtonSelected(GetButton((int)Buttons.PenButton), _activeTool == BoardTool.Pen);
         SetToolButtonSelected(GetButton((int)Buttons.EraserButton), _activeTool == BoardTool.Eraser);
-
-        SetColorButtonSelected(GetButton((int)Buttons.RedButton), IsActiveColor(new Color32(220, 40, 40, 255)));
-        SetColorButtonSelected(GetButton((int)Buttons.YellowButton), IsActiveColor(new Color32(245, 210, 45, 255)));
-        SetColorButtonSelected(GetButton((int)Buttons.GreenButton), IsActiveColor(new Color32(40, 180, 80, 255)));
-        SetColorButtonSelected(GetButton((int)Buttons.BlueButton), IsActiveColor(new Color32(45, 110, 230, 255)));
-        SetColorButtonSelected(GetButton((int)Buttons.BlackButton), IsActiveColor(new Color32(0, 0, 0, 255)));
-        SetColorButtonSelected(GetButton((int)Buttons.WhiteButton), IsActiveColor(new Color32(255, 255, 255, 255)));
     }
 
     private void SetToolButtonSelected(Button button, bool selected)
@@ -377,17 +349,6 @@ public class UI_BoardMenu : UI_Menu
             outline.enabled = selected;
     }
 
-    private void SetColorButtonSelected(Button button, bool selected)
-    {
-        if (_buttonOutlines.TryGetValue(button, out Outline outline))
-            outline.enabled = selected;
-    }
-
-    private bool IsActiveColor(Color32 color)
-    {
-        return _activeColor.r == color.r && _activeColor.g == color.g && _activeColor.b == color.b && _activeColor.a == color.a;
-    }
-
     private void RefreshCursorVisual()
     {
         _cursorImage.color = _activeTool == BoardTool.Eraser ? Color.white : _activeColor;
@@ -396,9 +357,32 @@ public class UI_BoardMenu : UI_Menu
         RefreshCursorVisibility();
     }
 
+    private void RefreshActivePenColor(bool forceVisualRefresh)
+    {
+        Color32 nextColor = UnassignedPenColor;
+        LobbyNetworkPlayer localPlayer = LobbyNetworkPlayer.FindLocalOwnedPlayer();
+        if (localPlayer != null
+            && localPlayer.TryGetSelectedRoleMask(out int roleMask)
+            && LobbyNetworkPlayer.TryResolveRangerSuitColorFromRoleMask(roleMask, out Color32 roleColor))
+        {
+            nextColor = roleColor;
+        }
+
+        if (!forceVisualRefresh && IsSameColor(_activeColor, nextColor))
+            return;
+
+        _activeColor = nextColor;
+        RefreshCursorVisual();
+    }
+
+    private static bool IsSameColor(Color32 a, Color32 b)
+    {
+        return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
+    }
+
     private void RefreshCursorVisibility()
     {
-        bool visible = _isPointerOverPanel || _isColorButtonHeld || _isBorderSliderHeld;
+        bool visible = _isPointerOverPanel || _isBorderSliderHeld;
         _cursorImage.gameObject.SetActive(visible);
     }
 
