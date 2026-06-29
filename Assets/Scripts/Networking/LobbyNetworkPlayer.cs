@@ -390,6 +390,47 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         return roleMask != 0;
     }
 
+    public static bool TryResolveRangerSuitColorFromRoleMask(int roleMask, out Color32 color)
+    {
+        int normalizedMask = NormalizeTitanRoleMask(roleMask);
+        if (normalizedMask == 0)
+        {
+            color = default;
+            return false;
+        }
+
+        // Priority follows below order:
+        // Torso (Red) > RightLeg (Blue) > LeftLeg (Green) > RightArm (Yellow) > LeftArm (Black).
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.Torso)) != 0)
+        {
+            color = new Color32(0xAC, 0x00, 0x00, 255); // Red (#AC0000)
+            return true;
+        }
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.RightLeg)) != 0)
+        {
+            color = new Color32(0x1E, 0x37, 0xB5, 255); // Blue (#1E37B5)
+            return true;
+        }
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.LeftLeg)) != 0)
+        {
+            color = new Color32(0x42, 0xAA, 0x00, 255); // Green (#42AA00)
+            return true;
+        }
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.RightArm)) != 0)
+        {
+            color = new Color32(0xF7, 0xC6, 0x00, 255); // Yellow (#F7C600)
+            return true;
+        }
+        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.LeftArm)) != 0)
+        {
+            color = new Color32(0x0F, 0x0F, 0x0F, 255); // Black (#0F0F0F)
+            return true;
+        }
+
+        color = default;
+        return false;
+    }
+
     public bool HasSelectedTitanRoleValue(Define.TitanRole titanRole)
     {
         int bit = RoleToMaskBit(titanRole);
@@ -1084,23 +1125,10 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private static int ResolveRangerColorRgbaFromRoleMask(int normalizedMask)
     {
         // No selection: keep the prefab material's default color.
-        if (normalizedMask == 0)
+        if (!TryResolveRangerSuitColorFromRoleMask(normalizedMask, out Color32 color))
             return 0;
 
-        // Priority follows below order:
-        // Torso (Red) > RightLeg (Blue) > LeftLeg (Green) > RightArm (Yellow) > LeftArm (Black).
-        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.Torso)) != 0)
-            return PackRgba(0xAC, 0x00, 0x00, 255); // Red (#AC0000)
-        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.RightLeg)) != 0)
-            return PackRgba(0x1E, 0x37, 0xB5, 255); // Blue (#1E37B5)
-        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.LeftLeg)) != 0)
-            return PackRgba(0x42, 0xAA, 0x00, 255); // Green (#42AA00)
-        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.RightArm)) != 0)
-            return PackRgba(0xF7, 0xC6, 0x00, 255); // Yellow (#F7C600)
-        if ((normalizedMask & RoleToMaskBit(Define.TitanRole.LeftArm)) != 0)
-            return PackRgba(0x0F, 0x0F, 0x0F, 255); // Black (#0F0F0F)
-
-        return 0;
+        return PackRgba(color.r, color.g, color.b, color.a);
     }
 
     private static Color ResolveRangerFaceColorFromRoleMask(int normalizedMask)
