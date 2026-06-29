@@ -19,6 +19,8 @@ public class LobbyCameraController : MonoBehaviour
 
     private float _yaw;
     private float _pitch = 18f;
+    private Vector3 _teleportSmoothedPivot;
+    private bool _isSmoothingTeleport;
     private readonly int _cameraBlockMask = 1 << WallLayer;
     private AudioListener _audioListener;
 
@@ -62,6 +64,20 @@ public class LobbyCameraController : MonoBehaviour
 
         Quaternion orbitRotation = Quaternion.Euler(_pitch, _yaw, 0f);
         Vector3 pivot = _target.position + _pivotOffset;
+        if (_isSmoothingTeleport)
+        {
+            _teleportSmoothedPivot = Vector3.Lerp(
+                _teleportSmoothedPivot,
+                pivot,
+                1f - Mathf.Exp(-_followLerpSpeed * Time.deltaTime)
+            );
+
+            if ((_teleportSmoothedPivot - pivot).sqrMagnitude <= 0.0001f)
+                _isSmoothingTeleport = false;
+
+            pivot = _teleportSmoothedPivot;
+        }
+
         Vector3 cameraOffset = orbitRotation * (Vector3.back * _distance);
         Vector3 desiredPosition = ResolveCameraPosition(pivot, cameraOffset);
         Vector3 smoothedPosition = Vector3.Lerp(
@@ -76,8 +92,18 @@ public class LobbyCameraController : MonoBehaviour
 
     public void SetTarget(Transform target)
     {
+        if (_target == target)
+            return;
+
         _target = target;
+        _isSmoothingTeleport = false;
         ClaimAudioListener();
+    }
+
+    public void SmoothNextTargetTeleport(Vector3 previousTargetWorldPosition)
+    {
+        _teleportSmoothedPivot = previousTargetWorldPosition + _pivotOffset;
+        _isSmoothingTeleport = true;
     }
 
     private void ClaimAudioListener()

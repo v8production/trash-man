@@ -215,6 +215,28 @@ public class RangerController : MonoBehaviour
         AnimState = Define.RangerAnimState.Idle00;
     }
 
+    public void StandUp(Vector3 worldPosition)
+    {
+        if (!_isSeated)
+            return;
+
+        _isSeated = false;
+        _seatedAnimState = Define.RangerAnimState.Sit00;
+        _moveInput = Vector2.zero;
+
+        bool wasCharacterControllerEnabled = _characterController != null && _characterController.enabled;
+        if (wasCharacterControllerEnabled)
+            _characterController.enabled = false;
+
+        transform.SetParent(null, true);
+        transform.position = worldPosition;
+
+        if (wasCharacterControllerEnabled)
+            _characterController.enabled = true;
+
+        AnimState = Define.RangerAnimState.Idle00;
+    }
+
     private void UpdateInput()
     {
         _moveInput = _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;

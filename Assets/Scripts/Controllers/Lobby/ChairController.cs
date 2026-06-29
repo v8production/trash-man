@@ -8,6 +8,10 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
     [SerializeField] private Define.RangerAnimState _rangerSitAnimation = Define.RangerAnimState.Sit00;
 
     private InteractionGuideController _interactionGuideController;
+    private Vector3 _rangerPositionBeforeInteraction;
+    private bool _hasRangerPositionBeforeInteraction;
+    private Vector3 _cachedRangerPositionBeforeInteraction;
+    private bool _hasCachedRangerPositionBeforeInteraction;
 
     bool ILobbyWorldButtonInteractionTarget.IsProximityInteractable => IsWithinInteractionDistance();
     float ILobbyWorldButtonInteractionTarget.ProximitySqrDistance => GetInteractionSqrDistance();
@@ -32,8 +36,43 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
 
     private void Update()
     {
+        CacheRangerPositionBeforeInteraction();
         RefreshHighlightVisibility();
         TryHandleDirectInteraction();
+    }
+
+    private void CacheRangerPositionBeforeInteraction()
+    {
+        if (Managers.Input.Mode != Define.InputMode.Player)
+        {
+            _hasCachedRangerPositionBeforeInteraction = false;
+            return;
+        }
+
+        if (Managers.Input.WasLeftMousePressedThisFrame() || Managers.Input.WasInteractKeyPressedThisFrame())
+            return;
+
+        if (TryGetOccupant(out _))
+        {
+            _hasCachedRangerPositionBeforeInteraction = false;
+            return;
+        }
+
+        if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform) || rangerTransform == null)
+        {
+            _hasCachedRangerPositionBeforeInteraction = false;
+            return;
+        }
+
+        float triggerDistance = Mathf.Max(0f, _interactionTriggerDistance);
+        if ((rangerTransform.position - transform.position).sqrMagnitude > triggerDistance * triggerDistance)
+        {
+            _hasCachedRangerPositionBeforeInteraction = false;
+            return;
+        }
+
+        _cachedRangerPositionBeforeInteraction = rangerTransform.position;
+        _hasCachedRangerPositionBeforeInteraction = true;
     }
 
     private void RefreshHighlightVisibility()
@@ -99,6 +138,15 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
         {
             if (rangerController.IsSeatedAt(transform))
             {
+                if (_hasRangerPositionBeforeInteraction)
+                {
+                    SmoothLobbyCameraForTeleport(rangerTransform.position);
+                    rangerController.StandUp(_rangerPositionBeforeInteraction);
+                    _hasRangerPositionBeforeInteraction = false;
+                    _hasCachedRangerPositionBeforeInteraction = false;
+                    return;
+                }
+
                 rangerController.StandUp();
                 return;
             }
@@ -106,8 +154,19 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
             if (TryGetOccupant(out RangerController seatedRanger) && seatedRanger != rangerController)
                 return;
 
+            _rangerPositionBeforeInteraction = _hasCachedRangerPositionBeforeInteraction
+                ? _cachedRangerPositionBeforeInteraction
+                : rangerTransform.position;
+            _hasRangerPositionBeforeInteraction = true;
             rangerController.Sit(transform, _seatedLocalPosition, Quaternion.Euler(_seatedLocalRotation), _rangerSitAnimation);
         }
+    }
+
+    private static void SmoothLobbyCameraForTeleport(Vector3 previousRangerWorldPosition)
+    {
+        LobbyCameraController cameraController = Object.FindAnyObjectByType<LobbyCameraController>();
+        if (cameraController != null)
+            cameraController.SmoothNextTargetTeleport(previousRangerWorldPosition);
     }
 
     private bool TryGetOccupant(out RangerController occupant)
