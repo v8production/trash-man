@@ -16,6 +16,7 @@ public static class BoardDrawingSurface
     public const int Width = 1920;
     public const int Height = 1080;
 
+    private const string ClearPayload = "clear";
     private static readonly Color32 s_backgroundColor = new(255, 255, 255, 0);
     private static Texture2D s_texture;
     private static Sprite s_sprite;
@@ -58,6 +59,19 @@ public static class BoardDrawingSurface
         Changed?.Invoke();
     }
 
+    public static void Clear()
+    {
+        EnsureTexture();
+        FillBackground();
+        s_texture.Apply(false);
+        Changed?.Invoke();
+    }
+
+    public static string CreateClearPayload()
+    {
+        return ClearPayload;
+    }
+
     public static string CreatePayload(BoardTool tool, int thickness, Color32 color, IReadOnlyList<Vector2Int> points)
     {
         StringBuilder builder = new();
@@ -86,6 +100,12 @@ public static class BoardDrawingSurface
     {
         if (string.IsNullOrWhiteSpace(payload))
             return false;
+
+        if (string.Equals(payload, ClearPayload, StringComparison.Ordinal))
+        {
+            Clear();
+            return true;
+        }
 
         string[] parts = payload.Split('|');
         if (parts.Length != 4)
@@ -137,13 +157,18 @@ public static class BoardDrawingSurface
             wrapMode = TextureWrapMode.Clamp,
         };
 
+        FillBackground();
+        s_texture.Apply(false);
+
+        s_sprite = Sprite.Create(s_texture, new Rect(0f, 0f, Width, Height), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    private static void FillBackground()
+    {
         Color32[] pixels = new Color32[Width * Height];
         for (int i = 0; i < pixels.Length; i++)
             pixels[i] = s_backgroundColor;
         s_texture.SetPixels32(pixels);
-        s_texture.Apply(false);
-
-        s_sprite = Sprite.Create(s_texture, new Rect(0f, 0f, Width, Height), new Vector2(0.5f, 0.5f), 100f);
     }
 
     private static void DrawLine(Vector2Int from, Vector2Int to, int radius, Color32 color)

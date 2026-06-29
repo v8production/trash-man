@@ -178,6 +178,7 @@ public class UI_BoardMenu : UI_Menu
     private void BindButtons()
     {
         GetButton((int)Buttons.Cancel).gameObject.BindEvent(OnCancelClicked);
+        GetButton((int)Buttons.ResetButton).gameObject.BindEvent(OnResetClicked);
         BindToolButton(GetButton((int)Buttons.PenButton), BoardTool.Pen);
         BindToolButton(GetButton((int)Buttons.EraserButton), BoardTool.Eraser);
     }
@@ -429,6 +430,17 @@ public class UI_BoardMenu : UI_Menu
     private void OnCancelClicked(PointerEventData eventData)
     {
         Closed?.Invoke();
+    }
+
+    private void OnResetClicked(PointerEventData eventData)
+    {
+        _isDrawing = false;
+        _strokePoints.Clear();
+        BoardDrawingSurface.Clear();
+
+        LobbyNetworkPlayer localPlayer = LobbyNetworkPlayer.FindLocalOwnedPlayer();
+        if (localPlayer != null)
+            localPlayer.SubmitBoardStroke(BoardDrawingSurface.CreateClearPayload());
     }
 
 }
