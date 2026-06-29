@@ -23,13 +23,8 @@ public class UI_BoardMenu : UI_Menu
     {
         Cancel,
         PenButton,
-        RedButton,
-        YellowButton,
-        GreenButton,
-        BlueButton,
-        BlackButton,
-        WhiteButton,
         EraserButton,
+        ResetButton,
     }
 
     private enum Sliders
@@ -52,7 +47,6 @@ public class UI_BoardMenu : UI_Menu
     private RectTransform _boardRect;
     private Image _boardImage;
     private RectTransform _panelBackgroundRect;
-    private Image _panelBackgroundImage;
     private RectTransform _cursorRect;
     private Image _cursorImage;
     private Slider _penBorderSlider;
@@ -79,7 +73,6 @@ public class UI_BoardMenu : UI_Menu
         _boardRect = GetObject((int)GameObjects.Board).GetComponent<RectTransform>();
         _boardImage = GetObject((int)GameObjects.Board).GetComponent<Image>();
         _panelBackgroundRect = GetObject((int)GameObjects.PanelBackground).GetComponent<RectTransform>();
-        _panelBackgroundImage = GetObject((int)GameObjects.PanelBackground).GetComponent<Image>();
         _cursorImage = GetImage((int)Images.Cursor);
         _cursorRect = _cursorImage.rectTransform;
         _penBorderSlider = Get<Slider>((int)Sliders.PenBorder);
@@ -187,12 +180,6 @@ public class UI_BoardMenu : UI_Menu
         GetButton((int)Buttons.Cancel).gameObject.BindEvent(OnCancelClicked);
         BindToolButton(GetButton((int)Buttons.PenButton), BoardTool.Pen);
         BindToolButton(GetButton((int)Buttons.EraserButton), BoardTool.Eraser);
-        CacheButtonVisuals(GetButton((int)Buttons.RedButton));
-        CacheButtonVisuals(GetButton((int)Buttons.YellowButton));
-        CacheButtonVisuals(GetButton((int)Buttons.GreenButton));
-        CacheButtonVisuals(GetButton((int)Buttons.BlueButton));
-        CacheButtonVisuals(GetButton((int)Buttons.BlackButton));
-        CacheButtonVisuals(GetButton((int)Buttons.WhiteButton));
     }
 
     private void BindToolButton(Button button, BoardTool tool)

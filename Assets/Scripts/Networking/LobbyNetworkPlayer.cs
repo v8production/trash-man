@@ -403,22 +403,22 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         // Torso (Red) > RightLeg (Blue) > LeftLeg (Green) > RightArm (Yellow) > LeftArm (Black).
         if ((normalizedMask & RoleToMaskBit(Define.TitanRole.Torso)) != 0)
         {
-            color = new Color32(0xAC, 0x00, 0x00, 255); // Red (#AC0000)
+            color = new Color32(0xE0, 0x00, 0x00, 255); // Red (#E00000)
             return true;
         }
         if ((normalizedMask & RoleToMaskBit(Define.TitanRole.RightLeg)) != 0)
         {
-            color = new Color32(0x1E, 0x37, 0xB5, 255); // Blue (#1E37B5)
+            color = new Color32(0x00, 0x2A, 0xFF, 255); // Blue (#002AFF)
             return true;
         }
         if ((normalizedMask & RoleToMaskBit(Define.TitanRole.LeftLeg)) != 0)
         {
-            color = new Color32(0x42, 0xAA, 0x00, 255); // Green (#42AA00)
+            color = new Color32(0x31, 0xBE, 0x00, 255); // Green (#31BE00)
             return true;
         }
         if ((normalizedMask & RoleToMaskBit(Define.TitanRole.RightArm)) != 0)
         {
-            color = new Color32(0xF7, 0xC6, 0x00, 255); // Yellow (#F7C600)
+            color = new Color32(0xFF, 0xCC, 0x00, 255); // Yellow (#FFCC00)
             return true;
         }
         if ((normalizedMask & RoleToMaskBit(Define.TitanRole.LeftArm)) != 0)
