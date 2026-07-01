@@ -1820,9 +1820,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
   _interactionTriggerDistance: 1.5
-  _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
+  _seatedLocalPosition: {x: 0, y: 0.736, z: 0.058}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
-  _rangerSitAnimation: 6
+  _rangerSitAnimation: 7
 --- !u!114 &648468433
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7791,9 +7791,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
   _interactionTriggerDistance: 1.5
-  _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
+  _seatedLocalPosition: {x: 0, y: 0.736, z: 0.058}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
-  _rangerSitAnimation: 6
+  _rangerSitAnimation: 7
 --- !u!114 &1287639151
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8835,7 +8835,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
   _interactionTriggerDistance: 1.5
-  _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
+  _seatedLocalPosition: {x: 0, y: 0.736, z: 0.058}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
   _rangerSitAnimation: 6
 --- !u!114 &1569634072
@@ -10427,7 +10427,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChairController
   _interactionTriggerDistance: 1.5
-  _seatedLocalPosition: {x: 0, y: 1.3, z: 0}
+  _seatedLocalPosition: {x: 0, y: 0.736, z: 0.058}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
   _rangerSitAnimation: 6
 --- !u!114 &2143872170

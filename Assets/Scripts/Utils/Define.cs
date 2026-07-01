@@ -90,5 +90,6 @@ public class Define
         Emote02,
         Sit00,
         Sit01,
+        Sit02,
     }
 }
