@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 public interface ILobbyWorldButtonInteractionTarget
 {
+    bool IsInteractionFeedbackAvailable { get; }
     bool IsProximityInteractable { get; }
     float ProximitySqrDistance { get; }
     int InteractionPriority { get; }

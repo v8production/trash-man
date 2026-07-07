@@ -11,12 +11,19 @@ public class InteractionGuideController : MonoBehaviour
 
     private readonly List<RenderingLayerState> _renderingLayerStates = new();
     private UI_InteractionGuide _interactionGuide;
-    private bool _isVisible = true;
+    private ILobbyWorldButtonInteractionTarget _interactionTarget;
+    private bool _isOutlineVisible = true;
+    private bool _isGuideVisible = true;
 
     private void Awake()
     {
         CacheLayerStates();
         SetVisible(false);
+    }
+
+    private void Update()
+    {
+        RefreshVisibility();
     }
 
     private void OnDisable()
@@ -26,23 +33,37 @@ public class InteractionGuideController : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (_isVisible && _interactionGuide != null)
+        if (_isGuideVisible && _interactionGuide != null)
             _interactionGuide.SetWorldPosition(GetInteractionGuideWorldPosition());
     }
 
     public void SetVisible(bool visible)
     {
-        if (_isVisible == visible)
+        SetVisible(visible, visible);
+    }
+
+    public void SetVisible(bool outlineVisible, bool guideVisible)
+    {
+        guideVisible &= outlineVisible;
+
+        if (_isOutlineVisible == outlineVisible && _isGuideVisible == guideVisible)
             return;
 
-        _isVisible = visible;
-        for (int i = 0; i < _renderingLayerStates.Count; i++)
+        if (_isOutlineVisible != outlineVisible)
         {
-            RenderingLayerState renderingLayerState = _renderingLayerStates[i];
-            renderingLayerState.Renderer.renderingLayerMask = visible ? renderingLayerState.OriginRenderingLayerMask | OutlineRenderingLayerMask : renderingLayerState.OriginRenderingLayerMask;
+            _isOutlineVisible = outlineVisible;
+            for (int i = 0; i < _renderingLayerStates.Count; i++)
+            {
+                RenderingLayerState renderingLayerState = _renderingLayerStates[i];
+                renderingLayerState.Renderer.renderingLayerMask = outlineVisible ? renderingLayerState.OriginRenderingLayerMask | OutlineRenderingLayerMask : renderingLayerState.OriginRenderingLayerMask;
+            }
         }
 
-        SetGuideVisible(visible);
+        if (_isGuideVisible != guideVisible)
+        {
+            _isGuideVisible = guideVisible;
+            SetGuideVisible(guideVisible);
+        }
     }
 
     public bool IsWithinTriggerDistance(Transform target)
@@ -55,6 +76,44 @@ public class InteractionGuideController : MonoBehaviour
 
         float triggerDistance = Mathf.Max(0f, _outlineTriggerDistance);
         return (target.position - transform.position).sqrMagnitude <= triggerDistance * triggerDistance;
+    }
+
+    private void RefreshVisibility()
+    {
+        if (Managers.Input.Mode != Define.InputMode.Player)
+        {
+            SetVisible(false);
+            return;
+        }
+
+        ILobbyWorldButtonInteractionTarget interactionTarget = GetInteractionTarget();
+        if (interactionTarget == null || !interactionTarget.IsInteractionFeedbackAvailable)
+        {
+            SetVisible(false);
+            return;
+        }
+
+        if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform) || rangerTransform == null)
+        {
+            SetVisible(false);
+            return;
+        }
+
+        bool outlineVisible = IsWithinTriggerDistance(rangerTransform);
+        SetVisible(outlineVisible, outlineVisible && interactionTarget.IsProximityInteractable);
+    }
+
+    private ILobbyWorldButtonInteractionTarget GetInteractionTarget()
+    {
+        if (_interactionTarget != null)
+            return _interactionTarget;
+
+        _interactionTarget = GetComponent<ILobbyWorldButtonInteractionTarget>();
+        if (_interactionTarget != null)
+            return _interactionTarget;
+
+        _interactionTarget = GetComponentInChildren<ILobbyWorldButtonInteractionTarget>(true);
+        return _interactionTarget;
     }
 
     private void CacheLayerStates()

@@ -7,21 +7,15 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
     [SerializeField] private Vector3 _seatedLocalRotation = new(0f, 90f, 0f);
     [SerializeField] private Define.RangerAnimState _rangerSitAnimation = Define.RangerAnimState.Sit00;
 
-    private InteractionGuideController _interactionGuideController;
     private Vector3 _rangerPositionBeforeInteraction;
     private bool _hasRangerPositionBeforeInteraction;
     private Vector3 _cachedRangerPositionBeforeInteraction;
     private bool _hasCachedRangerPositionBeforeInteraction;
 
+    bool ILobbyWorldButtonInteractionTarget.IsInteractionFeedbackAvailable => !TryGetOccupant(out _);
     bool ILobbyWorldButtonInteractionTarget.IsProximityInteractable => IsWithinInteractionDistance();
     float ILobbyWorldButtonInteractionTarget.ProximitySqrDistance => GetInteractionSqrDistance();
     int ILobbyWorldButtonInteractionTarget.InteractionPriority => 0;
-
-    private void Awake()
-    {
-        _interactionGuideController = GetComponent<InteractionGuideController>();
-        _interactionGuideController.SetVisible(false);
-    }
 
     private void OnEnable()
     {
@@ -31,13 +25,11 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
     private void OnDisable()
     {
         LobbyWorldButtonInteractionRegistry.Unregister(this);
-        _interactionGuideController.SetVisible(false);
     }
 
     private void Update()
     {
         CacheRangerPositionBeforeInteraction();
-        RefreshHighlightVisibility();
         TryHandleDirectInteraction();
     }
 
@@ -73,25 +65,6 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
 
         _cachedRangerPositionBeforeInteraction = rangerTransform.position;
         _hasCachedRangerPositionBeforeInteraction = true;
-    }
-
-    private void RefreshHighlightVisibility()
-    {
-        _interactionGuideController.SetVisible(IsWithinOutlineDistance());
-    }
-
-    private bool IsWithinOutlineDistance()
-    {
-        if (Managers.Input.Mode != Define.InputMode.Player)
-            return false;
-
-        if (TryGetOccupant(out _))
-            return false;
-
-        if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform) || rangerTransform == null)
-            return false;
-
-        return _interactionGuideController.IsWithinTriggerDistance(rangerTransform);
     }
 
     private void TryHandleDirectInteraction()

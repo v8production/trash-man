@@ -17,10 +17,10 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private Button _boardButton;
     private Image _boardImage;
-    private InteractionGuideController _interactionGuideController;
     private bool _isBound;
     private bool _isInitialized;
 
+    bool ILobbyWorldButtonInteractionTarget.IsInteractionFeedbackAvailable => true;
     bool ILobbyWorldButtonInteractionTarget.IsProximityInteractable => IsWithinInteractionDistance();
     float ILobbyWorldButtonInteractionTarget.ProximitySqrDistance => GetInteractionSqrDistance();
     int ILobbyWorldButtonInteractionTarget.InteractionPriority => 1;
@@ -38,8 +38,6 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
         if (_boardButton == null)
             _boardButton = GetComponentInChildren<Button>(true);
 
-        _interactionGuideController = GetComponentInParent<InteractionGuideController>();
-        _interactionGuideController.SetVisible(false);
         ApplyBoardSprite();
         BindButtonIfNeeded();
         _isInitialized = true;
@@ -59,12 +57,10 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
     {
         LobbyWorldButtonInteractionRegistry.Unregister(this);
         BoardDrawingSurface.Changed -= ApplyBoardSprite;
-        _interactionGuideController.SetVisible(false);
     }
 
     private void Update()
     {
-        RefreshHighlightVisibility();
         TryHandleDirectInteraction();
     }
 
@@ -81,25 +77,6 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
 
         _boardImage.sprite = BoardDrawingSurface.Sprite;
         _boardImage.preserveAspect = true;
-    }
-
-    private void RefreshHighlightVisibility()
-    {
-        _interactionGuideController.SetVisible(IsWithinOutlineDistance());
-    }
-
-    private bool IsWithinOutlineDistance()
-    {
-        if (Managers.Input.Mode != Define.InputMode.Player)
-            return false;
-
-        if (!Managers.LobbySession.HasJoinedLobbySession)
-            return false;
-
-        if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform) || rangerTransform == null)
-            return false;
-
-        return _interactionGuideController.IsWithinTriggerDistance(rangerTransform);
     }
 
     private void BindButtonIfNeeded()

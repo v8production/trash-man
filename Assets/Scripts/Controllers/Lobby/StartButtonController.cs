@@ -4,17 +4,10 @@ public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteraction
 {
     [SerializeField] private float _interactionTriggerDistance = 1.5f;
 
-    private InteractionGuideController _interactionGuideController;
-
+    bool ILobbyWorldButtonInteractionTarget.IsInteractionFeedbackAvailable => true;
     bool ILobbyWorldButtonInteractionTarget.IsProximityInteractable => IsWithinInteractionDistance();
     float ILobbyWorldButtonInteractionTarget.ProximitySqrDistance => GetInteractionSqrDistance();
     int ILobbyWorldButtonInteractionTarget.InteractionPriority => 0;
-
-    private void Awake()
-    {
-        _interactionGuideController = GetComponentInParent<InteractionGuideController>();
-        _interactionGuideController.SetVisible(false);
-    }
 
     private void OnEnable()
     {
@@ -24,26 +17,11 @@ public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteraction
     private void OnDisable()
     {
         LobbyWorldButtonInteractionRegistry.Unregister(this);
-        _interactionGuideController.SetVisible(false);
     }
 
     private void Update()
     {
-        RefreshHighlightVisibility();
         TryHandleDirectInteraction();
-    }
-
-    private void RefreshHighlightVisibility()
-    {
-        _interactionGuideController.SetVisible(IsWithinOutlineDistance());
-    }
-
-    private bool IsWithinOutlineDistance()
-    {
-        if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform))
-            return false;
-
-        return _interactionGuideController.IsWithinTriggerDistance(rangerTransform);
     }
 
     private void TryHandleDirectInteraction()
