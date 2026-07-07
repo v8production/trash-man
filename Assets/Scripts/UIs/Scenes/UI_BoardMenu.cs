@@ -11,7 +11,7 @@ public class UI_BoardMenu : UI_Menu
     private const float BoardAspect = 16f / 9f;
     private const float BoardMargin = 10f;
     private const int MaxPayloadPoints = 180;
-    private static readonly Color32 UnassignedPenColor = new(0xE9, 0xE9, 0xE9, 255);
+    private static readonly Color32 UnassignedPenColor = Color.white;
 
     private enum GameObjects
     {
@@ -349,12 +349,8 @@ public class UI_BoardMenu : UI_Menu
     {
         Color32 nextColor = UnassignedPenColor;
         LobbyNetworkPlayer localPlayer = LobbyNetworkPlayer.FindLocalOwnedPlayer();
-        if (localPlayer != null
-            && localPlayer.TryGetSelectedRoleMask(out int roleMask)
-            && LobbyNetworkPlayer.TryResolveRangerSuitColorFromRoleMask(roleMask, out Color32 roleColor))
-        {
-            nextColor = roleColor;
-        }
+        if (localPlayer != null)
+            nextColor = LobbyNetworkPlayer.ResolveBoardPenColorFromRoleMask(localPlayer.SelectedTitanRoleMaskValue);
 
         if (!forceVisualRefresh && IsSameColor(_activeColor, nextColor))
             return;

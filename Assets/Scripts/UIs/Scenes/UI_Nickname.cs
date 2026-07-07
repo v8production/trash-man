@@ -9,7 +9,7 @@ public class UI_Nickname : UI_Base
     }
 
     private const float NicknameHorizontalPadding = 12f;
-    private const float NicknameVerticalPadding = 0.3f;
+    private const float NicknameVerticalPadding = 0.1f;
 
     private string _text;
     private Transform _target;
@@ -18,6 +18,8 @@ public class UI_Nickname : UI_Base
     private CanvasGroup _canvasGroup;
     private RectTransform _textRect;
     private TextMeshProUGUI _textComponent;
+    private Color _defaultTextColor;
+    private bool _hasDefaultTextColor;
 
     private void Awake()
     {
@@ -34,6 +36,7 @@ public class UI_Nickname : UI_Base
 
         if (_textComponent != null)
         {
+            CacheDefaultTextColor();
             _textComponent.textWrappingMode = TextWrappingModes.NoWrap;
             _textComponent.overflowMode = TextOverflowModes.Overflow;
             _textComponent.text = _text;
@@ -65,8 +68,26 @@ public class UI_Nickname : UI_Base
         }
     }
 
+    public void SetTextColor(Color color, bool useOverride)
+    {
+        if (_textComponent == null)
+            return;
+
+        CacheDefaultTextColor();
+        _textComponent.color = useOverride ? color : _defaultTextColor;
+    }
+
     public void Hide() => gameObject.SetActive(false);
     public void Show() => gameObject.SetActive(true);
+
+    private void CacheDefaultTextColor()
+    {
+        if (_hasDefaultTextColor || _textComponent == null)
+            return;
+
+        _defaultTextColor = _textComponent.color;
+        _hasDefaultTextColor = true;
+    }
 
     private void UpdateScreenPosition()
     {

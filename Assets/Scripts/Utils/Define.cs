@@ -69,6 +69,47 @@ public class Define
         RightLeg = 5
     }
 
+    public struct TitanRoleColorSet
+    {
+        public int RangerBodyRgb;
+        public int RangerFaceRgb;
+        public float RangerFaceEmissive;
+        public int BoardPenRgb;
+        public int NicknameTextRgb;
+    }
+
+    public static readonly TitanRoleColorSet DefaultTitanRoleColors = new TitanRoleColorSet
+    {
+        RangerBodyRgb = 0x808080,
+        RangerFaceRgb = 0xFFFFFF,
+        RangerFaceEmissive = 1f,
+        BoardPenRgb = 0xFFFFFF,
+        NicknameTextRgb = 0x808080,
+    };
+
+    public static readonly TitanRole[] TitanRoleColorPriority =
+    {
+        TitanRole.Torso,
+        TitanRole.RightLeg,
+        TitanRole.LeftLeg,
+        TitanRole.RightArm,
+        TitanRole.LeftArm,
+    };
+
+    public static readonly TitanRoleColorSet[] TitanRoleColorTable =
+    {
+        // Torso / Red
+        new TitanRoleColorSet { RangerBodyRgb = 0xAC0000, RangerFaceRgb = 0xAC0000, RangerFaceEmissive = 10f, BoardPenRgb = 0xE00000, NicknameTextRgb = 0xAC0000 },
+        // LeftArm / Black
+        new TitanRoleColorSet { RangerBodyRgb = 0x0F0F0F, RangerFaceRgb = 0xE9E9E9, RangerFaceEmissive = 3f, BoardPenRgb = 0x0F0F0F, NicknameTextRgb = 0x0F0F0F },
+        // RightArm / Yellow
+        new TitanRoleColorSet { RangerBodyRgb = 0xF7C600, RangerFaceRgb = 0xF7C600, RangerFaceEmissive = 3f, BoardPenRgb = 0xFFCC00, NicknameTextRgb = 0xF7C600 },
+        // LeftLeg / Green
+        new TitanRoleColorSet { RangerBodyRgb = 0x42AA00, RangerFaceRgb = 0x42AA00, RangerFaceEmissive = 10f, BoardPenRgb = 0x31BE00, NicknameTextRgb = 0x42AA00 },
+        // RightLeg / Blue
+        new TitanRoleColorSet { RangerBodyRgb = 0x1E37B5, RangerFaceRgb = 0x1E37B5, RangerFaceEmissive = 10f, BoardPenRgb = 0x002AFF, NicknameTextRgb = 0x1E37B5 },
+    };
+
     public enum GrolarAnimState
     {
         Run00,
