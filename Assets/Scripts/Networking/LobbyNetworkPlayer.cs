@@ -37,6 +37,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private bool _remoteWasWalking;
     private bool _remoteEmotionActive;
     private bool _subscribedLobbyRangerEmotion;
+    private bool _subscribedLobbyRangerSitAnimation;
 
     private bool _submittedIdentity;
 
@@ -205,6 +206,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             _subscribedLobbyRangerEmotion = false;
         }
 
+        if (_lobbyRanger != null && _subscribedLobbyRangerSitAnimation)
+        {
+            _lobbyRanger.SitAnimationRequested -= HandleLocalRangerSitAnimationRequested;
+            _subscribedLobbyRangerSitAnimation = false;
+        }
+
         if (!preserveLobbyScene && !string.IsNullOrWhiteSpace(lobbyUserId))
         {
             Managers.LobbySession.UnregisterLobbyUserObjects(lobbyUserId, _lobbyRanger, _nicknameUI);
@@ -293,6 +300,16 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         PlayRangerEmotionClientRpc(rangerAnimStateValue);
     }
 
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void SubmitRangerSitAnimationServerRpc(int rangerAnimStateValue)
+    {
+        Define.RangerAnimState rangerAnimState = (Define.RangerAnimState)rangerAnimStateValue;
+        if (!RangerController.IsSitState(rangerAnimState))
+            return;
+
+        PlayRangerSitAnimationClientRpc(rangerAnimStateValue);
+    }
+
     [Rpc(SendTo.ClientsAndHost)]
     private void PlayRangerEmotionClientRpc(int rangerAnimStateValue)
     {
@@ -301,6 +318,19 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         Define.RangerAnimState rangerAnimState = (Define.RangerAnimState)rangerAnimStateValue;
         if (!RangerController.IsEmotionState(rangerAnimState))
+            return;
+
+        PlayRemoteRangerEmotion(rangerAnimState);
+    }
+
+    [Rpc(SendTo.ClientsAndHost)]
+    private void PlayRangerSitAnimationClientRpc(int rangerAnimStateValue)
+    {
+        if (IsOwner)
+            return;
+
+        Define.RangerAnimState rangerAnimState = (Define.RangerAnimState)rangerAnimStateValue;
+        if (!RangerController.IsSitState(rangerAnimState))
             return;
 
         PlayRemoteRangerEmotion(rangerAnimState);
@@ -975,7 +1005,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
                 _lobbyRanger = cachedRanger;
                 _nicknameUI = cachedNickname;
                 _lobbyRangerCharacterController = _lobbyRanger.GetComponent<CharacterController>();
-                SubscribeLobbyRangerEmotion();
+                SubscribeLobbyRangerAnimationRequests();
                 ApplyOwnershipState();
                 UpdateLobbyRangerName();
                 ApplyRangerColorPresentation();
@@ -998,7 +1028,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         _lobbyRanger = rangerObject.GetComponent<RangerController>();
         _lobbyRangerCharacterController = rangerObject.GetComponent<CharacterController>();
-        SubscribeLobbyRangerEmotion();
+        SubscribeLobbyRangerAnimationRequests();
         ApplyOwnershipState();
         UpdateLobbyRangerName();
 
@@ -1011,13 +1041,22 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             transform.SetPositionAndRotation(initial, Quaternion.identity);
     }
 
-    private void SubscribeLobbyRangerEmotion()
+    private void SubscribeLobbyRangerAnimationRequests()
     {
-        if (!IsOwner || _lobbyRanger == null || _subscribedLobbyRangerEmotion)
+        if (!IsOwner || _lobbyRanger == null)
             return;
 
-        _lobbyRanger.EmotionRequested += HandleLocalRangerEmotionRequested;
-        _subscribedLobbyRangerEmotion = true;
+        if (!_subscribedLobbyRangerEmotion)
+        {
+            _lobbyRanger.EmotionRequested += HandleLocalRangerEmotionRequested;
+            _subscribedLobbyRangerEmotion = true;
+        }
+
+        if (!_subscribedLobbyRangerSitAnimation)
+        {
+            _lobbyRanger.SitAnimationRequested += HandleLocalRangerSitAnimationRequested;
+            _subscribedLobbyRangerSitAnimation = true;
+        }
     }
 
     private void HandleLocalRangerEmotionRequested(Define.RangerAnimState rangerAnimState)
@@ -1030,6 +1069,18 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         SubmitRangerEmotionServerRpc((int)rangerAnimState);
+    }
+
+    private void HandleLocalRangerSitAnimationRequested(Define.RangerAnimState rangerAnimState)
+    {
+        if (!IsOwner || !IsSpawned)
+            return;
+
+        BaseScene scene = Managers.Scene.CurrentScene;
+        if (scene == null || scene.SceneType != Define.Scene.Lobby)
+            return;
+
+        SubmitRangerSitAnimationServerRpc((int)rangerAnimState);
     }
 
     private void ApplyRangerColorPresentation()

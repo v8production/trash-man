@@ -830,7 +830,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
-  _rangerSitAnimation: 6
+  _rangerSitAnimations: 06000000
 --- !u!114 &201826509
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1867,7 +1867,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
-  _rangerSitAnimation: 6
+  _rangerSitAnimations: 06000000
 --- !u!114 &533889754
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1924,7 +1924,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0, y: 0.736, z: 0.058}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
-  _rangerSitAnimation: 7
+  _rangerSitAnimations: 0700000008000000
 --- !u!114 &648468433
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2153,7 +2153,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
-  _rangerSitAnimation: 6
+  _rangerSitAnimations: 06000000
 --- !u!114 &682415615
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7899,7 +7899,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0, y: 0.736, z: 0.058}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
-  _rangerSitAnimation: 7
+  _rangerSitAnimations: 0700000008000000
 --- !u!114 &1287639151
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8160,7 +8160,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
-  _rangerSitAnimation: 6
+  _rangerSitAnimations: 06000000
 --- !u!114 &1365544241
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8954,7 +8954,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0, y: 0.736, z: 0.058}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
-  _rangerSitAnimation: 6
+  _rangerSitAnimations: 0700000008000000
 --- !u!114 &1569634072
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9701,7 +9701,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0.35, y: 0, z: 0}
   _seatedLocalRotation: {x: 0, y: 90, z: 0}
-  _rangerSitAnimation: 6
+  _rangerSitAnimations: 06000000
 --- !u!114 &1835475060
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10546,7 +10546,7 @@ MonoBehaviour:
   _interactionTriggerDistance: 1.5
   _seatedLocalPosition: {x: 0, y: 0.736, z: 0.058}
   _seatedLocalRotation: {x: -90, y: 90, z: 90}
-  _rangerSitAnimation: 6
+  _rangerSitAnimations: 0700000008000000
 --- !u!114 &2143872170
 MonoBehaviour:
   m_ObjectHideFlags: 0

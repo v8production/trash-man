@@ -5,7 +5,7 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
     [SerializeField] private float _interactionTriggerDistance = 1.5f;
     [SerializeField] private Vector3 _seatedLocalPosition = new(0.35f, 0f, 0f);
     [SerializeField] private Vector3 _seatedLocalRotation = new(0f, 90f, 0f);
-    [SerializeField] private Define.RangerAnimState _rangerSitAnimation = Define.RangerAnimState.Sit00;
+    [SerializeField] private Define.RangerAnimState[] _rangerSitAnimations = { Define.RangerAnimState.Sit00 };
 
     private Vector3 _rangerPositionBeforeInteraction;
     private bool _hasRangerPositionBeforeInteraction;
@@ -131,7 +131,10 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
                 ? _cachedRangerPositionBeforeInteraction
                 : rangerTransform.position;
             _hasRangerPositionBeforeInteraction = true;
-            rangerController.Sit(transform, _seatedLocalPosition, Quaternion.Euler(_seatedLocalRotation), _rangerSitAnimation);
+            Define.RangerAnimState sitAnimation = _rangerSitAnimations != null && _rangerSitAnimations.Length > 0
+                ? _rangerSitAnimations[Random.Range(0, _rangerSitAnimations.Length)]
+                : Define.RangerAnimState.Sit00;
+            rangerController.Sit(transform, _seatedLocalPosition, Quaternion.Euler(_seatedLocalRotation), sitAnimation);
         }
     }
 
