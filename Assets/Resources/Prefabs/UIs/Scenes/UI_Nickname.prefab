@@ -67,8 +67,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uC548\uB155"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ebbfd2335e868894fb0a1027be85e295, type: 2}
-  m_sharedMaterial: {fileID: 9149068587331348997, guid: ebbfd2335e868894fb0a1027be85e295, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: e287e92f1e837ce4ab752e2858bf084f, type: 2}
+  m_sharedMaterial: {fileID: -1214830844663177210, guid: e287e92f1e837ce4ab752e2858bf084f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -109,7 +109,7 @@ MonoBehaviour:
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
-  m_TextWrappingMode: 1
+  m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
   m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
