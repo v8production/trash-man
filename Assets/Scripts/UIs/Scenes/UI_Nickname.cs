@@ -9,7 +9,7 @@ public class UI_Nickname : UI_Base
     }
 
     private const float NicknameHorizontalPadding = 12f;
-    private const float NicknameVerticalPadding = 0.1f;
+    private const float NicknameVerticalPadding = 0.135f;
 
     private string _text;
     private Transform _target;
