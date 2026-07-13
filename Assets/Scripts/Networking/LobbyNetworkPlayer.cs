@@ -155,7 +155,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             if (IsServer)
             {
                 Vector3 initial = _lobbyRanger != null ? _lobbyRanger.transform.position : GetInitialSpawnPosition();
-                Quaternion initialRotation = _lobbyRanger != null ? _lobbyRanger.transform.rotation : Quaternion.identity;
+                Quaternion initialRotation = _lobbyRanger != null ? _lobbyRanger.transform.rotation : GetInitialSpawnRotation();
                 transform.SetPositionAndRotation(initial, initialRotation);
                 if (_lobbyRanger != null)
                     _lobbyRanger.transform.SetPositionAndRotation(initial, initialRotation);
@@ -1024,7 +1024,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         rangerObject.name = $"Ranger({OwnerClientId})";
         Vector3 initial = GetInitialSpawnPosition();
-        rangerObject.transform.SetPositionAndRotation(initial, Quaternion.identity);
+        Quaternion initialRotation = GetInitialSpawnRotation();
+        rangerObject.transform.SetPositionAndRotation(initial, initialRotation);
 
         _lobbyRanger = rangerObject.GetComponent<RangerController>();
         _lobbyRangerCharacterController = rangerObject.GetComponent<CharacterController>();
@@ -1038,7 +1039,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         // On the owner, drive the network player object's transform from the visible lobby ranger.
         // This is what remote clients will replicate and follow.
         if (IsOwner)
-            transform.SetPositionAndRotation(initial, Quaternion.identity);
+            transform.SetPositionAndRotation(initial, initialRotation);
     }
 
     private void SubscribeLobbyRangerAnimationRequests()
@@ -1385,8 +1386,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     private Vector3 GetInitialSpawnPosition()
     {
-        int slot = (int)(OwnerClientId % 4);
-        return new Vector3(slot * 2.5f, 0f, 0f);
+        return new Vector3(-5.5f, 0f, -1.5f);
+    }
+
+    private Quaternion GetInitialSpawnRotation()
+    {
+        return Quaternion.Euler(0f, 90f, 0f);
     }
 
     private static int NormalizeTitanRoleValue(int roleValue)

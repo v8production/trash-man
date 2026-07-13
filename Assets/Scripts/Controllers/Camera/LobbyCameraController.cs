@@ -5,6 +5,7 @@ public class LobbyCameraController : MonoBehaviour
     private const int WallLayer = 7;
 
     [SerializeField] private Transform _target;
+    [SerializeField] private Vector3 _initialOrbitEulerAngles = new(25f, 25f, 0f);
     [SerializeField] private Vector3 _pivotOffset = new(0f, 1.6f, 0f);
     [SerializeField] private float _distance = 3f;
     [SerializeField] private float _minDistance = 1.5f;
@@ -18,7 +19,7 @@ public class LobbyCameraController : MonoBehaviour
     [SerializeField] private float _collisionDistanceScale = 0.8f;
 
     private float _yaw;
-    private float _pitch = 18f;
+    private float _pitch;
     private Vector3 _teleportSmoothedPivot;
     private bool _isSmoothingTeleport;
     private readonly int _cameraBlockMask = 1 << WallLayer;
@@ -26,6 +27,7 @@ public class LobbyCameraController : MonoBehaviour
 
     private void Awake()
     {
+        ApplyInitialOrbitAngles();
         _audioListener = GetComponent<AudioListener>();
         ClaimAudioListener();
     }
@@ -37,10 +39,6 @@ public class LobbyCameraController : MonoBehaviour
 
     private void Start()
     {
-        Vector3 euler = transform.eulerAngles;
-        _yaw = euler.y;
-        _pitch = Mathf.Clamp(euler.x, _minPitch, _maxPitch);
-
         if (_lockCursor)
         {
             Cursor.lockState = CursorLockMode.Locked;
@@ -98,6 +96,7 @@ public class LobbyCameraController : MonoBehaviour
         _target = target;
         _isSmoothingTeleport = false;
         ClaimAudioListener();
+        SnapToTarget();
     }
 
     public void SmoothNextTargetTeleport(Vector3 previousTargetWorldPosition)
@@ -120,6 +119,24 @@ public class LobbyCameraController : MonoBehaviour
 
             listener.enabled = listener == _audioListener;
         }
+    }
+
+    private void ApplyInitialOrbitAngles()
+    {
+        _yaw = _initialOrbitEulerAngles.y;
+        _pitch = Mathf.Clamp(_initialOrbitEulerAngles.x, _minPitch, _maxPitch);
+    }
+
+    private void SnapToTarget()
+    {
+        if (_target == null)
+            return;
+
+        Vector3 pivot = _target.position + _pivotOffset;
+        Quaternion orbitRotation = Quaternion.Euler(_pitch, _yaw, 0f);
+        Vector3 cameraOffset = orbitRotation * (Vector3.back * _distance);
+        transform.position = ResolveCameraPosition(pivot, cameraOffset);
+        transform.LookAt(pivot);
     }
 
     private Vector3 ResolveCameraPosition(Vector3 pivot, Vector3 cameraOffset)
