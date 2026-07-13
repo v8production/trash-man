@@ -14,7 +14,7 @@ TagManager:
   - Floor
   - Wall
   - Indoor
-  - 
+  - ceil
   - 
   - 
   - 
@@ -44,7 +44,7 @@ TagManager:
   m_RenderingLayers:
   - Default
   - Outline
-  - Light Layer 2
+  - Environment
   - Light Layer 3
   - Light Layer 4
   - Light Layer 5
