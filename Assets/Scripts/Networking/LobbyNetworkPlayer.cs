@@ -8,8 +8,28 @@ using System.Collections.Generic;
 public class LobbyNetworkPlayer : NetworkBehaviour
 {
     private const string LobbyRangerPrefabName = "Ranger";
+    private const string MainLobbyName = "Main Lobby";
+    private const string LobbyLeftGateName = "ML_GateL";
+    private const string LobbyRightGateName = "ML_GateR";
+    private const string LobbyGateSpawnClipName = "LobbyGateSpawn";
+    private const string LobbyGateSpawnClipPath = "Animations/LobbyGateSpawn";
+    private const string LobbyGateLeftDoorName = "ML_Gate_doorL";
+    private const string LobbyGateRightDoorName = "ML_Gate_doorR";
+    private const int UnassignedLobbySpawnIndex = -1;
     private const int FirstTitanRoleValue = (int)Define.TitanRole.Torso;
     private const int LastTitanRoleValue = (int)Define.TitanRole.RightLeg;
+
+    private static readonly Vector3[] LobbySpawnPositions =
+    {
+        new(-5.5f, 0f, -1.5f),
+        new(5.5f, 0f, -1.5f),
+    };
+
+    private static readonly Vector3[] LobbySpawnEulerAngles =
+    {
+        new(0f, 90f, 0f),
+        new(0f, -90f, 0f),
+    };
 
     private readonly NetworkVariable<FixedString64Bytes> _userId = new(default);
     private readonly NetworkVariable<FixedString64Bytes> _displayName = new(new FixedString64Bytes("Player"));
@@ -18,6 +38,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     // Packed RGBA (0xRRGGBBAA) for compatibility with NGO primitive NetworkVariable types.
     private readonly NetworkVariable<int> _rangerColorRgba = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<FixedString4096Bytes> _rangerFacePayload = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    private readonly NetworkVariable<int> _lobbySpawnIndex = new(UnassignedLobbySpawnIndex, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanRoleInputPayload> _roleInput = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanRigPosePayload> _titanPose = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> _titanGauge = new(100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -40,6 +61,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private bool _subscribedLobbyRangerSitAnimation;
 
     private bool _submittedIdentity;
+    private bool _playedInitialLobbyGateAnimation;
 
     public int SelectedTitanRoleMaskValue => NormalizeTitanRoleMask(_selectedTitanRoleMask.Value);
     public bool HasSelectedTitanRole => NormalizeTitanRoleMask(_selectedTitanRoleMask.Value) != 0;
@@ -114,6 +136,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         // Register lobby objects once we have them; remote identity updates will refresh via OnValueChanged.
         RefreshIdentityPresentation();
+        PlayInitialLobbyGateAnimation();
     }
 
     public override void OnNetworkSpawn()
@@ -139,9 +162,13 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _activeTitanRole.OnValueChanged += HandleActiveRoleChanged;
         _rangerColorRgba.OnValueChanged += HandleRangerColorChanged;
         _rangerFacePayload.OnValueChanged += HandleRangerFaceChanged;
+        _lobbySpawnIndex.OnValueChanged += HandleLobbySpawnIndexChanged;
 
         if (isLobbyScene)
         {
+            if (IsServer)
+                AssignRandomLobbySpawnIndex();
+
             EnsureLobbyRanger();
             ApplyOwnershipState();
             EnsureNicknameUI();
@@ -160,6 +187,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
                 if (_lobbyRanger != null)
                     _lobbyRanger.transform.SetPositionAndRotation(initial, initialRotation);
             }
+
+            PlayInitialLobbyGateAnimation();
         }
         else if (isGameScene)
         {
@@ -199,6 +228,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _activeTitanRole.OnValueChanged -= HandleActiveRoleChanged;
         _rangerColorRgba.OnValueChanged -= HandleRangerColorChanged;
         _rangerFacePayload.OnValueChanged -= HandleRangerFaceChanged;
+        _lobbySpawnIndex.OnValueChanged -= HandleLobbySpawnIndexChanged;
 
         if (_lobbyRanger != null && _subscribedLobbyRangerEmotion)
         {
@@ -960,6 +990,21 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         ApplyRangerFacePresentation();
     }
 
+    private void HandleLobbySpawnIndexChanged(int previousValue, int newValue)
+    {
+        if (_lobbyRanger == null)
+            return;
+
+        Vector3 position = GetInitialSpawnPosition();
+        Quaternion rotation = GetInitialSpawnRotation();
+        _lobbyRanger.transform.SetPositionAndRotation(position, rotation);
+
+        if (IsOwner || IsServer)
+            transform.SetPositionAndRotation(position, rotation);
+
+        PlayInitialLobbyGateAnimation();
+    }
+
     private void UpdateRuntimeObjectName()
     {
         string userId = GetLobbyUserId();
@@ -1040,6 +1085,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         // This is what remote clients will replicate and follow.
         if (IsOwner)
             transform.SetPositionAndRotation(initial, initialRotation);
+
+        PlayInitialLobbyGateAnimation();
     }
 
     private void SubscribeLobbyRangerAnimationRequests()
@@ -1384,14 +1431,152 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         return IsOwner ? Managers.Steam.LocalDisplayName : $"Player {OwnerClientId}";
     }
 
+    private void AssignRandomLobbySpawnIndex()
+    {
+        if (_lobbySpawnIndex.Value != UnassignedLobbySpawnIndex)
+            return;
+
+        _lobbySpawnIndex.Value = Random.Range(0, LobbySpawnPositions.Length);
+    }
+
+    private int GetLobbySpawnIndex()
+    {
+        int spawnIndex = _lobbySpawnIndex.Value;
+        if (spawnIndex < 0 || spawnIndex >= LobbySpawnPositions.Length)
+            return 0;
+
+        return spawnIndex;
+    }
+
+    private void PlayInitialLobbyGateAnimation()
+    {
+        if (_playedInitialLobbyGateAnimation || _lobbySpawnIndex.Value == UnassignedLobbySpawnIndex)
+            return;
+
+        BaseScene scene = Managers.Scene.CurrentScene;
+        if (scene == null || scene.SceneType != Define.Scene.Lobby)
+            return;
+
+        string gateName = GetLobbySpawnIndex() == 0 ? LobbyLeftGateName : LobbyRightGateName;
+        if (!TryFindLobbyGate(gateName, out Transform gate, out Transform leftDoor, out Transform rightDoor))
+        {
+            Debug.LogWarning($"[Lobby] Missing lobby spawn gate. gateName={gateName}");
+            return;
+        }
+
+        AnimationClip clip = Resources.Load<AnimationClip>(LobbyGateSpawnClipPath);
+        if (clip == null)
+        {
+            Debug.LogWarning($"[Lobby] Missing lobby gate spawn animation clip. path={LobbyGateSpawnClipPath}");
+            return;
+        }
+
+        Animation animation = gate.GetComponent<Animation>();
+        if (animation == null)
+            animation = gate.gameObject.AddComponent<Animation>();
+
+        AnimationClip playableClip = CreatePlayableLobbyGateClip(clip, gate, leftDoor, rightDoor);
+        animation.RemoveClip(LobbyGateSpawnClipName);
+        animation.AddClip(playableClip, LobbyGateSpawnClipName);
+
+        animation.clip = playableClip;
+        animation.Stop(LobbyGateSpawnClipName);
+        animation.Play(LobbyGateSpawnClipName, PlayMode.StopSameLayer);
+        _playedInitialLobbyGateAnimation = true;
+    }
+
+    private static AnimationClip CreatePlayableLobbyGateClip(AnimationClip sourceClip, Transform gate, Transform leftDoor, Transform rightDoor)
+    {
+        AnimationClip clip = Instantiate(sourceClip);
+        clip.legacy = true;
+        clip.wrapMode = WrapMode.Once;
+        SetDoorCurves(clip, gate, leftDoor, 1f);
+        SetDoorCurves(clip, gate, rightDoor, -1f);
+        return clip;
+    }
+
+    private static void SetDoorCurves(AnimationClip clip, Transform gate, Transform door, float openYOffset)
+    {
+        string path = GetRelativePath(gate, door);
+        Vector3 closedPosition = door.localPosition;
+        clip.SetCurve(path, typeof(Transform), "localPosition.x", CreateConstantCurve(closedPosition.x));
+        clip.SetCurve(path, typeof(Transform), "localPosition.y", CreateLobbyGateDoorCurve(closedPosition.y, closedPosition.y + openYOffset));
+        clip.SetCurve(path, typeof(Transform), "localPosition.z", CreateConstantCurve(closedPosition.z));
+    }
+
+    private static AnimationCurve CreateLobbyGateDoorCurve(float closedY, float openY)
+    {
+        return new AnimationCurve(
+            new Keyframe(0f, closedY),
+            new Keyframe(0.5f, openY),
+            new Keyframe(3.5f, openY),
+            new Keyframe(4f, closedY));
+    }
+
+    private static AnimationCurve CreateConstantCurve(float value)
+    {
+        return new AnimationCurve(
+            new Keyframe(0f, value),
+            new Keyframe(4f, value));
+    }
+
+    private static bool TryFindLobbyGate(string gateName, out Transform gate, out Transform leftDoor, out Transform rightDoor)
+    {
+        gate = null;
+        leftDoor = null;
+        rightDoor = null;
+
+        GameObject mainLobby = GameObject.Find(MainLobbyName);
+        if (mainLobby == null)
+            return false;
+
+        gate = FindChildRecursive(mainLobby.transform, gateName);
+        if (gate == null)
+            return false;
+
+        leftDoor = FindChildRecursive(gate, LobbyGateLeftDoorName);
+        rightDoor = FindChildRecursive(gate, LobbyGateRightDoorName);
+        return leftDoor != null && rightDoor != null;
+    }
+
+    private static string GetRelativePath(Transform root, Transform target)
+    {
+        string path = target.name;
+        Transform current = target.parent;
+
+        while (current != null && current != root)
+        {
+            path = current.name + "/" + path;
+            current = current.parent;
+        }
+
+        return path;
+    }
+
+    private static Transform FindChildRecursive(Transform root, string childName)
+    {
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+            if (child.name == childName)
+                return child;
+
+            Transform result = FindChildRecursive(child, childName);
+            if (result != null)
+                return result;
+        }
+
+        return null;
+    }
+
     private Vector3 GetInitialSpawnPosition()
     {
-        return new Vector3(-5.5f, 0f, -1.5f);
+        return LobbySpawnPositions[GetLobbySpawnIndex()];
     }
 
     private Quaternion GetInitialSpawnRotation()
     {
-        return Quaternion.Euler(0f, 90f, 0f);
+        return Quaternion.Euler(LobbySpawnEulerAngles[GetLobbySpawnIndex()]);
     }
 
     private static int NormalizeTitanRoleValue(int roleValue)
