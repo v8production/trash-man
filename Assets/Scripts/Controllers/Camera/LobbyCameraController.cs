@@ -3,7 +3,7 @@ using UnityEngine;
 public class LobbyCameraController : MonoBehaviour
 {
     [SerializeField] private Transform _target;
-    [SerializeField] private Vector3 _firstPersonLocalPosition = new(0f, 1.55f, 0.08f);
+    [SerializeField] private Vector3 _firstPersonLocalPosition = new(0f, 1.75f, 0.08f);
     [SerializeField] private Vector3 _initialViewEulerAngles = Vector3.zero;
     [SerializeField] private float _mouseSensitivity = 0.12f;
     [SerializeField] private float _minPitch = -75f;
