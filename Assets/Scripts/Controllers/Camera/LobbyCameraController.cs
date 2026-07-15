@@ -41,7 +41,6 @@ public class LobbyCameraController : MonoBehaviour
             return;
 
         Vector2 lookInput = Managers.Input.ReadPlayerLookInput();
-        _yaw += lookInput.x * _mouseSensitivity;
         _pitch = Mathf.Clamp(_pitch - lookInput.y * _mouseSensitivity, _minPitch, _maxPitch);
 
         transform.localPosition = _firstPersonLocalPosition;
@@ -62,12 +61,6 @@ public class LobbyCameraController : MonoBehaviour
     public void SetFirstPersonLocalPosition(Vector3 localPosition)
     {
         _firstPersonLocalPosition = localPosition;
-        SnapToTarget();
-    }
-
-    public void ResetYaw()
-    {
-        _yaw = 0f;
         SnapToTarget();
     }
 
