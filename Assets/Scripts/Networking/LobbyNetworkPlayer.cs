@@ -57,6 +57,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private bool _remoteHasLastPosition;
     private bool _remoteWasWalking;
     private bool _remoteEmotionActive;
+    private bool _remoteSeated;
     private bool _subscribedLobbyRangerEmotion;
     private bool _subscribedLobbyRangerSitAnimation;
 
@@ -363,7 +364,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (!RangerController.IsSitState(rangerAnimState))
             return;
 
-        PlayRemoteRangerEmotion(rangerAnimState);
+        PlayRemoteRangerSitAnimation(rangerAnimState);
     }
 
     [Rpc(SendTo.ClientsAndHost)]
@@ -1250,6 +1251,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (_remoteAnimator == null)
             return;
 
+        _lobbyRanger.RefreshUpperBodyEmoteLayer();
+
         Vector3 currentPos = _lobbyRanger.transform.position;
         if (!_remoteHasLastPosition)
         {
@@ -1265,6 +1268,15 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _remoteLastPosition = currentPos;
 
         bool walking = speed > 0.15f;
+
+        if (_remoteSeated)
+        {
+            if (!walking)
+                return;
+
+            _remoteSeated = false;
+            _lobbyRanger.StopUpperBodyEmoteLayer();
+        }
 
         if (_remoteEmotionActive)
         {
@@ -1295,14 +1307,40 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         if (_remoteAnimator == null)
+        _remoteAnimator = _lobbyRanger.GetComponentInChildren<Animator>(true);
+
+        if (_remoteAnimator == null)
+            return;
+
+        if (_remoteSeated)
+        {
+            _lobbyRanger.PlayReplicatedEmotion(rangerAnimState);
+            return;
+        }
+
+        _remoteEmotionActive = true;
+        _remoteWasWalking = false;
+        _lobbyRanger.PlayReplicatedEmotion(rangerAnimState);
+    }
+
+    private void PlayRemoteRangerSitAnimation(Define.RangerAnimState rangerAnimState)
+    {
+        if (_lobbyRanger == null)
+            EnsureLobbyRanger();
+
+        if (_lobbyRanger == null)
+            return;
+
+        if (_remoteAnimator == null)
             _remoteAnimator = _lobbyRanger.GetComponentInChildren<Animator>(true);
 
         if (_remoteAnimator == null)
             return;
 
-        _remoteEmotionActive = true;
+        _remoteSeated = true;
+        _remoteEmotionActive = false;
         _remoteWasWalking = false;
-        CrossFadeRemoteRanger(rangerAnimState, 0.10f, 0f);
+        _lobbyRanger.PlayReplicatedSitAnimation(rangerAnimState);
     }
 
     private void CrossFadeRemoteRanger(Define.RangerAnimState state, float transitionDuration)
