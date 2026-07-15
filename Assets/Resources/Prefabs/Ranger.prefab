@@ -83,6 +83,11 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 2035632405019164891}
   m_SourcePrefab: {fileID: 100100000, guid: 3f658cbc784bed946a534e15e33d73e0, type: 3}
+--- !u!4 &546279187434315274 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3436036755398836469, guid: 3f658cbc784bed946a534e15e33d73e0, type: 3}
+  m_PrefabInstance: {fileID: 2899059492808154879}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2664704836980761518 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 3f658cbc784bed946a534e15e33d73e0, type: 3}
@@ -128,3 +133,8 @@ MonoBehaviour:
   moveActionName: Move
   moveSpeed: 2
   rotateLerpSpeed: 12
+  firstPersonCameraTarget: {fileID: 546279187434315274}
+  _hasNetworkedColorOverride: 0
+  _rangerColor: {r: 1, g: 1, b: 1, a: 1}
+  _faceColor: {r: 1, g: 1, b: 1, a: 1}
+  _faceEmissive: 1

@@ -2,32 +2,21 @@ using UnityEngine;
 
 public class LobbyCameraController : MonoBehaviour
 {
-    private const int WallLayer = 7;
-
     [SerializeField] private Transform _target;
-    [SerializeField] private Vector3 _initialOrbitEulerAngles = new(25f, 25f, 0f);
-    [SerializeField] private Vector3 _pivotOffset = new(0f, 1.6f, 0f);
-    [SerializeField] private float _distance = 3f;
-    [SerializeField] private float _minDistance = 1.5f;
-    [SerializeField] private float _maxDistance = 6f;
-    [SerializeField] private float _scrollZoomSensitivity = 100f;
+    [SerializeField] private Vector3 _firstPersonLocalPosition = new(0f, 1.55f, 0.08f);
+    [SerializeField] private Vector3 _initialViewEulerAngles = Vector3.zero;
     [SerializeField] private float _mouseSensitivity = 0.12f;
-    [SerializeField] private float _followLerpSpeed = 12f;
-    [SerializeField] private float _minPitch = -20f;
-    [SerializeField] private float _maxPitch = 65f;
+    [SerializeField] private float _minPitch = -75f;
+    [SerializeField] private float _maxPitch = 75f;
     [SerializeField] private bool _lockCursor = false;
-    [SerializeField] private float _collisionDistanceScale = 0.8f;
 
     private float _yaw;
     private float _pitch;
-    private Vector3 _teleportSmoothedPivot;
-    private bool _isSmoothingTeleport;
-    private readonly int _cameraBlockMask = 1 << WallLayer;
     private AudioListener _audioListener;
 
     private void Awake()
     {
-        ApplyInitialOrbitAngles();
+        ApplyInitialViewAngles();
         _audioListener = GetComponent<AudioListener>();
         ClaimAudioListener();
     }
@@ -52,40 +41,11 @@ public class LobbyCameraController : MonoBehaviour
             return;
 
         Vector2 lookInput = Managers.Input.ReadPlayerLookInput();
-        float mouseX = lookInput.x;
-        float mouseY = lookInput.y;
-        float scrollY = Managers.Input.ReadMouseScrollY();
+        _yaw += lookInput.x * _mouseSensitivity;
+        _pitch = Mathf.Clamp(_pitch - lookInput.y * _mouseSensitivity, _minPitch, _maxPitch);
 
-        _distance = Mathf.Clamp(_distance - scrollY * _scrollZoomSensitivity, _minDistance, _maxDistance);
-        _yaw += mouseX * _mouseSensitivity;
-        _pitch = Mathf.Clamp(_pitch - mouseY * _mouseSensitivity, _minPitch, _maxPitch);
-
-        Quaternion orbitRotation = Quaternion.Euler(_pitch, _yaw, 0f);
-        Vector3 pivot = _target.position + _pivotOffset;
-        if (_isSmoothingTeleport)
-        {
-            _teleportSmoothedPivot = Vector3.Lerp(
-                _teleportSmoothedPivot,
-                pivot,
-                1f - Mathf.Exp(-_followLerpSpeed * Time.deltaTime)
-            );
-
-            if ((_teleportSmoothedPivot - pivot).sqrMagnitude <= 0.0001f)
-                _isSmoothingTeleport = false;
-
-            pivot = _teleportSmoothedPivot;
-        }
-
-        Vector3 cameraOffset = orbitRotation * (Vector3.back * _distance);
-        Vector3 desiredPosition = ResolveCameraPosition(pivot, cameraOffset);
-        Vector3 smoothedPosition = Vector3.Lerp(
-            transform.position,
-            desiredPosition,
-            1f - Mathf.Exp(-_followLerpSpeed * Time.deltaTime)
-        );
-
-        transform.position = ResolveCameraPosition(pivot, smoothedPosition - pivot);
-        transform.LookAt(pivot);
+        transform.localPosition = _firstPersonLocalPosition;
+        transform.localRotation = Quaternion.Euler(_pitch, _yaw, 0f);
     }
 
     public void SetTarget(Transform target)
@@ -94,15 +54,26 @@ public class LobbyCameraController : MonoBehaviour
             return;
 
         _target = target;
-        _isSmoothingTeleport = false;
+        transform.SetParent(_target, false);
         ClaimAudioListener();
+        SnapToTarget();
+    }
+
+    public void SetFirstPersonLocalPosition(Vector3 localPosition)
+    {
+        _firstPersonLocalPosition = localPosition;
+        SnapToTarget();
+    }
+
+    public void ResetYaw()
+    {
+        _yaw = 0f;
         SnapToTarget();
     }
 
     public void SmoothNextTargetTeleport(Vector3 previousTargetWorldPosition)
     {
-        _teleportSmoothedPivot = previousTargetWorldPosition + _pivotOffset;
-        _isSmoothingTeleport = true;
+        SnapToTarget();
     }
 
     private void ClaimAudioListener()
@@ -121,10 +92,10 @@ public class LobbyCameraController : MonoBehaviour
         }
     }
 
-    private void ApplyInitialOrbitAngles()
+    private void ApplyInitialViewAngles()
     {
-        _yaw = _initialOrbitEulerAngles.y;
-        _pitch = Mathf.Clamp(_initialOrbitEulerAngles.x, _minPitch, _maxPitch);
+        _yaw = _initialViewEulerAngles.y;
+        _pitch = Mathf.Clamp(_initialViewEulerAngles.x, _minPitch, _maxPitch);
     }
 
     private void SnapToTarget()
@@ -132,28 +103,7 @@ public class LobbyCameraController : MonoBehaviour
         if (_target == null)
             return;
 
-        Vector3 pivot = _target.position + _pivotOffset;
-        Quaternion orbitRotation = Quaternion.Euler(_pitch, _yaw, 0f);
-        Vector3 cameraOffset = orbitRotation * (Vector3.back * _distance);
-        transform.position = ResolveCameraPosition(pivot, cameraOffset);
-        transform.LookAt(pivot);
-    }
-
-    private Vector3 ResolveCameraPosition(Vector3 pivot, Vector3 cameraOffset)
-    {
-        if (cameraOffset.sqrMagnitude <= Define.epsilon)
-            return pivot;
-
-        RaycastHit[] hits = Physics.RaycastAll(pivot, cameraOffset, cameraOffset.magnitude, _cameraBlockMask);
-        if (hits.Length == 0)
-            return pivot + cameraOffset;
-
-        float closestDistance = cameraOffset.magnitude;
-        for (int i = 0; i < hits.Length; i++)
-        {
-            closestDistance = Mathf.Min(closestDistance, hits[i].distance);
-        }
-
-        return pivot + cameraOffset.normalized * (closestDistance * _collisionDistanceScale);
+        transform.localPosition = _firstPersonLocalPosition;
+        transform.localRotation = Quaternion.Euler(_pitch, _yaw, 0f);
     }
 }
