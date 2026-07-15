@@ -34,6 +34,9 @@ public class RangerController : MonoBehaviour
     private MaterialPropertyBlock _materialPropertyBlock;
     private Renderer[] _renderers = System.Array.Empty<Renderer>();
     private Vector2 _moveInput;
+    private Vector2 _lockedMoveInput;
+    private Vector3 _lockedMoveDirection;
+    private Vector3 _lockedFacingDirection;
     private bool _initialized;
     private bool _isSeated;
     private Define.RangerAnimState _seatedAnimState = Define.RangerAnimState.Sit00;
@@ -76,6 +79,7 @@ public class RangerController : MonoBehaviour
     private void OnDisable()
     {
         _moveInput = Vector2.zero;
+        ClearLockedMoveDirection();
         StopMovementAnimation();
     }
 
@@ -154,6 +158,7 @@ public class RangerController : MonoBehaviour
         if (_isSeated)
         {
             _moveInput = Vector2.zero;
+            ClearLockedMoveDirection();
 
             UpdateUpperBodyEmoteLayer();
 
@@ -169,6 +174,7 @@ public class RangerController : MonoBehaviour
         if (Managers.Input.Mode != Define.InputMode.Player)
         {
             _moveInput = Vector2.zero;
+            ClearLockedMoveDirection();
             StopMovementAnimation();
             return;
         }
@@ -177,11 +183,11 @@ public class RangerController : MonoBehaviour
         Define.RangerAnimState requestedEmotion;
         bool hasEmotionInput = TryGetEmotionInput(out requestedEmotion);
 
-        Vector3 moveDirection = GetCameraRelativeDirectionOnPlane(_moveInput);
+        Vector3 moveDirection = GetLockedMovementDirectionOnPlane(_moveInput);
         Vector3 planarVelocity = moveDirection * moveSpeed;
         _characterController.Move(planarVelocity * Time.deltaTime);
 
-        UpdateRotation(moveDirection);
+        UpdateRotation(_lockedFacingDirection);
 
         if (hasEmotionInput)
         {
@@ -216,6 +222,7 @@ public class RangerController : MonoBehaviour
         _isSeated = true;
         _seatedAnimState = seatedAnimState;
         _moveInput = Vector2.zero;
+        ClearLockedMoveDirection();
         transform.SetParent(chairTransform);
         transform.localPosition = localPosition;
         transform.localRotation = localRotation;
@@ -234,6 +241,7 @@ public class RangerController : MonoBehaviour
         _isSeated = false;
         _seatedAnimState = Define.RangerAnimState.Sit00;
         _moveInput = Vector2.zero;
+        ClearLockedMoveDirection();
         transform.SetParent(null, true);
         StopUpperBodyEmoteLayer();
         AnimState = Define.RangerAnimState.Idle00;
@@ -247,6 +255,7 @@ public class RangerController : MonoBehaviour
         _isSeated = false;
         _seatedAnimState = Define.RangerAnimState.Sit00;
         _moveInput = Vector2.zero;
+        ClearLockedMoveDirection();
 
         bool wasCharacterControllerEnabled = _characterController != null && _characterController.enabled;
         if (wasCharacterControllerEnabled)
@@ -606,37 +615,70 @@ public class RangerController : MonoBehaviour
         transform.rotation = Quaternion.Slerp(currentRotation, targetRotation, rotateLerpSpeed * Time.deltaTime);
     }
 
-    private Vector3 GetCameraRelativeDirectionOnPlane(Vector2 moveInput)
+    private Vector3 GetCameraForwardOnPlane()
     {
         if (_cameraController == null)
             _cameraController = GetMainCameraController();
 
         Vector3 forward;
-        Vector3 right;
 
         if (_cameraController != null)
-        {
             forward = Vector3.ProjectOnPlane(_cameraController.transform.forward, Vector3.up);
-            right = Vector3.ProjectOnPlane(_cameraController.transform.right, Vector3.up);
-        }
         else
-        {
             forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
-            right = Vector3.ProjectOnPlane(transform.right, Vector3.up);
-        }
 
+        if (forward.sqrMagnitude > 0.0001f)
+            return forward.normalized;
+
+        return Vector3.forward;
+    }
+
+    private static Vector3 GetDirectionFromFacing(Vector3 facingDirection, Vector2 moveInput)
+    {
+        Vector3 forward = Vector3.ProjectOnPlane(facingDirection, Vector3.up);
         if (forward.sqrMagnitude > 0.0001f)
             forward.Normalize();
         else
             forward = Vector3.forward;
 
-        if (right.sqrMagnitude > 0.0001f)
-            right.Normalize();
-        else
-            right = Vector3.right;
-
+        Vector3 right = Vector3.Cross(Vector3.up, forward);
         Vector3 direction = (right * moveInput.x) + (forward * moveInput.y);
         return Vector3.ClampMagnitude(direction, 1f);
+    }
+
+    private Vector3 GetLockedMovementDirectionOnPlane(Vector2 moveInput)
+    {
+        if (moveInput.sqrMagnitude <= 0.0001f)
+        {
+            ClearLockedMoveDirection();
+            return Vector3.zero;
+        }
+
+        if (_lockedMoveDirection.sqrMagnitude > 0.0001f && ApproximatelySameMoveInput(moveInput, _lockedMoveInput))
+            return _lockedMoveDirection;
+
+        _lockedMoveInput = moveInput;
+        _lockedFacingDirection = GetCameraForwardOnPlane();
+        transform.rotation = Quaternion.LookRotation(_lockedFacingDirection, Vector3.up);
+
+        if (_cameraController != null)
+            _cameraController.ResetYaw();
+
+        _lockedMoveDirection = GetDirectionFromFacing(_lockedFacingDirection, moveInput);
+
+        return _lockedMoveDirection;
+    }
+
+    private void ClearLockedMoveDirection()
+    {
+        _lockedMoveInput = Vector2.zero;
+        _lockedMoveDirection = Vector3.zero;
+        _lockedFacingDirection = Vector3.zero;
+    }
+
+    private static bool ApproximatelySameMoveInput(Vector2 current, Vector2 locked)
+    {
+        return (current - locked).sqrMagnitude <= 0.0001f;
     }
 
     private static LobbyCameraController GetMainCameraController()

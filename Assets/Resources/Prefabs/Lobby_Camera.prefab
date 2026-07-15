@@ -151,14 +151,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LobbyCameraController
   _target: {fileID: 0}
-  _initialOrbitEulerAngles: {x: 25, y: 25, z: 0}
-  _pivotOffset: {x: 0, y: 1.6, z: 0}
-  _distance: 3
-  _minDistance: 1.5
-  _maxDistance: 6
-  _scrollZoomSensitivity: 100
+  _firstPersonLocalPosition: {x: 0, y: 1.55, z: 0.08}
+  _initialViewEulerAngles: {x: 0, y: 0, z: 0}
   _mouseSensitivity: 0.12
-  _followLerpSpeed: 12
-  _minPitch: -20
-  _maxPitch: 65
+  _minPitch: -75
+  _maxPitch: 75
   _lockCursor: 0
