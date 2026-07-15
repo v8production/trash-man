@@ -1514,7 +1514,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             animation = gate.gameObject.AddComponent<Animation>();
 
         AnimationClip playableClip = CreatePlayableLobbyGateClip(clip, gate, leftDoor, rightDoor);
-        animation.RemoveClip(LobbyGateSpawnClipName);
+        if (animation.GetClip(LobbyGateSpawnClipName) != null)
+            animation.RemoveClip(LobbyGateSpawnClipName);
+
         animation.AddClip(playableClip, LobbyGateSpawnClipName);
 
         animation.clip = playableClip;
