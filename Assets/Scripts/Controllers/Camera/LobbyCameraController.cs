@@ -4,6 +4,7 @@ public class LobbyCameraController : MonoBehaviour
 {
     [SerializeField] private Transform _target;
     [SerializeField] private Vector3 _firstPersonLocalPosition = new(0f, 1.75f, 0.08f);
+    [SerializeField] private Vector3 _seatedFirstPersonLocalPosition = new(0f, 1.55f, -0.2f);
     [SerializeField] private Vector3 _initialViewEulerAngles = Vector3.zero;
     [SerializeField] private float _mouseSensitivity = 0.12f;
     [SerializeField] private float _minPitch = -75f;
@@ -13,6 +14,7 @@ public class LobbyCameraController : MonoBehaviour
     private float _yaw;
     private float _pitch;
     private AudioListener _audioListener;
+    private RangerController _targetRanger;
 
     private void Awake()
     {
@@ -41,9 +43,15 @@ public class LobbyCameraController : MonoBehaviour
             return;
 
         Vector2 lookInput = Managers.Input.ReadPlayerLookInput();
+        bool isTargetSeated = IsTargetSeated();
+        if (isTargetSeated)
+            _yaw += lookInput.x * _mouseSensitivity;
+        else
+            _yaw = _initialViewEulerAngles.y;
+
         _pitch = Mathf.Clamp(_pitch - lookInput.y * _mouseSensitivity, _minPitch, _maxPitch);
 
-        transform.localPosition = _firstPersonLocalPosition;
+        transform.localPosition = GetCurrentLocalPosition();
         transform.localRotation = Quaternion.Euler(_pitch, _yaw, 0f);
     }
 
@@ -53,18 +61,12 @@ public class LobbyCameraController : MonoBehaviour
             return;
 
         _target = target;
+        _targetRanger = _target != null ? _target.GetComponent<RangerController>() : null;
         transform.SetParent(_target, false);
         ClaimAudioListener();
         SnapToTarget();
     }
-
-    public void SetFirstPersonLocalPosition(Vector3 localPosition)
-    {
-        _firstPersonLocalPosition = localPosition;
-        SnapToTarget();
-    }
-
-    public void SmoothNextTargetTeleport(Vector3 previousTargetWorldPosition)
+    public void SmoothNextTargetTeleport()
     {
         SnapToTarget();
     }
@@ -96,7 +98,20 @@ public class LobbyCameraController : MonoBehaviour
         if (_target == null)
             return;
 
-        transform.localPosition = _firstPersonLocalPosition;
+        transform.localPosition = GetCurrentLocalPosition();
         transform.localRotation = Quaternion.Euler(_pitch, _yaw, 0f);
+    }
+
+    private Vector3 GetCurrentLocalPosition()
+    {
+        if (IsTargetSeated())
+            return _seatedFirstPersonLocalPosition;
+
+        return _firstPersonLocalPosition;
+    }
+
+    private bool IsTargetSeated()
+    {
+        return _targetRanger != null && RangerController.IsSitState(_targetRanger.AnimState);
     }
 }

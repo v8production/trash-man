@@ -24,7 +24,6 @@ public class LobbyScene : BaseScene
     private const string LeftKioskScreenParentName = "ML_roleconsoleL";
     private const string RightKioskScreenParentName = "ML_roleconsoleR";
     private const string BoardParentName = "ML_board";
-    private static readonly Vector3 s_lobbyCameraFirstPersonLocalPosition = new(0f, 1.75f, 0.08f);
 
     private static readonly Vector3 s_mainScreenLocalPosition = new(0f, 8.3f, 3f);
     private static readonly Quaternion s_mainScreenLocalRotation = Quaternion.Euler(-90f, 0f, 180f);
@@ -458,12 +457,9 @@ public class LobbyScene : BaseScene
         if (_localLobbyCamera == null)
         {
             GameObject cameraObject = Managers.Resource.Instantiate(LobbyCameraPrefabName, localRanger);
-            cameraObject.transform.localPosition = s_lobbyCameraFirstPersonLocalPosition;
-            cameraObject.transform.localRotation = Quaternion.identity;
             _localLobbyCamera = cameraObject.GetComponent<LobbyCameraController>();
         }
 
-        _localLobbyCamera.SetFirstPersonLocalPosition(s_lobbyCameraFirstPersonLocalPosition);
         _localLobbyCamera.SetTarget(localRanger);
     }
 

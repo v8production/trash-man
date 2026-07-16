@@ -152,6 +152,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LobbyCameraController
   _target: {fileID: 0}
   _firstPersonLocalPosition: {x: 0, y: 1.75, z: 0.08}
+  _seatedFirstPersonLocalPosition: {x: 0, y: 1.45, z: -0.35}
   _initialViewEulerAngles: {x: 0, y: 0, z: 0}
   _mouseSensitivity: 0.12
   _minPitch: -75

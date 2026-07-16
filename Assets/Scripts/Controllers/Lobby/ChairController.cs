@@ -113,7 +113,7 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
             {
                 if (_hasRangerPositionBeforeInteraction)
                 {
-                    SmoothLobbyCameraForTeleport(rangerTransform.position);
+                    SmoothLobbyCameraForTeleport();
                     rangerController.StandUp(_rangerPositionBeforeInteraction);
                     _hasRangerPositionBeforeInteraction = false;
                     _hasCachedRangerPositionBeforeInteraction = false;
@@ -138,11 +138,11 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
         }
     }
 
-    private static void SmoothLobbyCameraForTeleport(Vector3 previousRangerWorldPosition)
+    private static void SmoothLobbyCameraForTeleport()
     {
-        LobbyCameraController cameraController = Object.FindAnyObjectByType<LobbyCameraController>();
+        LobbyCameraController cameraController = FindAnyObjectByType<LobbyCameraController>();
         if (cameraController != null)
-            cameraController.SmoothNextTargetTeleport(previousRangerWorldPosition);
+            cameraController.SmoothNextTargetTeleport();
     }
 
     private bool TryGetOccupant(out RangerController occupant)
