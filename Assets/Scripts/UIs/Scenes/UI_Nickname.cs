@@ -8,12 +8,14 @@ public class UI_Nickname : UI_Base
         Nickname,
     }
 
-    private const float NicknameHorizontalPadding = 12f;
-    private const float NicknameVerticalPadding = 0.135f;
+    private const float WidthPadding = 12f;
+    private const float StandYPadding = 0.135f;
+    private const float SitYPadding = -0.2f;
 
     private string _text;
     private Transform _target;
     private CharacterController _targetCharacterController;
+    private RangerController _targetRanger;
     private RectTransform _parentRectTransform;
     private CanvasGroup _canvasGroup;
     private RectTransform _textRect;
@@ -55,6 +57,7 @@ public class UI_Nickname : UI_Base
         CacheComponents();
         _target = target;
         _targetCharacterController = _target.GetComponent<CharacterController>();
+        _targetRanger = _target.GetComponent<RangerController>();
         UpdateScreenPosition();
     }
 
@@ -119,8 +122,13 @@ public class UI_Nickname : UI_Base
     {
         float controllerTop = _targetCharacterController.center.y + _targetCharacterController.height * 0.5f;
         Vector3 localPosition = _targetCharacterController.center;
-        localPosition.y = controllerTop + NicknameVerticalPadding;
+        localPosition.y = controllerTop + GetYPadding();
         return _target.TransformPoint(localPosition);
+    }
+
+    private float GetYPadding()
+    {
+        return _targetRanger != null && _targetRanger.IsSeated ? SitYPadding : StandYPadding;
     }
 
     private void CacheComponents()
@@ -151,7 +159,7 @@ public class UI_Nickname : UI_Base
         _textComponent.ForceMeshUpdate();
         float preferredWidth = Mathf.Max(0f, _textComponent.preferredWidth);
         Vector2 size = _textRect.sizeDelta;
-        size.x = preferredWidth + NicknameHorizontalPadding;
+        size.x = preferredWidth + WidthPadding;
         _textRect.sizeDelta = size;
     }
 }
