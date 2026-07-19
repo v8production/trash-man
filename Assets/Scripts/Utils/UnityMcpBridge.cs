@@ -19,7 +19,7 @@ using UnityEngine.SceneManagement;
 [InitializeOnLoad]
 public static class UnityMcpBridge
 {
-    private const int Port = 17777;
+    private const int Port = 31080;
     private const string MenuPath = "Tools/OpenCode/Unity MCP Bridge/Restart";
 
     private static TcpListener listener;
