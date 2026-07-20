@@ -142,8 +142,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Loading Lobby
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 4d9646250f1c4e448a12a6578fe30f4f, type: 2}
+  m_sharedMaterial: {fileID: -2627801204937422189, guid: 4d9646250f1c4e448a12a6578fe30f4f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
