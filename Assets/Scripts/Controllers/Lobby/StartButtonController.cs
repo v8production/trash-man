@@ -4,20 +4,18 @@ public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteraction
 {
     [SerializeField] private float _interactionTriggerDistance = 1.5f;
 
+    private InteractionGuideController _interactionGuideController;
+
     bool ILobbyWorldButtonInteractionTarget.IsInteractionFeedbackAvailable => true;
     bool ILobbyWorldButtonInteractionTarget.IsProximityInteractable => IsWithinInteractionDistance();
-    float ILobbyWorldButtonInteractionTarget.ProximitySqrDistance => GetInteractionSqrDistance();
-    int ILobbyWorldButtonInteractionTarget.InteractionPriority => 0;
 
-    private void OnEnable()
+    private void Awake()
     {
-        LobbyWorldButtonInteractionRegistry.Register(this);
+        _interactionGuideController = GetComponent<InteractionGuideController>();
+        if (_interactionGuideController == null)
+            _interactionGuideController = GetComponentInParent<InteractionGuideController>();
     }
 
-    private void OnDisable()
-    {
-        LobbyWorldButtonInteractionRegistry.Unregister(this);
-    }
 
     private void Update()
     {
@@ -29,7 +27,7 @@ public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteraction
         if (Managers.Input.Mode != Define.InputMode.Player)
             return;
 
-        if (!LobbyWorldButtonInteractionRegistry.CanInteract(this))
+        if (_interactionGuideController == null || !_interactionGuideController.CanInteractFromLocalView())
             return;
 
         if (!Managers.Input.WasLeftMousePressedThisFrame() && !Managers.Input.WasInteractKeyPressedThisFrame())
@@ -45,14 +43,6 @@ public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteraction
 
         float triggerDistance = Mathf.Max(0f, _interactionTriggerDistance);
         return (rangerTransform.position - transform.position).sqrMagnitude <= triggerDistance * triggerDistance;
-    }
-
-    private float GetInteractionSqrDistance()
-    {
-        if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform))
-            return float.PositiveInfinity;
-
-        return (rangerTransform.position - transform.position).sqrMagnitude;
     }
 
     private void HandleStartButtonClicked()

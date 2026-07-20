@@ -239,6 +239,11 @@ public class RangerController : MonoBehaviour
 
     public void StandUp(Vector3 worldPosition)
     {
+        StandUp(worldPosition, transform.rotation);
+    }
+
+    public void StandUp(Vector3 worldPosition, Quaternion worldRotation)
+    {
         if (!_isSeated)
             return;
 
@@ -252,6 +257,7 @@ public class RangerController : MonoBehaviour
 
         transform.SetParent(null, true);
         transform.position = worldPosition;
+        transform.rotation = worldRotation;
 
         if (wasCharacterControllerEnabled)
             _characterController.enabled = true;

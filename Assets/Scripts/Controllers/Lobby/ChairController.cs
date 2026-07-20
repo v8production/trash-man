@@ -8,23 +8,23 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
     [SerializeField] private Define.RangerAnimState[] _rangerSitAnimations = { Define.RangerAnimState.Sit00 };
 
     private Vector3 _rangerPositionBeforeInteraction;
+    private Quaternion _rangerRotationBeforeInteraction;
+    private LobbyCameraController.ViewRotation _cameraViewRotationBeforeInteraction;
     private bool _hasRangerPositionBeforeInteraction;
     private Vector3 _cachedRangerPositionBeforeInteraction;
+    private Quaternion _cachedRangerRotationBeforeInteraction;
+    private LobbyCameraController.ViewRotation _cachedCameraViewRotationBeforeInteraction;
     private bool _hasCachedRangerPositionBeforeInteraction;
+    private InteractionGuideController _interactionGuideController;
 
-    bool ILobbyWorldButtonInteractionTarget.IsInteractionFeedbackAvailable => !TryGetOccupant(out _);
+    bool ILobbyWorldButtonInteractionTarget.IsInteractionFeedbackAvailable => IsLocalRangerSeatedAtThis() || !TryGetOccupant(out _);
     bool ILobbyWorldButtonInteractionTarget.IsProximityInteractable => IsWithinInteractionDistance();
-    float ILobbyWorldButtonInteractionTarget.ProximitySqrDistance => GetInteractionSqrDistance();
-    int ILobbyWorldButtonInteractionTarget.InteractionPriority => 0;
 
-    private void OnEnable()
+    private void Awake()
     {
-        LobbyWorldButtonInteractionRegistry.Register(this);
-    }
-
-    private void OnDisable()
-    {
-        LobbyWorldButtonInteractionRegistry.Unregister(this);
+        _interactionGuideController = GetComponent<InteractionGuideController>();
+        if (_interactionGuideController == null)
+            _interactionGuideController = GetComponentInParent<InteractionGuideController>();
     }
 
     private void Update()
@@ -64,6 +64,8 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
         }
 
         _cachedRangerPositionBeforeInteraction = rangerTransform.position;
+        _cachedRangerRotationBeforeInteraction = rangerTransform.rotation;
+        _cachedCameraViewRotationBeforeInteraction = CaptureLobbyCameraViewRotation();
         _hasCachedRangerPositionBeforeInteraction = true;
     }
 
@@ -72,7 +74,15 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
         if (Managers.Input.Mode != Define.InputMode.Player)
             return;
 
-        if (!LobbyWorldButtonInteractionRegistry.CanInteract(this))
+        if (IsLocalRangerSeatedAtThis())
+        {
+            if (Managers.Input.WasLeftMousePressedThisFrame() || Managers.Input.WasInteractKeyPressedThisFrame())
+                HandleChairClicked();
+
+            return;
+        }
+
+        if (_interactionGuideController == null || !_interactionGuideController.CanInteractFromLocalView())
             return;
 
         if (!Managers.Input.WasLeftMousePressedThisFrame() && !Managers.Input.WasInteractKeyPressedThisFrame())
@@ -89,16 +99,21 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
         if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform) || rangerTransform == null)
             return false;
 
+        RangerController rangerController = rangerTransform.GetComponent<RangerController>();
+        if (rangerController != null && rangerController.IsSeatedAt(transform))
+            return true;
+
         float triggerDistance = Mathf.Max(0f, _interactionTriggerDistance);
         return (rangerTransform.position - transform.position).sqrMagnitude <= triggerDistance * triggerDistance;
     }
 
-    private float GetInteractionSqrDistance()
+    private bool IsLocalRangerSeatedAtThis()
     {
         if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform) || rangerTransform == null)
-            return float.PositiveInfinity;
+            return false;
 
-        return (rangerTransform.position - transform.position).sqrMagnitude;
+        RangerController rangerController = rangerTransform.GetComponent<RangerController>();
+        return rangerController != null && rangerController.IsSeatedAt(transform);
     }
 
     private void HandleChairClicked()
@@ -113,8 +128,8 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
             {
                 if (_hasRangerPositionBeforeInteraction)
                 {
-                    SmoothLobbyCameraForTeleport();
-                    rangerController.StandUp(_rangerPositionBeforeInteraction);
+                    rangerController.StandUp(_rangerPositionBeforeInteraction, _rangerRotationBeforeInteraction);
+                    RestoreLobbyCameraViewRotation(_cameraViewRotationBeforeInteraction);
                     _hasRangerPositionBeforeInteraction = false;
                     _hasCachedRangerPositionBeforeInteraction = false;
                     return;
@@ -130,6 +145,12 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
             _rangerPositionBeforeInteraction = _hasCachedRangerPositionBeforeInteraction
                 ? _cachedRangerPositionBeforeInteraction
                 : rangerTransform.position;
+            _rangerRotationBeforeInteraction = _hasCachedRangerPositionBeforeInteraction
+                ? _cachedRangerRotationBeforeInteraction
+                : rangerTransform.rotation;
+            _cameraViewRotationBeforeInteraction = _hasCachedRangerPositionBeforeInteraction
+                ? _cachedCameraViewRotationBeforeInteraction
+                : CaptureLobbyCameraViewRotation();
             _hasRangerPositionBeforeInteraction = true;
             Define.RangerAnimState sitAnimation = _rangerSitAnimations != null && _rangerSitAnimations.Length > 0
                 ? _rangerSitAnimations[Random.Range(0, _rangerSitAnimations.Length)]
@@ -138,11 +159,22 @@ public class ChairController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
         }
     }
 
-    private static void SmoothLobbyCameraForTeleport()
+    private static LobbyCameraController.ViewRotation CaptureLobbyCameraViewRotation()
     {
         LobbyCameraController cameraController = FindAnyObjectByType<LobbyCameraController>();
-        if (cameraController != null)
-            cameraController.SmoothNextTargetTeleport();
+        if (cameraController == null)
+            return default;
+
+        return cameraController.CaptureViewRotation();
+    }
+
+    private static void RestoreLobbyCameraViewRotation(LobbyCameraController.ViewRotation viewRotation)
+    {
+        LobbyCameraController cameraController = FindAnyObjectByType<LobbyCameraController>();
+        if (cameraController == null)
+            return;
+
+        cameraController.RestoreViewRotation(viewRotation);
     }
 
     private bool TryGetOccupant(out RangerController occupant)

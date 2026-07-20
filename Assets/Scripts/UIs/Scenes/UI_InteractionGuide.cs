@@ -28,17 +28,10 @@ public class UI_InteractionGuide : UI_Base
         Managers.UI.ShowCanvas(gameObject, false);
     }
 
-    public void SetWorldPosition(Vector3 worldPosition)
+    public void SetScreenCenter()
     {
         Init();
-        if (Camera.main == null)
-            return;
-
-        Vector3 screenPosition = Camera.main.WorldToScreenPoint(worldPosition);
-        if (screenPosition.z <= 0f)
-            return;
-
-        _interactionGuideRectTransform.position = new Vector3(screenPosition.x, screenPosition.y, 0f);
+        _interactionGuideRectTransform.anchoredPosition = Vector2.zero;
     }
 
     public void Hide() => gameObject.SetActive(false);

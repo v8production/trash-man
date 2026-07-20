@@ -71,6 +71,18 @@ public class LobbyCameraController : MonoBehaviour
         SnapToTarget();
     }
 
+    public ViewRotation CaptureViewRotation()
+    {
+        return new ViewRotation(_yaw, _pitch);
+    }
+
+    public void RestoreViewRotation(ViewRotation viewRotation)
+    {
+        _yaw = viewRotation.Yaw;
+        _pitch = Mathf.Clamp(viewRotation.Pitch, _minPitch, _maxPitch);
+        SnapToTarget();
+    }
+
     private void ClaimAudioListener()
     {
         if (_audioListener == null)
@@ -113,5 +125,17 @@ public class LobbyCameraController : MonoBehaviour
     private bool IsTargetSeated()
     {
         return _targetRanger != null && RangerController.IsSitState(_targetRanger.AnimState);
+    }
+
+    public readonly struct ViewRotation
+    {
+        public readonly float Yaw;
+        public readonly float Pitch;
+
+        public ViewRotation(float yaw, float pitch)
+        {
+            Yaw = yaw;
+            Pitch = pitch;
+        }
     }
 }

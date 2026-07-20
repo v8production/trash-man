@@ -17,13 +17,12 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
 
     private Button _boardButton;
     private Image _boardImage;
+    private InteractionGuideController _interactionGuideController;
     private bool _isBound;
     private bool _isInitialized;
 
     bool ILobbyWorldButtonInteractionTarget.IsInteractionFeedbackAvailable => true;
     bool ILobbyWorldButtonInteractionTarget.IsProximityInteractable => IsWithinInteractionDistance();
-    float ILobbyWorldButtonInteractionTarget.ProximitySqrDistance => GetInteractionSqrDistance();
-    int ILobbyWorldButtonInteractionTarget.InteractionPriority => 1;
 
     public override void Init()
     {
@@ -38,6 +37,10 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
         if (_boardButton == null)
             _boardButton = GetComponentInChildren<Button>(true);
 
+        _interactionGuideController = GetComponent<InteractionGuideController>();
+        if (_interactionGuideController == null)
+            _interactionGuideController = GetComponentInParent<InteractionGuideController>();
+
         ApplyBoardSprite();
         BindButtonIfNeeded();
         _isInitialized = true;
@@ -48,14 +51,12 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
         if (!_isInitialized)
             Init();
 
-        LobbyWorldButtonInteractionRegistry.Register(this);
         BoardDrawingSurface.Changed += ApplyBoardSprite;
         ApplyBoardSprite();
     }
 
     private void OnDisable()
     {
-        LobbyWorldButtonInteractionRegistry.Unregister(this);
         BoardDrawingSurface.Changed -= ApplyBoardSprite;
     }
 
@@ -67,7 +68,6 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
     private void OnDestroy()
     {
         UnbindButton();
-        LobbyWorldButtonInteractionRegistry.Unregister(this);
     }
 
     private void ApplyBoardSprite()
@@ -128,18 +128,10 @@ public class UI_Board : UI_Base, ILobbyWorldButtonInteractionTarget
         if (Managers.Input.Mode != Define.InputMode.Player)
             return;
 
-        if (!LobbyWorldButtonInteractionRegistry.CanInteract(this))
+        if (_interactionGuideController == null || !_interactionGuideController.CanInteractFromLocalView())
             return;
 
         if (Managers.Scene.CurrentScene is LobbyScene lobbyScene)
             lobbyScene.RequestShowBoardMenu();
-    }
-
-    private float GetInteractionSqrDistance()
-    {
-        if (!Managers.LobbySession.TryGetLocalRangerTransform(out Transform rangerTransform) || rangerTransform == null)
-            return float.PositiveInfinity;
-
-        return (rangerTransform.position - transform.position).sqrMagnitude;
     }
 }

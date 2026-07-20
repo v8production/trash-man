@@ -7,8 +7,6 @@ public class InteractionGuideController : MonoBehaviour
     private const string InteractionGuidePrefabName = "UI_InteractionGuide";
 
     [SerializeField] private float _outlineTriggerDistance = 5.0f;
-    [SerializeField] private Vector3 _interactionGuideLocalPosition = Vector3.zero;
-
     private readonly List<RenderingLayerState> _renderingLayerStates = new();
     private UI_InteractionGuide _interactionGuide;
     private ILobbyWorldButtonInteractionTarget _interactionTarget;
@@ -34,7 +32,7 @@ public class InteractionGuideController : MonoBehaviour
     private void LateUpdate()
     {
         if (_isGuideVisible && _interactionGuide != null)
-            _interactionGuide.SetWorldPosition(GetInteractionGuideWorldPosition());
+            _interactionGuide.SetScreenCenter();
     }
 
     public void SetVisible(bool visible)
@@ -78,6 +76,18 @@ public class InteractionGuideController : MonoBehaviour
         return (target.position - transform.position).sqrMagnitude <= triggerDistance * triggerDistance;
     }
 
+    public bool CanInteractFromLocalView()
+    {
+        if (Managers.Input.Mode != Define.InputMode.Player)
+            return false;
+
+        ILobbyWorldButtonInteractionTarget interactionTarget = GetInteractionTarget();
+        if (interactionTarget == null || !interactionTarget.IsInteractionFeedbackAvailable || !interactionTarget.IsProximityInteractable)
+            return false;
+
+        return IsHitByCenterCameraRay();
+    }
+
     private void RefreshVisibility()
     {
         if (Managers.Input.Mode != Define.InputMode.Player)
@@ -100,7 +110,46 @@ public class InteractionGuideController : MonoBehaviour
         }
 
         bool outlineVisible = IsWithinTriggerDistance(rangerTransform);
-        SetVisible(outlineVisible, outlineVisible && interactionTarget.IsProximityInteractable);
+        SetVisible(outlineVisible, outlineVisible && interactionTarget.IsProximityInteractable && IsHitByCenterCameraRay());
+    }
+
+    private bool IsHitByCenterCameraRay()
+    {
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null)
+            return false;
+
+        Ray ray = mainCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        float triggerDistance = Mathf.Max(0f, _outlineTriggerDistance);
+        RaycastHit[] hits = Physics.RaycastAll(ray, triggerDistance, ~0, QueryTriggerInteraction.Collide);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            if (IsOwnTransform(hits[i].transform))
+                return true;
+        }
+
+        for (int i = 0; i < _renderingLayerStates.Count; i++)
+        {
+            Bounds bounds = _renderingLayerStates[i].Renderer.bounds;
+            if (bounds.IntersectRay(ray, out float distance) && distance <= triggerDistance)
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool IsOwnTransform(Transform hitTransform)
+    {
+        if (hitTransform == null)
+            return false;
+
+        if (hitTransform == transform || hitTransform.IsChildOf(transform))
+            return true;
+
+        if (hitTransform.TryGetComponent(out InteractionGuideController hitController) && hitController == this)
+            return true;
+
+        return hitTransform.GetComponentInParent<InteractionGuideController>() == this;
     }
 
     private ILobbyWorldButtonInteractionTarget GetInteractionTarget()
@@ -133,6 +182,7 @@ public class InteractionGuideController : MonoBehaviour
         if (visible)
         {
             EnsureInteractionGuide();
+            _interactionGuide.SetScreenCenter();
             _interactionGuide.Show();
             return;
         }
@@ -147,12 +197,7 @@ public class InteractionGuideController : MonoBehaviour
             return;
 
         _interactionGuide = Managers.UI.CreateSceneUI<UI_InteractionGuide>(InteractionGuidePrefabName);
-        _interactionGuide.SetWorldPosition(GetInteractionGuideWorldPosition());
-    }
-
-    private Vector3 GetInteractionGuideWorldPosition()
-    {
-        return transform.TransformPoint(_interactionGuideLocalPosition);
+        _interactionGuide.SetScreenCenter();
     }
 
     private readonly struct RenderingLayerState
@@ -167,4 +212,10 @@ public class InteractionGuideController : MonoBehaviour
         }
     }
 
+}
+
+public interface ILobbyWorldButtonInteractionTarget
+{
+    bool IsInteractionFeedbackAvailable { get; }
+    bool IsProximityInteractable { get; }
 }
