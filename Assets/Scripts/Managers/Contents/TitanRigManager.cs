@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public sealed class TitanRigManager
 {
@@ -155,14 +156,27 @@ public sealed class TitanRigManager
         return runtime.GetLegState(left);
     }
 
-    public void SetLegState(bool left, TitanLegControlState state)
+    public void TickLegSystem(
+        in TitanLegInputCommand leftCommand,
+        in TitanLegInputCommand rightCommand,
+        float deltaTime)
     {
         if (!EnsureBoundFromScene())
         {
             return;
         }
 
-        runtime.SetLegState(left, state);
+        runtime.TickLegSystem(leftCommand, rightCommand, deltaTime);
+    }
+
+    public float GetFootGroundHeight(bool left)
+    {
+        if (!EnsureBoundFromScene())
+        {
+            return 0f;
+        }
+
+        return runtime.GetFootGroundHeight(left);
     }
 
     public void ApplyTorsoPose()
@@ -185,16 +199,6 @@ public sealed class TitanRigManager
         runtime.ApplyArmPose(left);
     }
 
-    public void ApplyLegPose(bool left)
-    {
-        if (!EnsureBoundFromScene())
-        {
-            return;
-        }
-
-        runtime.ApplyLegPose(left);
-    }
-
     public bool TryGetPoseSnapshot(out TitanRigPoseSnapshot snapshot)
     {
         snapshot = default;
@@ -211,6 +215,16 @@ public sealed class TitanRigManager
         runtime.ApplyMovementRootPose(worldPosition, worldRotation, zeroVelocities);
     }
 
+    public void ApplyMovementRootBaseRotation()
+    {
+        if (!EnsureBoundFromScene())
+        {
+            return;
+        }
+
+        runtime.ApplyMovementRootBaseRotation();
+    }
+
     public void ApplyPoseSnapshot(in TitanRigPoseSnapshot snapshot)
     {
         if (!EnsureBoundFromScene())
@@ -219,6 +233,16 @@ public sealed class TitanRigManager
         }
 
         runtime.ApplyPoseSnapshot(snapshot);
+    }
+
+    public void SetRemotePhysicsOverride(bool enabled)
+    {
+        if (!EnsureBoundFromScene())
+        {
+            return;
+        }
+
+        runtime.SetRemotePhysicsOverride(enabled);
     }
 }
 
@@ -243,6 +267,7 @@ public struct TitanRigPoseSnapshot
     public bool HasLeftKnee;
     public Quaternion LeftKneeRotation;
     public bool HasLeftFoot;
+    public Vector3 LeftFootPosition;
     public Quaternion LeftFootRotation;
 
     public bool HasRightHip;
@@ -250,6 +275,7 @@ public struct TitanRigPoseSnapshot
     public bool HasRightKnee;
     public Quaternion RightKneeRotation;
     public bool HasRightFoot;
+    public Vector3 RightFootPosition;
     public Quaternion RightFootRotation;
 
     public bool HasSpine;
@@ -267,8 +293,32 @@ public struct TitanArmControlState
 [System.Serializable]
 public struct TitanLegControlState
 {
-    public float HipYaw;
-    public float HipRoll;
-    public float KneeRoll;
-    public float AnkleRoll;
+    public bool Initialized;
+
+    [FormerlySerializedAs("WorldFootTarget")]
+    public Vector3 DesiredGroundTarget;
+
+    public float FootLift;
+    public float FootLiftTarget;
+    public float FootLiftSmoothVelocity;
+    public float FootLiftFallVelocity;
+    public TitanLegIkAngles SolvedAngles;
+    public Vector3 ReachableFootTarget;
+    public Vector3 PredictedFootPosition;
+    public Vector3 ActualFootPosition;
+    public float SolveError;
+    public bool TargetWasClamped;
+    public float DesiredPositionError;
+    public bool ForceRecovery;
+    public bool PostureCanonicalizationPending;
+    public bool LastSolveReached;
+    public Vector3 LastSolveTarget;
+    public Vector3 LastSolveRootPosition;
+    public Quaternion LastSolveRootRotation;
+    public TitanLegSolveCache SolveCache;
+    public bool HasGroundContact;
+    public Vector3 GroundContactPoint;
+    public Vector3 GroundContactNormal;
+    public bool IsPlanted;
+    public Vector3 PlantAnchorWorld;
 }
