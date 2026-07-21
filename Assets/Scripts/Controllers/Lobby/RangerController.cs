@@ -403,7 +403,7 @@ public class RangerController : MonoBehaviour
         if (Time.time < _upperBodyEmoteEndTime)
             return;
 
-        FreezeUpperBodyEmoteLayer();
+        StopUpperBodyEmoteLayer();
     }
 
     private int ResolveUpperBodyEmoteLayerIndex()
@@ -412,12 +412,6 @@ public class RangerController : MonoBehaviour
             return -1;
 
         return Anim.GetLayerIndex(UpperBodyEmoteLayerName);
-    }
-
-    private void FreezeUpperBodyEmoteLayer()
-    {
-        _upperBodyEmoteActive = false;
-        _upperBodyEmoteEndTime = 0f;
     }
 
     private static string GetUpperBodyEmoteStatePath(Define.RangerAnimState emotionState)

@@ -57,7 +57,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private bool _remoteHasLastPosition;
     private bool _remoteWasWalking;
     private bool _remoteEmotionActive;
-    private bool _remoteSeated;
+    private bool _remotePendingSeatedPoseSnap;
     private bool _subscribedLobbyRangerEmotion;
     private bool _subscribedLobbyRangerSitAnimation;
 
@@ -1269,12 +1269,18 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         bool walking = speed > 0.15f;
 
-        if (_remoteSeated)
+        if (RangerController.IsSitState(_lobbyRanger.AnimState))
         {
+            if (_remotePendingSeatedPoseSnap)
+            {
+                _remotePendingSeatedPoseSnap = false;
+                _remoteLastPosition = currentPos;
+                return;
+            }
+
             if (!walking)
                 return;
 
-            _remoteSeated = false;
             _lobbyRanger.StopUpperBodyEmoteLayer();
         }
 
@@ -1312,14 +1318,11 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (_remoteAnimator == null)
             return;
 
-        if (_remoteSeated)
-        {
-            _lobbyRanger.PlayReplicatedEmotion(rangerAnimState);
-            return;
-        }
+        bool isSeated = RangerController.IsSitState(_lobbyRanger.AnimState);
+        _remoteEmotionActive = !isSeated;
+        if (!isSeated)
+            _remoteWasWalking = false;
 
-        _remoteEmotionActive = true;
-        _remoteWasWalking = false;
         _lobbyRanger.PlayReplicatedEmotion(rangerAnimState);
     }
 
@@ -1337,9 +1340,11 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (_remoteAnimator == null)
             return;
 
-        _remoteSeated = true;
         _remoteEmotionActive = false;
         _remoteWasWalking = false;
+        _remoteHasLastPosition = true;
+        _remoteLastPosition = _lobbyRanger.transform.position;
+        _remotePendingSeatedPoseSnap = true;
         _lobbyRanger.PlayReplicatedSitAnimation(rangerAnimState);
     }
 
@@ -1348,6 +1353,13 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (_remoteAnimator == null)
             return;
 
+        if (_lobbyRanger != null)
+        {
+            _lobbyRanger.StopUpperBodyEmoteLayer();
+            _lobbyRanger.AnimState = state;
+            return;
+        }
+
         _remoteAnimator.CrossFade(state.ToString(), transitionDuration);
     }
 
@@ -1355,6 +1367,13 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     {
         if (_remoteAnimator == null)
             return;
+
+        if (_lobbyRanger != null)
+        {
+            _lobbyRanger.StopUpperBodyEmoteLayer();
+            _lobbyRanger.AnimState = state;
+            return;
+        }
 
         _remoteAnimator.CrossFade(state.ToString(), transitionDuration, 0, normalizedTime);
     }
