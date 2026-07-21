@@ -42,6 +42,12 @@ public class GameSceneQuickStartRunner : MonoBehaviour
                 continue;
             }
 
+            if (networkManager.IsListening)
+            {
+                Log($"Existing network session detected; skipping GameScene quick start. host={networkManager.IsHost}, client={networkManager.IsClient}");
+                yield break;
+            }
+
             if (!EnsureHostStarted(networkManager, attempt))
             {
                 yield return WaitRetry();
@@ -78,12 +84,7 @@ public class GameSceneQuickStartRunner : MonoBehaviour
 
         if (networkManager.IsListening)
         {
-            if (networkManager.IsHost)
-                return true;
-
-            networkManager.Shutdown();
-            Log($"Restarting runtime as Steam host. attempt={attempt}");
-            return false;
+            return networkManager.IsHost;
         }
 
         bool started = networkManager.StartHost();
