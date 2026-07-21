@@ -5,28 +5,33 @@ public class GameCameraController : MonoBehaviour
 {
     [Header("Optional References")]
     [SerializeField] private Transform _titanTarget;
-    [SerializeField] private BossController _bossTarget;
 
     [Header("Framing")]
     [SerializeField] private Vector3 _titanPivotOffset = new(0f, 1f, 0f);
     [SerializeField] private bool _useDynamicTitanCenter = true;
     [SerializeField] private Vector3 _dynamicTitanCenterOffset = Vector3.zero;
-    [SerializeField] private Vector3 _lookPointOffset = new(0f, -0.15f, 0f);
-    [SerializeField] private Vector3 _bossLookOffset = new(0f, 0.5f, 0f);
     [SerializeField] private float _followDistance = 2f;
+    [SerializeField] private float _minFollowDistance = 0.75f;
+    [SerializeField] private float _maxFollowDistance = 6f;
+    [SerializeField] private float _zoomSensitivity = 100f;
     [SerializeField] private float _heightOffset = 1.1f;
-    [SerializeField] private float _lookAtBossWeight = 0f;
 
-    [Header("Smoothing")]
-    [SerializeField] private float _followLerpSpeed = 8f;
-    [SerializeField] private float _rotationLerpSpeed = 10f;
+    [Header("Torso Look")]
+    [SerializeField] private float _yawSensitivity = 0.12f;
+    [SerializeField] private float _pitchSensitivity = 0.12f;
+    [SerializeField] private float _minPitch = -30f;
+    [SerializeField] private float _maxPitch = 60f;
 
     [Header("Fallback")]
     [SerializeField] private Vector3 _fallbackForward = Vector3.forward;
-    [SerializeField] private float _minimumPlanarDistance = 0.25f;
 
     private TitanRigRuntime _cachedTitanRuntime;
     private Renderer[] _cachedTitanRenderers = System.Array.Empty<Renderer>();
+    private float _cameraYaw;
+    private float _cameraPitch;
+    private bool _hasCameraAngles;
+    private TorsoCameraStatePayload _lastPublishedCameraState;
+    private bool _hasLastPublishedCameraState;
 
     private void OnEnable()
     {
@@ -40,23 +45,21 @@ public class GameCameraController : MonoBehaviour
     private void LateUpdate()
     {
         ResolveReferences();
+        ApplyTorsoCameraInput();
 
         if (!TryBuildCameraPose(out Vector3 desiredPosition, out Quaternion desiredRotation))
             return;
 
-        float followT = 1f - Mathf.Exp(-_followLerpSpeed * Time.deltaTime);
-        float rotationT = 1f - Mathf.Exp(-_rotationLerpSpeed * Time.deltaTime);
-
-        transform.position = Vector3.Lerp(transform.position, desiredPosition, followT);
-        transform.rotation = Quaternion.Slerp(transform.rotation, desiredRotation, rotationT);
+        transform.position = desiredPosition;
+        transform.rotation = desiredRotation;
     }
 
-    public void SetTargets(Transform titanTarget, BossController bossTarget)
+    public void SetTargets(Transform titanTarget, BossController _)
     {
         _titanTarget = titanTarget;
-        _bossTarget = bossTarget;
         _cachedTitanRuntime = null;
         _cachedTitanRenderers = System.Array.Empty<Renderer>();
+        _hasCameraAngles = false;
 
         if (TryBuildCameraPose(out Vector3 desiredPosition, out Quaternion desiredRotation))
         {
@@ -80,9 +83,6 @@ public class GameCameraController : MonoBehaviour
                     _titanTarget = titanController.transform;
             }
         }
-
-        if (_bossTarget == null)
-            _bossTarget = FindAnyObjectByType<BossController>();
     }
 
     private bool TryBuildCameraPose(out Vector3 desiredPosition, out Quaternion desiredRotation)
@@ -93,17 +93,14 @@ public class GameCameraController : MonoBehaviour
         if (_titanTarget == null)
             return false;
 
-        Vector3 titanPivot = ResolveTitanPivot();
-        Vector3 titanForward = ResolvePlanarForward(titanPivot);
-        Vector3 desiredLookPoint = ResolveLookPoint(titanPivot);
+        Vector3 titanPivot = ResolveTitanPivot() + Vector3.up * _heightOffset;
+        EnsureCameraAnglesInitialized();
 
-        desiredPosition = titanPivot - titanForward * _followDistance + Vector3.up * _heightOffset;
+        Quaternion orbitRotation = Quaternion.Euler(_cameraPitch, _cameraYaw, 0f);
+        Vector3 cameraOffset = orbitRotation * (Vector3.back * _followDistance);
 
-        Vector3 lookDirection = desiredLookPoint - desiredPosition;
-        if (lookDirection.sqrMagnitude <= 0.0001f)
-            lookDirection = titanForward;
-
-        desiredRotation = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
+        desiredPosition = titanPivot + cameraOffset;
+        desiredRotation = Quaternion.LookRotation(titanPivot - desiredPosition, Vector3.up);
         return true;
     }
 
@@ -166,31 +163,103 @@ public class GameCameraController : MonoBehaviour
         _cachedTitanRenderers = runtime.GetComponentsInChildren<Renderer>(includeInactive: true);
     }
 
-    private Vector3 ResolvePlanarForward(Vector3 titanPivot)
+    private void ApplyTorsoCameraInput()
     {
-        if (_bossTarget != null)
+        Vector2 mouseDelta = Vector2.zero;
+        float scrollInput = 0f;
+
+        if (IsLocalTorsoActive())
         {
-            Vector3 bossPivot = _bossTarget.transform.position + _bossLookOffset;
-            Vector3 planarToBoss = Vector3.ProjectOnPlane(bossPivot - titanPivot, Vector3.up);
-            if (planarToBoss.sqrMagnitude >= _minimumPlanarDistance * _minimumPlanarDistance)
-                return planarToBoss.normalized;
+            mouseDelta = Managers.Input.ReadTitanMouseDelta();
+            scrollInput = Managers.Input.ReadMouseScrollY();
+
+            ApplyCameraDelta(mouseDelta, scrollInput);
+            EnsureCameraAnglesInitialized();
+            PublishLocalCameraState();
+            return;
         }
 
-        Vector3 titanForward = Vector3.ProjectOnPlane(_titanTarget.forward, Vector3.up);
+        if (Managers.TitanRole.TryGetTorsoCameraState(out TorsoCameraStatePayload cameraState))
+        {
+            _cameraYaw = cameraState.Yaw;
+            _cameraPitch = Mathf.Clamp(cameraState.Pitch, _minPitch, _maxPitch);
+            _followDistance = Mathf.Clamp(cameraState.Distance, _minFollowDistance, _maxFollowDistance);
+            _hasCameraAngles = true;
+            return;
+        }
+
+        if (Managers.TitanRole.TryGetRoleInput(Define.TitanRole.Torso, out TitanAggregatedInput torsoInput))
+        {
+            mouseDelta = torsoInput.MouseDelta;
+            scrollInput = torsoInput.TorsoCameraScrollInput;
+        }
+        else
+        {
+            mouseDelta = Managers.Input.ReadTitanMouseDelta();
+            scrollInput = Managers.Input.ReadMouseScrollY();
+        }
+
+        ApplyCameraDelta(mouseDelta, scrollInput);
+    }
+
+    private static bool IsLocalTorsoActive()
+    {
+        LobbyNetworkPlayer localPlayer = LobbyNetworkPlayer.FindLocalOwnedPlayer();
+        return localPlayer != null
+            && localPlayer.TryGetActiveTitanRole(out Define.TitanRole activeRole)
+            && activeRole == Define.TitanRole.Torso;
+    }
+
+    private void PublishLocalCameraState()
+    {
+        TorsoCameraStatePayload cameraState = new(_cameraYaw, _cameraPitch, _followDistance);
+        if (_hasLastPublishedCameraState && _lastPublishedCameraState.Equals(cameraState))
+            return;
+
+        if (!LobbyNetworkPlayer.TryPublishLocalTorsoCameraState(cameraState))
+            return;
+
+        _lastPublishedCameraState = cameraState;
+        _hasLastPublishedCameraState = true;
+    }
+
+    private void ApplyCameraDelta(Vector2 mouseDelta, float scrollInput)
+    {
+        if (mouseDelta.sqrMagnitude > 0f)
+        {
+            EnsureCameraAnglesInitialized();
+            _cameraYaw += mouseDelta.x * _yawSensitivity;
+            _cameraPitch = Mathf.Clamp(_cameraPitch - mouseDelta.y * _pitchSensitivity, _minPitch, _maxPitch);
+        }
+
+        if (!Mathf.Approximately(scrollInput, 0f))
+            _followDistance = Mathf.Clamp(_followDistance - scrollInput * _zoomSensitivity, _minFollowDistance, _maxFollowDistance);
+    }
+
+    private void EnsureCameraAnglesInitialized()
+    {
+        if (_hasCameraAngles)
+            return;
+
+        Vector3 initialForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+        if (initialForward.sqrMagnitude <= 0.0001f)
+            initialForward = ResolveFallbackForward();
+
+        _cameraYaw = Mathf.Atan2(initialForward.x, initialForward.z) * Mathf.Rad2Deg;
+        _cameraPitch = Mathf.Clamp(transform.eulerAngles.x > 180f ? transform.eulerAngles.x - 360f : transform.eulerAngles.x, _minPitch, _maxPitch);
+        _hasCameraAngles = true;
+    }
+
+    private Vector3 ResolveFallbackForward()
+    {
+        Vector3 titanForward = Vector3.zero;
+        if (_titanTarget != null)
+            titanForward = Vector3.ProjectOnPlane(_titanTarget.forward, Vector3.up);
+
         if (titanForward.sqrMagnitude > 0.0001f)
             return titanForward.normalized;
 
         Vector3 fallbackForward = Vector3.ProjectOnPlane(_fallbackForward, Vector3.up);
         return fallbackForward.sqrMagnitude > 0.0001f ? fallbackForward.normalized : Vector3.forward;
-    }
-
-    private Vector3 ResolveLookPoint(Vector3 titanPivot)
-    {
-        if (_bossTarget == null)
-            return titanPivot + _lookPointOffset;
-
-        Vector3 bossPivot = _bossTarget.transform.position + _bossLookOffset;
-        float bossWeight = Mathf.Clamp01(_lookAtBossWeight);
-        return Vector3.Lerp(titanPivot, bossPivot, bossWeight) + _lookPointOffset;
     }
 }
