@@ -1,4 +1,7 @@
 using TMPro;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -20,14 +23,6 @@ public class UI_Intro : UI_Scene
         Quit,
     }
 
-    enum Texts
-    {
-        NewGame,
-        JoinGame,
-        EnterCode,
-        Quit,
-    }
-
     private bool _isTransitioning;
 
     public override void Init()
@@ -35,20 +30,11 @@ public class UI_Intro : UI_Scene
         base.Init();
         Bind<Image>(typeof(Images));
         Bind<Button>(typeof(Buttons));
-        Bind<TextMeshProUGUI>(typeof(Texts));
 
         GetButton((int)Buttons.NewGame).gameObject.BindEvent(OnNewGameButtonClicked);
         GetButton((int)Buttons.JoinGame).gameObject.BindEvent(OnJoinGameCodeButtonClicked);
         GetButton((int)Buttons.EnterCode).gameObject.BindEvent(OnEnterCodeButtonClicked);
         GetButton((int)Buttons.Quit).gameObject.BindEvent(OnQuitButtonClicked);
-
-        TextMeshProUGUI joinGameText = Get<TextMeshProUGUI>((int)Texts.JoinGame);
-        if (joinGameText != null)
-            joinGameText.text = "Join Game";
-
-        TextMeshProUGUI enterCodeText = Get<TextMeshProUGUI>((int)Texts.EnterCode);
-        if (enterCodeText != null)
-            enterCodeText.text = "Enter Code";
     }
 
     private void OnNewGameButtonClicked(PointerEventData eventData)
@@ -87,6 +73,14 @@ public class UI_Intro : UI_Scene
 
     private void OnQuitButtonClicked(PointerEventData eventData)
     {
+#if UNITY_EDITOR
+        if (Application.isEditor)
+        {
+            EditorApplication.ExitPlaymode();
+            return;
+        }
+#endif
+
         Application.Quit();
     }
 
