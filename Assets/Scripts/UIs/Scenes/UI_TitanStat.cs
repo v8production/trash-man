@@ -37,8 +37,12 @@ public class UI_TitanStat : UI_Scene
     void SetRatio(GameObjects gameObject, float ratio)
     {
         GameObject target = GetObject((int)gameObject);
+        if (target == null)
+            return;
 
         Slider slider = target.GetComponent<Slider>();
+        if (slider == null)
+            return;
 
         slider.value = ratio;
     }
