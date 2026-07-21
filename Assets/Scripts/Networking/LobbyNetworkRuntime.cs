@@ -8,6 +8,7 @@ public static class LobbyNetworkRuntime
     private const int MaxLobbyPlayers = 5;
     private const string RuntimeRootName = "@NetworkManager";
     private const string NetworkObjectPrefabPath = "Prefabs/@NetworkObject";
+    private const BindingFlags InstanceFieldFlags = BindingFlags.Instance | BindingFlags.NonPublic;
 
     private static readonly uint LobbyPlayerPrefabHash = ComputeStableHash32("TrashMan.LobbyNetworkPlayerPrefab.v1");
 
@@ -97,9 +98,27 @@ public static class LobbyNetworkRuntime
 
         networkManager.ConnectionApprovalCallback -= HandleConnectionApproval;
         networkManager.ConnectionApprovalCallback += HandleConnectionApproval;
+        networkManager.OnPreShutdown -= RepairDisposedSceneEventDataStore;
+        networkManager.OnPreShutdown += RepairDisposedSceneEventDataStore;
 
         EnsureNetworkPrefabRegistered(networkManager, playerPrefab);
         return true;
+    }
+
+    private static void RepairDisposedSceneEventDataStore()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton != null
+            ? NetworkManager.Singleton
+            : Object.FindAnyObjectByType<NetworkManager>();
+        NetworkSceneManager sceneManager = networkManager != null ? networkManager.SceneManager : null;
+        if (sceneManager == null)
+            return;
+
+        FieldInfo storeField = typeof(NetworkSceneManager).GetField("SceneEventDataStore", InstanceFieldFlags);
+        if (storeField == null || storeField.GetValue(sceneManager) != null)
+            return;
+
+        storeField.SetValue(sceneManager, System.Activator.CreateInstance(storeField.FieldType));
     }
 
     private static void HandleConnectionApproval(
