@@ -2,8 +2,6 @@ using UnityEngine;
 
 public class TitanStat : Stat
 {
-    private const float GaugeRecoverPerSecond = 50f;
-
     [SerializeField]
     protected int _gauge;
     [SerializeField]
@@ -23,14 +21,6 @@ public class TitanStat : Stat
         SetGauge(100f);
     }
 
-    public void RecoverGauge(float deltaTime)
-    {
-        if (deltaTime <= 0f)
-            return;
-
-        SetGauge(_gaugeValue + (GaugeRecoverPerSecond * deltaTime));
-    }
-
     public bool TrySpendGauge(float amount)
     {
         if (amount <= 0f)
@@ -41,6 +31,14 @@ public class TitanStat : Stat
 
         SetGauge(_gaugeValue - amount);
         return true;
+    }
+
+    public void RecoverGauge(int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        SetGauge(_gaugeValue + amount);
     }
 
     private void SetGauge(float value)
