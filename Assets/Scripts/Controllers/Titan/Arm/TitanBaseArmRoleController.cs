@@ -2,95 +2,27 @@ using UnityEngine;
 
 public abstract class TitanBaseArmRoleController : TitanBaseController
 {
-    [Header("Shoulder Mouse Mapping")]
-    [SerializeField] private float shoulderRadiusPixels = 260f;
-    [SerializeField] private bool useScreenCenterAsOrigin = true;
-    [SerializeField] private Vector2 mouseOriginPixels = new(960f, 540f);
-    [SerializeField] private float shoulderSpeed = 1f;
-    [SerializeField] private Vector2 shoulderRollLimit = new(-15f, 45f);
-
-    [Header("Elbow Input")]
-    [SerializeField] private float elbowSpeed = 120f;
-    [SerializeField] private Vector2 elbowPitchLimit = new(-130f, 15f);
+    private const float ShoulderRollSensitivity = 0.12f;
+    private const float ShoulderPitchSensitivity = 0.12f;
+    private const float ElbowSpeed = 90f;
+    private const float MinShoulderRoll = -45f;
+    private const float MaxShoulderRoll = 45f;
+    private const float MinShoulderPitch = -60f;
+    private const float MaxShoulderPitch = 60f;
+    private const float MinElbowPitch = 0f;
+    private const float MaxElbowPitch = 120f;
 
     protected abstract bool IsLeftArm { get; }
 
-    private float _lastRoleInputTime = -999f;
-    private Vector2 _capturedMouseOrigin;
-    private bool _hasCapturedMouseOrigin;
-
     public override void TickRoleInput(in TitanAggregatedInput input, float deltaTime)
     {
-        if (!Managers.TitanRig.EnsureReady())
-        {
-            return;
-        }
+        TitanArmControlState state = Managers.TitanRig.GetArmState(IsLeftArm);
+        float shoulderPitchDirection = IsLeftArm ? 1f : -1f;
 
-        TitanArmControlState state = Managers.TitanRig.GetArmState(left: IsLeftArm);
-
-        float now = Time.unscaledTime;
-        bool roleActivated = (now - _lastRoleInputTime) > 0.25f;
-        _lastRoleInputTime = now;
-
-        if (roleActivated)
-        {
-            _capturedMouseOrigin = input.MousePosition;
-            _hasCapturedMouseOrigin = true;
-            return;
-        }
-
-        Vector2 mousePosition = input.MousePosition;
-        Vector2 mouseDelta = input.MouseDelta;
-        float sensitivity = Managers.Input.GetTitanMouseSensitivity();
-
-        Vector2 origin = _hasCapturedMouseOrigin
-            ? _capturedMouseOrigin
-            : useScreenCenterAsOrigin
-                ? new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)
-                : mouseOriginPixels;
-
-        float maxRollDegrees = Mathf.Max(Mathf.Abs(shoulderRollLimit.x), Mathf.Abs(shoulderRollLimit.y));
-        float resolvedBaseRadius = Mathf.Max(0.01f, shoulderRadiusPixels);
-        float normalizedX = Mathf.Clamp((mousePosition.x - origin.x) / resolvedBaseRadius, -1f, 1f);
-
-        float pitchDegreesPerPixel = maxRollDegrees > 0f
-            ? maxRollDegrees * sensitivity / resolvedBaseRadius
-            : 0f;
-
-        float targetRoll = normalizedX * maxRollDegrees * sensitivity;
-
-        if (IsLeftArm)
-        {
-            targetRoll = -targetRoll;
-        }
-
-        float blend = 1f - Mathf.Exp(-shoulderSpeed * deltaTime);
-
-        state.ShoulderRoll = Mathf.Lerp(state.ShoulderRoll, targetRoll, blend);
-        state.ShoulderPitch += mouseDelta.y * pitchDegreesPerPixel * (IsLeftArm ? 1f : -1f);
-
-        float elbowInput = IsLeftArm ? input.LeftArmElbow : -input.RightArmElbow;
-
-        state.ShoulderRoll = Mathf.Clamp(state.ShoulderRoll, shoulderRollLimit.x, shoulderRollLimit.y);
-
-        Vector2 resolvedElbowLimit = GetResolvedElbowPitchLimit();
-
-        state.ElbowPitch = Mathf.Clamp(
-            state.ElbowPitch - (elbowInput * elbowSpeed * deltaTime),
-            resolvedElbowLimit.x,
-            resolvedElbowLimit.y
-        );
-
-        Managers.TitanRig.SetArmState(left: IsLeftArm, state);
-        Managers.TitanRig.ApplyArmPose(left: IsLeftArm);
+        state.ShoulderRoll = Mathf.Clamp(state.ShoulderRoll + input.MouseDelta.x * ShoulderRollSensitivity, MinShoulderRoll, MaxShoulderRoll);
+        state.ShoulderPitch = Mathf.Clamp(state.ShoulderPitch + input.MouseDelta.y * ShoulderPitchSensitivity * shoulderPitchDirection, MinShoulderPitch, MaxShoulderPitch);
+        state.ElbowPitch = Mathf.Clamp(state.ElbowPitch + input.ArmElbowInput * ElbowSpeed * deltaTime, MinElbowPitch, MaxElbowPitch);
+        Managers.TitanRig.SetArmState(IsLeftArm, state);
+        Managers.TitanRig.ApplyArmPose(IsLeftArm);
     }
-
-    private Vector2 GetResolvedElbowPitchLimit()
-    {
-        if (IsLeftArm)
-            return elbowPitchLimit;
-
-        return new Vector2(-elbowPitchLimit.y, -elbowPitchLimit.x);
-    }
-
 }

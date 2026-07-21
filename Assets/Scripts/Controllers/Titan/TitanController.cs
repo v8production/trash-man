@@ -6,7 +6,6 @@ public class TitanController : MonoBehaviour
 
     [Header("References")]
     private TitanRigRuntime rigRuntime;
-    private TitanLegAnchorResolver legAnchorResolver;
     private TitanTorsoRoleController torsoController;
     private TitanLeftArmRoleController leftArmController;
     private TitanRightArmRoleController rightArmController;
@@ -61,7 +60,6 @@ public class TitanController : MonoBehaviour
         Managers.TitanRig.Bind(rigRuntime);
 
         _stat = gameObject.GetOrAddComponent<TitanStat>();
-        legAnchorResolver = gameObject.GetOrAddComponent<TitanLegAnchorResolver>();
         torsoController = gameObject.GetOrAddComponent<TitanTorsoRoleController>();
         leftArmController = gameObject.GetOrAddComponent<TitanLeftArmRoleController>();
         rightArmController = gameObject.GetOrAddComponent<TitanRightArmRoleController>();

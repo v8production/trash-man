@@ -2,8 +2,9 @@ using UnityEngine;
 
 public sealed class TitanLeftFootAttachmentController : FootAttachmentController
 {
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         side = TitanBaseLegRoleController.LegSide.Left;
     }
 }
