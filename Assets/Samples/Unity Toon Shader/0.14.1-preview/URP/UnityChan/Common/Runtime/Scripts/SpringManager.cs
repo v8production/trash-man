@@ -13,14 +13,12 @@ public class SpringManager : MonoBehaviour {
     }
 
     void Update() {
-#if UNITY_EDITOR
         if (m_dynamicRatio >= 1.0f)
             m_dynamicRatio = 1.0f;
         else if (m_dynamicRatio <= 0.0f)
             m_dynamicRatio = 0.0f;
         
         UpdateParameters();
-#endif
     }
 
     private void LateUpdate() {
@@ -35,7 +33,9 @@ public class SpringManager : MonoBehaviour {
 
     private void UpdateParameters() {
         if (m_springBones.Length <= 1) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[UnityChan] SpringManager needs at least 2 SpringBones to apply scale.");
+#endif
             return;
         } 
         
@@ -83,9 +83,7 @@ public class SpringManager : MonoBehaviour {
 
 
 //----------------------------------------------------------------------------------------------------------------------
-#if UNITY_EDITOR
     public string SpringBonesFieldName() => nameof(SpringManager.m_springBones);
-#endif    
     
 //----------------------------------------------------------------------------------------------------------------------
     // DynamicRatio is parameter for activated level of dynamic animation 
