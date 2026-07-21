@@ -40,6 +40,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private readonly NetworkVariable<FixedString4096Bytes> _rangerFacePayload = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> _lobbySpawnIndex = new(UnassignedLobbySpawnIndex, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanRoleInputPayload> _roleInput = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    private readonly NetworkVariable<TorsoCameraStatePayload> _torsoCameraState = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanRigPosePayload> _titanPose = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> _titanGauge = new(100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanStatPayload> _titanStat = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -70,6 +71,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     public bool HasSelectedTitanRole => NormalizeTitanRoleMask(_selectedTitanRoleMask.Value) != 0;
     public int ActiveTitanRoleValue => NormalizeTitanRoleValue(_activeTitanRole.Value);
     public TitanRoleInputPayload CurrentRoleInput => _roleInput.Value;
+    public TorsoCameraStatePayload CurrentTorsoCameraState => _torsoCameraState.Value;
     public TitanRigPosePayload CurrentTitanPose => _titanPose.Value;
     public int CurrentTitanGauge => _titanGauge.Value;
     public TitanAbilityStatePayload CurrentTitanAbilityState => _titanAbilityState.Value;
@@ -78,8 +80,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     private float _nextPublishLogTime;
     private const float PublishLogIntervalSeconds = 0.50f;
-    private const float AttachInputBufferSeconds = 0.20f;
-    private float _attachInputBufferRemaining;
     private uint _torsoDrillPressCounter;
     private uint _torsoShieldPressCounter;
     private uint _torsoClawPressCounter;
@@ -327,6 +327,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private void SubmitRoleInputServerRpc(TitanRoleInputPayload inputPayload)
     {
         _roleInput.Value = inputPayload;
+    }
+
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void SubmitTorsoCameraStateServerRpc(TorsoCameraStatePayload cameraState)
+    {
+        _torsoCameraState.Value = cameraState;
     }
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
@@ -613,16 +619,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         }
 
         TitanAggregatedInput currentInput = Managers.Input.CaptureTitanInput();
-        if (currentInput.RightMousePressedThisFrame)
-        {
-            _attachInputBufferRemaining = AttachInputBufferSeconds;
-        }
-        else
-        {
-            _attachInputBufferRemaining = Mathf.Max(0f, _attachInputBufferRemaining - Time.unscaledDeltaTime);
-        }
-
-        currentInput.RightMouseAttachBuffered = currentInput.RightMouseHeld || _attachInputBufferRemaining > 0f;
         StampTorsoPressCounters(ref currentInput, activeRole == (int)Define.TitanRole.Torso);
         TitanRoleInputPayload payload = new(currentInput);
         if (_roleInput.Value.Equals(payload))
@@ -638,6 +634,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             input.TorsoDrillPressedThisFrame = false;
             input.TorsoShieldPressedThisFrame = false;
             input.TorsoClawPressedThisFrame = false;
+            input.TorsoShieldHeld = false;
+            input.TorsoYawInput = 0f;
         }
 
         if (isTorsoActive && input.TorsoDrillPressedThisFrame)
@@ -684,32 +682,16 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     public static LobbyNetworkPlayer[] FindAllSpawnedPlayers()
     {
-        NetworkManager networkManager = NetworkManager.Singleton;
-        if (networkManager != null && networkManager.SpawnManager != null)
+        LobbyNetworkPlayer[] players = Object.FindObjectsByType<LobbyNetworkPlayer>();
+        List<LobbyNetworkPlayer> spawnedPlayers = new(players.Length);
+        for (int i = 0; i < players.Length; i++)
         {
-            var spawned = networkManager.SpawnManager.SpawnedObjectsList;
-            List<LobbyNetworkPlayer> result = new();
-            foreach (NetworkObject obj in spawned)
-            {
-                if (obj == null)
-                    continue;
-
-                if (!obj.TryGetComponent(out LobbyNetworkPlayer player))
-                    continue;
-
-                if (!player.IsSpawned)
-                    continue;
-
-                result.Add(player);
-            }
-
-            // If SpawnManager is present but doesn't yet report player objects (timing / scene load edge),
-            // fall back to a scene search.
-            if (result.Count > 0)
-                return result.ToArray();
+            LobbyNetworkPlayer player = players[i];
+            if (player != null && player.IsSpawned)
+                spawnedPlayers.Add(player);
         }
 
-        return Object.FindObjectsByType<LobbyNetworkPlayer>();
+        return spawnedPlayers.ToArray();
     }
 
     public static bool TryPublishServerTitanPose(TitanRigPosePayload posePayload)
@@ -722,6 +704,19 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return true;
 
         publisher._titanPose.Value = posePayload;
+        return true;
+    }
+
+    public static bool TryPublishLocalTorsoCameraState(TorsoCameraStatePayload cameraState)
+    {
+        LobbyNetworkPlayer localPlayer = FindLocalOwnedPlayer();
+        if (localPlayer == null || !localPlayer.IsOwner || !localPlayer.IsSpawned)
+            return false;
+
+        if (localPlayer._torsoCameraState.Value.Equals(cameraState))
+            return true;
+
+        localPlayer.SubmitTorsoCameraStateServerRpc(cameraState);
         return true;
     }
 
@@ -1067,21 +1062,6 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     {
         RefreshRoleSelectionPresentation();
 
-        // Owner-side: when active role switches, reset virtual mouse baseline and detach buffer.
-        // This prevents immediate pose snaps for roles that map absolute mouse position to joints (legs/arms).
-        if (!IsOwner)
-        {
-            return;
-        }
-
-        BaseScene scene = Managers.Scene.CurrentScene;
-        if (scene == null || scene.SceneType != Define.Scene.Game)
-        {
-            return;
-        }
-
-        _attachInputBufferRemaining = 0f;
-        Managers.Input.ResetTitanMouseBaseline();
     }
 
     private void HandleRangerColorChanged(int previousValue, int newValue)

@@ -5,6 +5,7 @@ public class TitanRoleManager
 {
     private readonly Dictionary<Define.TitanRole, LobbyNetworkPlayer> _playersByRole = new();
     private readonly Dictionary<ulong, int> _roleMasksByClientId = new();
+    private readonly Dictionary<Define.TitanRole, uint> _lastTransientInputSequenceByRole = new();
 
     public void Init()
     {
@@ -15,6 +16,7 @@ public class TitanRoleManager
     {
         _playersByRole.Clear();
         _roleMasksByClientId.Clear();
+        _lastTransientInputSequenceByRole.Clear();
     }
 
     public bool RefreshRoleMap(bool requireAllRoles, out string error)
@@ -211,7 +213,38 @@ public class TitanRoleManager
         }
 
         input = player.CurrentRoleInput.ToAggregatedInput();
+        ConsumeTransientInputOnce(role, ref input);
         return true;
+    }
+
+    private void ConsumeTransientInputOnce(Define.TitanRole role, ref TitanAggregatedInput input)
+    {
+        if (input.TransientInputSequence == 0)
+            return;
+
+        if (_lastTransientInputSequenceByRole.TryGetValue(role, out uint lastSequence)
+            && lastSequence == input.TransientInputSequence)
+        {
+            input.MouseDelta = UnityEngine.Vector2.zero;
+            input.TorsoCameraScrollInput = 0f;
+            input.LegScrollInput = 0f;
+            return;
+        }
+
+        _lastTransientInputSequenceByRole[role] = input.TransientInputSequence;
+    }
+
+    public bool TryGetTorsoCameraState(out TorsoCameraStatePayload cameraState)
+    {
+        cameraState = default;
+        if (!RefreshRoleMap(false, out string error))
+            return false;
+
+        if (!_playersByRole.TryGetValue(Define.TitanRole.Torso, out LobbyNetworkPlayer player) || player == null)
+            return false;
+
+        cameraState = player.CurrentTorsoCameraState;
+        return cameraState.IsValid;
     }
 
     public bool IsRoleAssigned(Define.TitanRole role)

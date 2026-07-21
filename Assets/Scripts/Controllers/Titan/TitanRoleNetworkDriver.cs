@@ -8,7 +8,6 @@ public class TitanRoleNetworkDriver : MonoBehaviour
     private const float DebugLogIntervalSeconds = 0.50f;
     private bool _shouldLogThisFrame;
     private TitanTorsoRoleController _torsoController;
-    private TitanLegAnchorResolver _legAnchorResolver;
     private TitanLeftArmRoleController _leftArmController;
     private TitanRightArmRoleController _rightArmController;
     private TitanLeftLegRoleController _leftLegController;
@@ -21,7 +20,6 @@ public class TitanRoleNetworkDriver : MonoBehaviour
     private void Awake()
     {
         _torsoController = gameObject.GetOrAddComponent<TitanTorsoRoleController>();
-        _legAnchorResolver = gameObject.GetOrAddComponent<TitanLegAnchorResolver>();
         _leftArmController = gameObject.GetOrAddComponent<TitanLeftArmRoleController>();
         _rightArmController = gameObject.GetOrAddComponent<TitanRightArmRoleController>();
         _leftLegController = gameObject.GetOrAddComponent<TitanLeftLegRoleController>();
@@ -49,25 +47,32 @@ public class TitanRoleNetworkDriver : MonoBehaviour
 
         float dt = Time.fixedDeltaTime;
 
-        TitanAggregatedInput leftLegInput = default;
-        TitanAggregatedInput rightLegInput = default;
-        bool hasLeftLegInput = TryGetLegRoleInput(true, out leftLegInput);
-        bool hasRightLegInput = TryGetLegRoleInput(false, out rightLegInput);
-
-        ApplyLegAttachInput(true, in leftLegInput, hasLeftLegInput);
-        ApplyLegAttachInput(false, in rightLegInput, hasRightLegInput);
+        // Root physics pose must be finalized before leg IK; changing root rotation after IK invalidates the solved pose.
+        Managers.TitanRig.ApplyMovementRootBaseRotation();
 
         TickTorsoRole(dt);
-        TickArmRole(true, dt);
-        TickArmRole(false, dt);
-        TickLegRole(true, hasLeftLegInput, in leftLegInput, dt);
-        TickLegRole(false, hasRightLegInput, in rightLegInput, dt);
-        TickPassiveStabilization(hasLeftLegInput, hasRightLegInput, dt);
+
+        TickRole(_leftArmController, Define.TitanRole.LeftArm, dt);
+        TickRole(_rightArmController, Define.TitanRole.RightArm, dt);
+        TickLegRoles(dt);
         TickClawWire(dt);
 
         PublishAuthoritativePose();
         PublishAuthoritativeStat();
         PublishAuthoritativeAbilityState();
+    }
+
+    private void LateUpdate()
+    {
+        if (ShouldApplyServerPoseOnly())
+        {
+            ApplyLatestServerPose();
+            return;
+        }
+
+        Managers.TitanRig.ApplyTorsoPose();
+        Managers.TitanRig.ApplyArmPose(true);
+        Managers.TitanRig.ApplyArmPose(false);
     }
 
     private static bool ShouldApplyServerPoseOnly()
@@ -84,14 +89,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         if (_appliedClientPhysicsMode)
             return;
 
-        Rigidbody movementRigidbody = Managers.TitanRig.MovementRigidbody;
-        if (movementRigidbody != null)
-        {
-            movementRigidbody.linearVelocity = Vector3.zero;
-            movementRigidbody.angularVelocity = Vector3.zero;
-            movementRigidbody.isKinematic = true;
-        }
-
+        Managers.TitanRig.SetRemotePhysicsOverride(true);
         _appliedClientPhysicsMode = true;
     }
 
@@ -100,10 +98,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         if (!_appliedClientPhysicsMode)
             return;
 
-        Rigidbody movementRigidbody = Managers.TitanRig.MovementRigidbody;
-        if (movementRigidbody != null)
-            movementRigidbody.isKinematic = false;
-
+        Managers.TitanRig.SetRemotePhysicsOverride(false);
         _appliedClientPhysicsMode = false;
     }
 
@@ -191,77 +186,46 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         if (_torsoController == null)
             return;
 
-        bool anchorActive = _legAnchorResolver != null && _legAnchorResolver.HasAnyAttachedFoot();
-        _torsoController.SetAnchorPhysicsOverride(anchorActive);
         Managers.TitanRole.TryGetRoleInput(Define.TitanRole.Torso, out TitanAggregatedInput input);
-        _torsoController.SetInputEnabled(true);
         _torsoController.TickRoleInput(input, dt);
-        _torsoController.TickPhysics(dt);
     }
 
-    private void TickArmRole(bool left, float dt)
+    private static void TickRole(TitanBaseController controller, Define.TitanRole role, float dt)
     {
-        TitanBaseArmRoleController controller = left ? _leftArmController : _rightArmController;
         if (controller == null)
             return;
 
-        Define.TitanRole role = left ? Define.TitanRole.LeftArm : Define.TitanRole.RightArm;
-        bool ok = Managers.TitanRole.TryGetRoleInput(role, out TitanAggregatedInput input);
-
-        if (ok)
-        {
-            controller.TickRoleInput(input, dt);
-        }
+        Managers.TitanRole.TryGetRoleInput(role, out TitanAggregatedInput input);
+        controller.TickRoleInput(input, dt);
     }
 
-    private bool TryGetLegRoleInput(bool left, out TitanAggregatedInput input)
+    private void TickLegRoles(float dt)
     {
-        Define.TitanRole role = left ? Define.TitanRole.LeftLeg : Define.TitanRole.RightLeg;
-        return Managers.TitanRole.TryGetRoleInput(role, out input);
-    }
+        Managers.TitanRole.TryGetRoleInput(
+            Define.TitanRole.LeftLeg,
+            out TitanAggregatedInput leftInput);
 
-    private void ApplyLegAttachInput(bool left, in TitanAggregatedInput activeInput, bool hasActiveInput)
-    {
-        TitanBaseLegRoleController controller = left ? _leftLegController : _rightLegController;
-        if (controller == null)
-        {
-            return;
-        }
+        Managers.TitanRole.TryGetRoleInput(
+            Define.TitanRole.RightLeg,
+            out TitanAggregatedInput rightInput);
 
-        if (hasActiveInput)
-        {
-            controller.TickAttachInput(activeInput);
-            return;
-        }
+        _leftLegController?.TickRoleInput(leftInput, dt);
+        _rightLegController?.TickRoleInput(rightInput, dt);
 
-        Define.TitanRole role = left ? Define.TitanRole.LeftLeg : Define.TitanRole.RightLeg;
-        if (!Managers.TitanRole.IsRoleAssigned(role))
-        {
-            controller.TickAttachInput(default);
-        }
-    }
+        TitanLegInputCommand leftCommand =
+            _leftLegController != null
+                ? _leftLegController.ConsumePendingCommand()
+                : default;
 
-    private void TickLegRole(bool left, bool hasInput, in TitanAggregatedInput input, float dt)
-    {
-        TitanBaseLegRoleController controller = left ? _leftLegController : _rightLegController;
-        if (controller == null)
-        {
-            return;
-        }
+        TitanLegInputCommand rightCommand =
+            _rightLegController != null
+                ? _rightLegController.ConsumePendingCommand()
+                : default;
 
-        if (hasInput)
-        {
-            controller.TickRoleInput(input, dt);
-        }
-    }
-
-    private void TickPassiveStabilization(bool hasLeftLegInput, bool hasRightLegInput, float dt)
-    {
-        if (_leftLegController != null && !hasLeftLegInput && !Managers.TitanRole.IsRoleAssigned(Define.TitanRole.LeftLeg))
-            _leftLegController.TickIdle(dt);
-
-        if (_rightLegController != null && !hasRightLegInput && !Managers.TitanRole.IsRoleAssigned(Define.TitanRole.RightLeg))
-            _rightLegController.TickIdle(dt);
+        Managers.TitanRig.TickLegSystem(
+            leftCommand,
+            rightCommand,
+            dt);
     }
 
 }

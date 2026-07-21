@@ -12,27 +12,12 @@ public class InputManager
     private Vector2 _virtualMousePosition;
     private Vector2Int _virtualMouseScreenSize;
     private CursorLockMode _lastCursorLockMode;
-    private float _nextTitanInputLogTime;
-    private const float TitanInputLogIntervalSeconds = 0.20f;
-    private const float TitanMouseSensitivity = 5f;
+    private uint _transientInputSequence;
 
     public Define.InputMode Mode { get; private set; } = Define.InputMode.Player;
 
     public InputActionMap PlayerMap;
     public InputActionMap UIMap;
-
-    public float GetTitanMouseSensitivity()
-    {
-        return TitanMouseSensitivity;
-    }
-
-    public void ResetTitanMouseBaseline()
-    {
-        // Used when switching active titan control roles.
-        // Without this, the virtual mouse position (cursor-locked mode) carries over
-        // and absolute mouse-to-pose mappings can snap immediately on role activation.
-        _hasVirtualMousePosition = false;
-    }
 
     private InputAction _lookAction;
     private InputAction _scrollWheelAction;
@@ -86,28 +71,18 @@ public class InputManager
         if (Mode != Define.InputMode.Player)
             return input;
 
+        input.TorsoDrillPressedThisFrame = WasRightMousePressedThisFrame();
+        input.TorsoShieldPressedThisFrame = WasPressedThisFrame(Key.Space);
+        input.TorsoClawPressedThisFrame = WasLeftMousePressedThisFrame();
+        input.TorsoShieldHeld = IsPressed(Key.Space);
+        input.TorsoYawInput = GetAxis(Key.A, Key.D);
         input.MouseDelta = ReadTitanMouseDelta();
-        input.MousePosition = ReadMousePosition();
-        input.RightMouseHeld = IsRightMouseHeld();
-        input.RightMousePressedThisFrame = WasRightMousePressedThisFrame();
-        input.TorsoForward = GetAxis(Key.UpArrow, Key.DownArrow);
-        input.TorsoStrafe = GetAxis(Key.RightArrow, Key.LeftArrow);
-        input.TorsoTurn = GetAxis(Key.Period, Key.Comma);
-        input.TorsoWaist = GetAxis(Key.D, Key.A);
-        input.TorsoDrillPressedThisFrame = WasPressedThisFrame(Key.Q);
-        input.TorsoShieldPressedThisFrame = WasPressedThisFrame(Key.W);
-        input.TorsoClawPressedThisFrame = WasPressedThisFrame(Key.E);
+        input.TorsoCameraScrollInput = ReadMouseScrollY();
+        input.ArmElbowInput = GetAxis(Key.W, Key.S);
+        input.LegScrollInput = Mathf.Abs(input.TorsoCameraScrollInput);
+        if (input.MouseDelta.sqrMagnitude > 0.0001f || !Mathf.Approximately(input.TorsoCameraScrollInput, 0f))
+            input.TransientInputSequence = ++_transientInputSequence;
 
-        float ws = GetAxis(Key.W, Key.S);
-        bool shiftHeld = IsShiftHeld();
-        input.LeftArmElbow = ws;
-        input.RightArmElbow = ws;
-        input.LeftLegKnee = shiftHeld ? 0f : ws;
-        input.RightLegKnee = shiftHeld ? 0f : ws;
-        input.LeftLegAnkle = shiftHeld ? ws : 0f;
-        input.RightLegAnkle = shiftHeld ? ws : 0f;
-
-        // MaybeLogTitanInput(input);
         return input;
     }
 
@@ -157,13 +132,13 @@ public class InputManager
         return mouse.scroll.ReadValue().y;
     }
 
-    public bool IsRightMouseHeld()
+    public bool WasLeftMousePressedThisFrame()
     {
         if (Mode != Define.InputMode.Player)
             return false;
 
         Mouse mouse = Mouse.current;
-        return mouse != null && mouse.rightButton.isPressed;
+        return mouse != null && mouse.leftButton.wasPressedThisFrame;
     }
 
     public bool WasRightMousePressedThisFrame()
@@ -173,15 +148,6 @@ public class InputManager
 
         Mouse mouse = Mouse.current;
         return mouse != null && mouse.rightButton.wasPressedThisFrame;
-    }
-
-    public bool WasLeftMousePressedThisFrame()
-    {
-        if (Mode != Define.InputMode.Player)
-            return false;
-
-        Mouse mouse = Mouse.current;
-        return mouse != null && mouse.leftButton.wasPressedThisFrame;
     }
 
     public bool WasInteractKeyPressedThisFrame()
@@ -282,23 +248,4 @@ public class InputManager
         return Keyboard.current != null && Keyboard.current[key].isPressed;
     }
 
-    private void MaybeLogTitanInput(in TitanAggregatedInput input)
-    {
-        if (!InputDebug.Enabled)
-            return;
-
-        if (Time.unscaledTime < _nextTitanInputLogTime)
-            return;
-
-        bool hasWs = Mathf.Abs(input.LeftArmElbow) > 0.001f;
-        bool hasWaist = Mathf.Abs(input.TorsoWaist) > 0.001f;
-        bool hasArrows = Mathf.Abs(input.TorsoForward) > 0.001f || Mathf.Abs(input.TorsoStrafe) > 0.001f;
-        bool hasTurn = Mathf.Abs(input.TorsoTurn) > 0.001f;
-
-        if (!hasWs && !hasWaist && !hasArrows && !hasTurn)
-            return;
-
-        _nextTitanInputLogTime = Time.unscaledTime + TitanInputLogIntervalSeconds;
-        InputDebug.Log($"Managers.Input arrows(fwd={input.TorsoForward}, strafe={input.TorsoStrafe}) turn={input.TorsoTurn} waist(A/D)={input.TorsoWaist} ws(W/S)={input.LeftArmElbow}");
-    }
 }

@@ -4,139 +4,89 @@ using UnityEngine;
 
 public struct TitanRoleInputPayload : INetworkSerializable, IEquatable<TitanRoleInputPayload>
 {
-    public float MouseX;
-    public float MouseY;
-    public float MouseDeltaX;
-    public float MouseDeltaY;
-    public bool RightMouseHeld;
-    public bool RightMousePressedThisFrame;
-    public bool RightMouseAttachBuffered;
-
-    public float TorsoForward;
-    public float TorsoStrafe;
-    public float TorsoTurn;
-    public float TorsoWaist;
     public bool TorsoDrillPressedThisFrame;
     public bool TorsoShieldPressedThisFrame;
     public bool TorsoClawPressedThisFrame;
+    public bool TorsoShieldHeld;
     public uint TorsoDrillPressCounter;
     public uint TorsoShieldPressCounter;
     public uint TorsoClawPressCounter;
-
-    public float LeftArmElbow;
-    public float RightArmElbow;
-    public float LeftLegKnee;
-    public float RightLegKnee;
-    public float LeftLegAnkle;
-    public float RightLegAnkle;
+    public float TorsoYawInput;
+    public Vector2 MouseDelta;
+    public float TorsoCameraScrollInput;
+    public float ArmElbowInput;
+    public float LegScrollInput;
+    public uint TransientInputSequence;
 
     public TitanRoleInputPayload(in TitanAggregatedInput input)
     {
-        MouseX = input.MousePosition.x;
-        MouseY = input.MousePosition.y;
-        MouseDeltaX = input.MouseDelta.x;
-        MouseDeltaY = input.MouseDelta.y;
-        RightMouseHeld = input.RightMouseHeld;
-        RightMousePressedThisFrame = input.RightMousePressedThisFrame;
-        RightMouseAttachBuffered = input.RightMouseAttachBuffered;
-        TorsoForward = input.TorsoForward;
-        TorsoStrafe = input.TorsoStrafe;
-        TorsoTurn = input.TorsoTurn;
-        TorsoWaist = input.TorsoWaist;
         TorsoDrillPressedThisFrame = input.TorsoDrillPressedThisFrame;
         TorsoShieldPressedThisFrame = input.TorsoShieldPressedThisFrame;
         TorsoClawPressedThisFrame = input.TorsoClawPressedThisFrame;
+        TorsoShieldHeld = input.TorsoShieldHeld;
         TorsoDrillPressCounter = input.TorsoDrillPressCounter;
         TorsoShieldPressCounter = input.TorsoShieldPressCounter;
         TorsoClawPressCounter = input.TorsoClawPressCounter;
-        LeftArmElbow = input.LeftArmElbow;
-        RightArmElbow = input.RightArmElbow;
-        LeftLegKnee = input.LeftLegKnee;
-        RightLegKnee = input.RightLegKnee;
-        LeftLegAnkle = input.LeftLegAnkle;
-        RightLegAnkle = input.RightLegAnkle;
+        TorsoYawInput = input.TorsoYawInput;
+        MouseDelta = input.MouseDelta;
+        TorsoCameraScrollInput = input.TorsoCameraScrollInput;
+        ArmElbowInput = input.ArmElbowInput;
+        LegScrollInput = input.LegScrollInput;
+        TransientInputSequence = input.TransientInputSequence;
     }
 
     public TitanAggregatedInput ToAggregatedInput()
     {
         return new TitanAggregatedInput
         {
-            MousePosition = new Vector2(MouseX, MouseY),
-            MouseDelta = new Vector2(MouseDeltaX, MouseDeltaY),
-            RightMouseHeld = RightMouseHeld,
-            RightMousePressedThisFrame = RightMousePressedThisFrame,
-            RightMouseAttachBuffered = RightMouseAttachBuffered,
-            TorsoForward = TorsoForward,
-            TorsoStrafe = TorsoStrafe,
-            TorsoTurn = TorsoTurn,
-            TorsoWaist = TorsoWaist,
             TorsoDrillPressedThisFrame = TorsoDrillPressedThisFrame,
             TorsoShieldPressedThisFrame = TorsoShieldPressedThisFrame,
             TorsoClawPressedThisFrame = TorsoClawPressedThisFrame,
+            TorsoShieldHeld = TorsoShieldHeld,
             TorsoDrillPressCounter = TorsoDrillPressCounter,
             TorsoShieldPressCounter = TorsoShieldPressCounter,
             TorsoClawPressCounter = TorsoClawPressCounter,
-            LeftArmElbow = LeftArmElbow,
-            RightArmElbow = RightArmElbow,
-            LeftLegKnee = LeftLegKnee,
-            RightLegKnee = RightLegKnee,
-            LeftLegAnkle = LeftLegAnkle,
-            RightLegAnkle = RightLegAnkle,
+            TorsoYawInput = TorsoYawInput,
+            MouseDelta = MouseDelta,
+            TorsoCameraScrollInput = TorsoCameraScrollInput,
+            ArmElbowInput = ArmElbowInput,
+            LegScrollInput = LegScrollInput,
+            TransientInputSequence = TransientInputSequence,
         };
     }
 
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
     {
-        serializer.SerializeValue(ref MouseX);
-        serializer.SerializeValue(ref MouseY);
-        serializer.SerializeValue(ref MouseDeltaX);
-        serializer.SerializeValue(ref MouseDeltaY);
-        serializer.SerializeValue(ref RightMouseHeld);
-        serializer.SerializeValue(ref RightMousePressedThisFrame);
-        serializer.SerializeValue(ref RightMouseAttachBuffered);
-        serializer.SerializeValue(ref TorsoForward);
-        serializer.SerializeValue(ref TorsoStrafe);
-        serializer.SerializeValue(ref TorsoTurn);
-        serializer.SerializeValue(ref TorsoWaist);
         serializer.SerializeValue(ref TorsoDrillPressedThisFrame);
         serializer.SerializeValue(ref TorsoShieldPressedThisFrame);
         serializer.SerializeValue(ref TorsoClawPressedThisFrame);
+        serializer.SerializeValue(ref TorsoShieldHeld);
         serializer.SerializeValue(ref TorsoDrillPressCounter);
         serializer.SerializeValue(ref TorsoShieldPressCounter);
         serializer.SerializeValue(ref TorsoClawPressCounter);
-        serializer.SerializeValue(ref LeftArmElbow);
-        serializer.SerializeValue(ref RightArmElbow);
-        serializer.SerializeValue(ref LeftLegKnee);
-        serializer.SerializeValue(ref RightLegKnee);
-        serializer.SerializeValue(ref LeftLegAnkle);
-        serializer.SerializeValue(ref RightLegAnkle);
+        serializer.SerializeValue(ref TorsoYawInput);
+        serializer.SerializeValue(ref MouseDelta);
+        serializer.SerializeValue(ref TorsoCameraScrollInput);
+        serializer.SerializeValue(ref ArmElbowInput);
+        serializer.SerializeValue(ref LegScrollInput);
+        serializer.SerializeValue(ref TransientInputSequence);
     }
 
     public bool Equals(TitanRoleInputPayload other)
     {
-        return MouseX.Equals(other.MouseX)
-            && MouseY.Equals(other.MouseY)
-            && MouseDeltaX.Equals(other.MouseDeltaX)
-            && MouseDeltaY.Equals(other.MouseDeltaY)
-            && RightMouseHeld == other.RightMouseHeld
-            && RightMousePressedThisFrame == other.RightMousePressedThisFrame
-            && RightMouseAttachBuffered == other.RightMouseAttachBuffered
-            && TorsoForward.Equals(other.TorsoForward)
-            && TorsoStrafe.Equals(other.TorsoStrafe)
-            && TorsoTurn.Equals(other.TorsoTurn)
-            && TorsoWaist.Equals(other.TorsoWaist)
-            && TorsoDrillPressedThisFrame == other.TorsoDrillPressedThisFrame
+        return TorsoDrillPressedThisFrame == other.TorsoDrillPressedThisFrame
             && TorsoShieldPressedThisFrame == other.TorsoShieldPressedThisFrame
             && TorsoClawPressedThisFrame == other.TorsoClawPressedThisFrame
+            && TorsoShieldHeld == other.TorsoShieldHeld
             && TorsoDrillPressCounter == other.TorsoDrillPressCounter
             && TorsoShieldPressCounter == other.TorsoShieldPressCounter
             && TorsoClawPressCounter == other.TorsoClawPressCounter
-            && LeftArmElbow.Equals(other.LeftArmElbow)
-            && RightArmElbow.Equals(other.RightArmElbow)
-            && LeftLegKnee.Equals(other.LeftLegKnee)
-            && RightLegKnee.Equals(other.RightLegKnee)
-            && LeftLegAnkle.Equals(other.LeftLegAnkle)
-            && RightLegAnkle.Equals(other.RightLegAnkle);
+            && TorsoYawInput.Equals(other.TorsoYawInput)
+            && MouseDelta.Equals(other.MouseDelta)
+            && TorsoCameraScrollInput.Equals(other.TorsoCameraScrollInput)
+            && ArmElbowInput.Equals(other.ArmElbowInput)
+            && LegScrollInput.Equals(other.LegScrollInput)
+            && TransientInputSequence == other.TransientInputSequence;
     }
 }
 
@@ -162,6 +112,7 @@ public struct TitanRigPosePayload : INetworkSerializable, IEquatable<TitanRigPos
     public bool HasLeftKnee;
     public Quaternion LeftKneeRotation;
     public bool HasLeftFoot;
+    public Vector3 LeftFootPosition;
     public Quaternion LeftFootRotation;
 
     public bool HasRightHip;
@@ -169,6 +120,7 @@ public struct TitanRigPosePayload : INetworkSerializable, IEquatable<TitanRigPos
     public bool HasRightKnee;
     public Quaternion RightKneeRotation;
     public bool HasRightFoot;
+    public Vector3 RightFootPosition;
     public Quaternion RightFootRotation;
 
     public bool HasSpine;
@@ -196,6 +148,7 @@ public struct TitanRigPosePayload : INetworkSerializable, IEquatable<TitanRigPos
         HasLeftKnee = snapshot.HasLeftKnee;
         LeftKneeRotation = snapshot.LeftKneeRotation;
         HasLeftFoot = snapshot.HasLeftFoot;
+        LeftFootPosition = snapshot.LeftFootPosition;
         LeftFootRotation = snapshot.LeftFootRotation;
 
         HasRightHip = snapshot.HasRightHip;
@@ -203,6 +156,7 @@ public struct TitanRigPosePayload : INetworkSerializable, IEquatable<TitanRigPos
         HasRightKnee = snapshot.HasRightKnee;
         RightKneeRotation = snapshot.RightKneeRotation;
         HasRightFoot = snapshot.HasRightFoot;
+        RightFootPosition = snapshot.RightFootPosition;
         RightFootRotation = snapshot.RightFootRotation;
 
         HasSpine = snapshot.HasSpine;
@@ -231,6 +185,7 @@ public struct TitanRigPosePayload : INetworkSerializable, IEquatable<TitanRigPos
             HasLeftKnee = HasLeftKnee,
             LeftKneeRotation = LeftKneeRotation,
             HasLeftFoot = HasLeftFoot,
+            LeftFootPosition = LeftFootPosition,
             LeftFootRotation = LeftFootRotation,
 
             HasRightHip = HasRightHip,
@@ -238,6 +193,7 @@ public struct TitanRigPosePayload : INetworkSerializable, IEquatable<TitanRigPos
             HasRightKnee = HasRightKnee,
             RightKneeRotation = RightKneeRotation,
             HasRightFoot = HasRightFoot,
+            RightFootPosition = RightFootPosition,
             RightFootRotation = RightFootRotation,
 
             HasSpine = HasSpine,
@@ -267,6 +223,7 @@ public struct TitanRigPosePayload : INetworkSerializable, IEquatable<TitanRigPos
         serializer.SerializeValue(ref HasLeftKnee);
         serializer.SerializeValue(ref LeftKneeRotation);
         serializer.SerializeValue(ref HasLeftFoot);
+        serializer.SerializeValue(ref LeftFootPosition);
         serializer.SerializeValue(ref LeftFootRotation);
 
         serializer.SerializeValue(ref HasRightHip);
@@ -274,6 +231,7 @@ public struct TitanRigPosePayload : INetworkSerializable, IEquatable<TitanRigPos
         serializer.SerializeValue(ref HasRightKnee);
         serializer.SerializeValue(ref RightKneeRotation);
         serializer.SerializeValue(ref HasRightFoot);
+        serializer.SerializeValue(ref RightFootPosition);
         serializer.SerializeValue(ref RightFootRotation);
 
         serializer.SerializeValue(ref HasSpine);
@@ -298,15 +256,49 @@ public struct TitanRigPosePayload : INetworkSerializable, IEquatable<TitanRigPos
             && HasLeftKnee == other.HasLeftKnee
             && LeftKneeRotation.Equals(other.LeftKneeRotation)
             && HasLeftFoot == other.HasLeftFoot
+            && LeftFootPosition.Equals(other.LeftFootPosition)
             && LeftFootRotation.Equals(other.LeftFootRotation)
             && HasRightHip == other.HasRightHip
             && RightHipRotation.Equals(other.RightHipRotation)
             && HasRightKnee == other.HasRightKnee
             && RightKneeRotation.Equals(other.RightKneeRotation)
             && HasRightFoot == other.HasRightFoot
+            && RightFootPosition.Equals(other.RightFootPosition)
             && RightFootRotation.Equals(other.RightFootRotation)
             && HasSpine == other.HasSpine
             && SpineRotation.Equals(other.SpineRotation);
+    }
+}
+
+public struct TorsoCameraStatePayload : INetworkSerializable, IEquatable<TorsoCameraStatePayload>
+{
+    public bool IsValid;
+    public float Yaw;
+    public float Pitch;
+    public float Distance;
+
+    public TorsoCameraStatePayload(float yaw, float pitch, float distance)
+    {
+        IsValid = true;
+        Yaw = yaw;
+        Pitch = pitch;
+        Distance = distance;
+    }
+
+    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+    {
+        serializer.SerializeValue(ref IsValid);
+        serializer.SerializeValue(ref Yaw);
+        serializer.SerializeValue(ref Pitch);
+        serializer.SerializeValue(ref Distance);
+    }
+
+    public bool Equals(TorsoCameraStatePayload other)
+    {
+        return IsValid == other.IsValid
+            && Yaw.Equals(other.Yaw)
+            && Pitch.Equals(other.Pitch)
+            && Distance.Equals(other.Distance);
     }
 }
 
