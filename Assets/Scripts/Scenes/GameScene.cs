@@ -6,6 +6,11 @@ public class GameScene : BaseScene
 {
     private const string TitanPrefabName = "Titan";
     private const string GrolarPrefabName = "Grolar";
+    private const string HpTankPrefabName = "HPTank";
+    private const string GaugeTankPrefabName = "GaugeTank";
+    private const float TankSpawnIntervalSeconds = 5f;
+    private const float TankSpawnRadius = 5f;
+    private const float TankSpawnY = 0f;
     private static readonly Vector3 TitanSpawnPosition = new(0, 1.5f, 0);
     private static readonly Quaternion TitanSpawnRotation = Quaternion.Euler(0f, 0f, 0f);
     private static readonly Vector3 GrolarSpawnPosition = new(0, 0, 1);
@@ -22,13 +27,37 @@ public class GameScene : BaseScene
     private BossStat _bossStat;
     private TitanStat _titanStat;
     private bool _gameEndShown;
+    private GameObject _hpTankOriginal;
+    private GameObject _gaugeTankOriginal;
+    private float _nextTankSpawnTime;
 
     private void EnsureTitanRuntime()
     {
         GameObject titanObject = Managers.Resource.Instantiate(TitanPrefabName);
-        titanObject.transform.SetPositionAndRotation(TitanSpawnPosition, TitanSpawnRotation);
-
         _titanController = titanObject.GetComponent<TitanController>();
+
+        TitanRigRuntime runtime = titanObject.GetComponent<TitanRigRuntime>();
+        Managers.TitanRig.Bind(runtime);
+        runtime.ApplyMovementRootPose(TitanSpawnPosition, TitanSpawnRotation, zeroVelocities: true);
+        runtime.ApplyMovementRootBaseRotation();
+    }
+
+    private static void RefreshGameRoleMap()
+    {
+        if (!Managers.TitanRole.RefreshRoleMap(requireAllRoles: false, out string error))
+            Debug.LogWarning($"{InputDebug.Prefix} GameScene role map not ready during bootstrap: {error}");
+    }
+
+    private static void SeedInitialTitanNetworkState()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager == null || !networkManager.IsListening || !networkManager.IsServer)
+            return;
+
+        if (!Managers.TitanRig.TryGetPoseSnapshot(out TitanRigPoseSnapshot snapshot))
+            return;
+
+        LobbyNetworkPlayer.TryPublishServerTitanPose(new TitanRigPosePayload(snapshot));
     }
 
     private void EnsureGrolarRuntime()
@@ -76,13 +105,17 @@ public class GameScene : BaseScene
 
         Debug.Log($"{InputDebug.Prefix} GameScene.Init SceneType={SceneType}");
 
+        CleanupLobbyRangers();
         EnsureTitanRuntime();
+        RefreshGameRoleMap();
+        SeedInitialTitanNetworkState();
         EnsureGrolarRuntime();
         EnsureUI();
         MapStatsToUIs();
-        CleanupLobbyRangers();
         _roleMappingUi.CaptureCurrentRoleMapping();
         Managers.Input.SetMode(Define.InputMode.Player);
+        CacheTankPrefabs();
+        _nextTankSpawnTime = Time.time + TankSpawnIntervalSeconds;
     }
 
     private void Update()
@@ -93,6 +126,7 @@ public class GameScene : BaseScene
             return;
 
         UpdateRoleMappingVisibility();
+        UpdateTankSpawning();
 
         if (!IsEscapePressedThisFrame())
             return;
@@ -178,6 +212,38 @@ public class GameScene : BaseScene
         return stat != null && stat.Hp <= 0;
     }
 
+    private void CacheTankPrefabs()
+    {
+        _hpTankOriginal = Managers.Resource.Load<GameObject>($"Prefabs/{HpTankPrefabName}");
+        _gaugeTankOriginal = Managers.Resource.Load<GameObject>($"Prefabs/{GaugeTankPrefabName}");
+    }
+
+    private void UpdateTankSpawning()
+    {
+        if (_titanController == null || Time.time < _nextTankSpawnTime)
+            return;
+
+        SpawnRandomTank();
+        _nextTankSpawnTime = Time.time + TankSpawnIntervalSeconds;
+    }
+
+    private void SpawnRandomTank()
+    {
+        GameObject original = Random.value < 0.5f ? _hpTankOriginal : _gaugeTankOriginal;
+        if (original == null)
+            return;
+
+        Poolable tank = Managers.Pool.Pop(original, transform);
+        tank.transform.SetPositionAndRotation(GetRandomTankSpawnPosition(), Quaternion.identity);
+    }
+
+    private Vector3 GetRandomTankSpawnPosition()
+    {
+        Vector2 offset = Random.insideUnitCircle * TankSpawnRadius;
+        Vector3 titanPosition = _titanController.transform.position;
+        return new Vector3(titanPosition.x + offset.x, TankSpawnY, titanPosition.z + offset.y);
+    }
+
     private void UpdateRoleMappingVisibility()
     {
         if (_roleMappingUi == null)
@@ -246,5 +312,7 @@ public class GameScene : BaseScene
         _bossStat = null;
         _titanStat = null;
         _gameEndShown = false;
+        _hpTankOriginal = null;
+        _gaugeTankOriginal = null;
     }
 }

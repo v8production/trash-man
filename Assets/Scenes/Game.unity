@@ -270,19 +270,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameCameraController
   _titanTarget: {fileID: 0}
-  _bossTarget: {fileID: 0}
   _titanPivotOffset: {x: 0, y: 1, z: 0}
   _useDynamicTitanCenter: 1
   _dynamicTitanCenterOffset: {x: 0, y: 0, z: 0}
-  _lookPointOffset: {x: 0, y: 0.3, z: 0}
-  _bossLookOffset: {x: 0, y: 0.5, z: 0}
   _followDistance: 2
+  _minFollowDistance: 0.75
+  _maxFollowDistance: 3
+  _zoomSensitivity: 10
   _heightOffset: 0.8
-  _lookAtBossWeight: 0
-  _followLerpSpeed: 8
-  _rotationLerpSpeed: 10
+  _yawSensitivity: 0.08
+  _pitchSensitivity: 0.08
+  _minPitch: -30
+  _maxPitch: 60
   _fallbackForward: {x: 0, y: 0, z: 1}
-  _minimumPlanarDistance: 0.25
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
