@@ -48,11 +48,6 @@ public class FootAttachmentController : MonoBehaviour
     protected TitanBaseLegRoleController.LegSide side;
 
     public TitanBaseLegRoleController.LegSide Side => side;
-    public bool IsAttached => false;
-    public bool AttachHeld => false;
-    public Vector3 AttachedWorldPosition => Vector3.zero;
-    public Quaternion AttachedWorldRotation => Quaternion.identity;
-    public Collider AttachedCollider => null;
     public Transform FootTransform => footTransform;
     public Transform BottomProbe => bottomProbe != null ? bottomProbe : footTransform;
     public int SoleContactPointCount => cachedSolePointCount;
@@ -73,10 +68,6 @@ public class FootAttachmentController : MonoBehaviour
         CacheSolePoints();
         ValidateSoleAuthoring();
         ValidateDiagnosticColliderAuthoring();
-    }
-
-    public void SetAttachHeld(bool held)
-    {
     }
 
     public void RebuildCachedSoleGeometry()
