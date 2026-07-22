@@ -2067,8 +2067,14 @@ public sealed class TitanRigRuntime : MonoBehaviour
         }
 
         Vector3 up = TitanGroundFrame.Up;
-        Vector3 requestedWorldDelta = (TitanGroundFrame.WorldRight * command.HorizontalDelta.x
-            + TitanGroundFrame.WorldForward * command.HorizontalDelta.y) * footMoveSensitivity;
+        Vector3 pelvisForward = Vector3.ProjectOnPlane(MovementRoot.forward, up);
+        if (pelvisForward.sqrMagnitude < 0.0001f)
+            pelvisForward = TitanGroundFrame.WorldForward;
+
+        pelvisForward.Normalize();
+        Vector3 pelvisRight = Vector3.Cross(up, pelvisForward).normalized;
+        Vector3 requestedWorldDelta = (pelvisRight * command.HorizontalDelta.x
+            + pelvisForward * command.HorizontalDelta.y) * footMoveSensitivity;
         Vector3 previous = state.DesiredGroundTarget;
         float groundHeight = Vector3.Dot(previous, up);
         Vector3 requested = Vector3.ProjectOnPlane(previous + requestedWorldDelta, up) + up * groundHeight;

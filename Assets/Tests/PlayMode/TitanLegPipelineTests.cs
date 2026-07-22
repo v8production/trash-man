@@ -274,6 +274,28 @@ public sealed class TitanLegPipelineTests
     }
 
     [Test]
+    public void HorizontalSwingInput_UsesPelvisFacingDirection()
+    {
+        using RuntimeFixture fixture = RuntimeFixture.CreateProcedural();
+        TitanRigRuntime runtime = fixture.Runtime;
+        runtime.MovementRoot.rotation = Quaternion.Euler(0f, 90f, 0f);
+        Physics.SyncTransforms();
+        TickUntilGrounded(runtime);
+        runtime.TickLegSystem(default, new TitanLegInputCommand { LiftInput = 1f }, 0.02f);
+        Vector3 startTarget = runtime.RightLegState.DesiredGroundTarget;
+
+        for (int i = 0; i < 16; i++)
+        {
+            runtime.TickLegSystem(default, new TitanLegInputCommand { LiftInput = 1f, HorizontalDelta = new Vector2(0f, 5f) }, 0.02f);
+        }
+
+        Vector3 moved = runtime.RightLegState.DesiredGroundTarget - startTarget;
+        Assert.That(Vector3.Dot(moved, Vector3.right), Is.GreaterThan(0.1f));
+        Assert.That(Mathf.Abs(Vector3.Dot(moved, TitanGroundFrame.WorldForward)), Is.LessThan(0.05f));
+        Assert.That(runtime.RightLegState.TargetWasClamped, Is.False, DescribeLegState(runtime, false));
+    }
+
+    [Test]
     public void InteriorHorizontalMotion_DoesNotUseExhaustiveFallback()
     {
         using RuntimeFixture fixture = RuntimeFixture.CreateProcedural();
