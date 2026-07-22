@@ -24,6 +24,14 @@ public class Define
         Game,
 
     }
+
+    public enum GameEndResult
+    {
+        None,
+        Victory,
+        GameOver,
+    }
+
     public enum Layer
     {
         Monster = 8,

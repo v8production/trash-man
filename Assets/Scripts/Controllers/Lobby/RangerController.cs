@@ -43,6 +43,7 @@ public class RangerController : MonoBehaviour
     Animator Anim;
     public event System.Action<Define.RangerAnimState> EmotionRequested;
     public event System.Action<Define.RangerAnimState> SitAnimationRequested;
+    public event System.Action StandUpAnimationRequested;
 
     private Define.RangerAnimState _animState;
     public bool IsSeated => _isSeated;
@@ -235,6 +236,7 @@ public class RangerController : MonoBehaviour
         transform.SetParent(null, true);
         StopUpperBodyEmoteLayer();
         AnimState = Define.RangerAnimState.Idle00;
+        StandUpAnimationRequested?.Invoke();
     }
 
     public void StandUp(Vector3 worldPosition)
@@ -264,10 +266,12 @@ public class RangerController : MonoBehaviour
 
         StopUpperBodyEmoteLayer();
         AnimState = Define.RangerAnimState.Idle00;
+        StandUpAnimationRequested?.Invoke();
     }
 
     public void PlayReplicatedSitAnimation(Define.RangerAnimState seatedAnimState)
     {
+        _isSeated = true;
         _seatedAnimState = seatedAnimState;
         _animState = _seatedAnimState;
 
@@ -275,6 +279,15 @@ public class RangerController : MonoBehaviour
             Anim.CrossFade(_animState.ToString(), EmotionCrossFadeDuration, 0, 0f);
 
         StopUpperBodyEmoteLayer();
+    }
+
+    public void PlayReplicatedStandUpAnimation()
+    {
+        _isSeated = false;
+        _seatedAnimState = Define.RangerAnimState.Sit00;
+        _moveInput = Vector2.zero;
+        StopUpperBodyEmoteLayer();
+        AnimState = Define.RangerAnimState.Idle00;
     }
 
     public void PlayReplicatedEmotion(Define.RangerAnimState emotionState)

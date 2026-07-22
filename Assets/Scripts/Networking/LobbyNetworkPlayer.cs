@@ -45,6 +45,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private readonly NetworkVariable<TitanStatPayload> _titanStat = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanAbilityStatePayload> _titanAbilityState = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<GrolarStatePayload> _grolarState = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    private readonly NetworkVariable<int> _gameEndResult = new((int)Define.GameEndResult.None, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     private RangerController _lobbyRanger;
     private CharacterController _lobbyRangerCharacterController;
@@ -60,6 +61,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private bool _remotePendingSeatedPoseSnap;
     private bool _subscribedLobbyRangerEmotion;
     private bool _subscribedLobbyRangerSitAnimation;
+    private bool _subscribedLobbyRangerStandUpAnimation;
 
     private bool _submittedIdentity;
     private bool _playedInitialLobbyGateAnimation;
@@ -243,6 +245,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             _subscribedLobbyRangerSitAnimation = false;
         }
 
+        if (_lobbyRanger != null && _subscribedLobbyRangerStandUpAnimation)
+        {
+            _lobbyRanger.StandUpAnimationRequested -= HandleLocalRangerStandUpAnimationRequested;
+            _subscribedLobbyRangerStandUpAnimation = false;
+        }
+
         if (!preserveLobbyScene && !string.IsNullOrWhiteSpace(lobbyUserId))
         {
             Managers.LobbySession.UnregisterLobbyUserObjects(lobbyUserId, _lobbyRanger, _nicknameUI);
@@ -341,6 +349,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         PlayRangerSitAnimationClientRpc(rangerAnimStateValue);
     }
 
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void SubmitRangerStandUpAnimationServerRpc()
+    {
+        PlayRangerStandUpAnimationClientRpc();
+    }
+
     [Rpc(SendTo.ClientsAndHost)]
     private void PlayRangerEmotionClientRpc(int rangerAnimStateValue)
     {
@@ -368,9 +382,24 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     }
 
     [Rpc(SendTo.ClientsAndHost)]
+    private void PlayRangerStandUpAnimationClientRpc()
+    {
+        if (IsOwner)
+            return;
+
+        PlayRemoteRangerStandUpAnimation();
+    }
+
+    [Rpc(SendTo.ClientsAndHost)]
     private void LoadGameSceneClientRpc()
     {
         Managers.Scene.LoadScene(Define.Scene.Game);
+    }
+
+    [Rpc(SendTo.ClientsAndHost)]
+    private void LoadLobbySceneClientRpc()
+    {
+        Managers.Scene.LoadScene(Define.Scene.Lobby);
     }
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
@@ -383,6 +412,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         }
 
         RequestLoadGameForAll();
+    }
+
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void RequestLoadLobbyForAllServerRpc()
+    {
+        RequestLoadLobbyForAll();
     }
 
     public void SubmitLocalFaceTexture(Texture2D faceTexture)
@@ -836,6 +871,42 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         return grolarState.IsValid;
     }
 
+    public static bool TryPublishServerGameEndResult(Define.GameEndResult result)
+    {
+        if (result == Define.GameEndResult.None)
+            return false;
+
+        LobbyNetworkPlayer publisher = FindServerPosePublisher();
+        if (publisher == null || !publisher.IsServer || !publisher.IsSpawned)
+            return false;
+
+        if (publisher._gameEndResult.Value != (int)Define.GameEndResult.None)
+            return true;
+
+        publisher._gameEndResult.Value = (int)result;
+        publisher.ShowGameEndClientRpc((int)result);
+        return true;
+    }
+
+    public static bool TryGetLatestGameEndResult(out Define.GameEndResult result)
+    {
+        result = Define.GameEndResult.None;
+
+        LobbyNetworkPlayer publisher = FindServerPosePublisher();
+        if (publisher == null || !publisher.IsSpawned)
+            return false;
+
+        result = (Define.GameEndResult)publisher._gameEndResult.Value;
+        return true;
+    }
+
+    [Rpc(SendTo.ClientsAndHost)]
+    private void ShowGameEndClientRpc(int resultValue)
+    {
+        if (Managers.Scene.CurrentScene is GameScene gameScene)
+            gameScene.ShowGameEndFromNetwork((Define.GameEndResult)resultValue);
+    }
+
     private static LobbyNetworkPlayer FindServerPosePublisher()
     {
         LobbyNetworkPlayer[] players = FindAllSpawnedPlayers();
@@ -866,6 +937,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             if (player == null || !player.IsServer || !player.IsSpawned)
                 continue;
 
+            player._gameEndResult.Value = (int)Define.GameEndResult.None;
+
             if (player.TryLoadGameSceneForSession())
                 return true;
 
@@ -886,6 +959,36 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return false;
 
         localPlayer.RequestLoadGameForAllServerRpc();
+        return true;
+    }
+
+    public static bool RequestLoadLobbyForAll()
+    {
+        LobbyNetworkPlayer[] players = Object.FindObjectsByType<LobbyNetworkPlayer>();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || !player.IsServer || !player.IsSpawned)
+                continue;
+
+            player._gameEndResult.Value = (int)Define.GameEndResult.None;
+            player.LoadLobbySceneClientRpc();
+            return true;
+        }
+
+        return false;
+    }
+
+    public static bool RequestLoadLobbyFromLocalPlayer()
+    {
+        if (RequestLoadLobbyForAll())
+            return true;
+
+        LobbyNetworkPlayer localPlayer = FindLocalOwnedPlayer();
+        if (localPlayer == null || !localPlayer.IsSpawned)
+            return false;
+
+        localPlayer.RequestLoadLobbyForAllServerRpc();
         return true;
     }
 
@@ -1106,6 +1209,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             _lobbyRanger.SitAnimationRequested += HandleLocalRangerSitAnimationRequested;
             _subscribedLobbyRangerSitAnimation = true;
         }
+
+        if (!_subscribedLobbyRangerStandUpAnimation)
+        {
+            _lobbyRanger.StandUpAnimationRequested += HandleLocalRangerStandUpAnimationRequested;
+            _subscribedLobbyRangerStandUpAnimation = true;
+        }
     }
 
     private void HandleLocalRangerEmotionRequested(Define.RangerAnimState rangerAnimState)
@@ -1130,6 +1239,18 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         SubmitRangerSitAnimationServerRpc((int)rangerAnimState);
+    }
+
+    private void HandleLocalRangerStandUpAnimationRequested()
+    {
+        if (!IsOwner || !IsSpawned)
+            return;
+
+        BaseScene scene = Managers.Scene.CurrentScene;
+        if (scene == null || scene.SceneType != Define.Scene.Lobby)
+            return;
+
+        SubmitRangerStandUpAnimationServerRpc();
     }
 
     private void ApplyRangerColorPresentation()
@@ -1278,10 +1399,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
                 return;
             }
 
-            if (!walking)
-                return;
-
-            _lobbyRanger.StopUpperBodyEmoteLayer();
+            return;
         }
 
         if (_remoteEmotionActive)
@@ -1346,6 +1464,28 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _remoteLastPosition = _lobbyRanger.transform.position;
         _remotePendingSeatedPoseSnap = true;
         _lobbyRanger.PlayReplicatedSitAnimation(rangerAnimState);
+    }
+
+    private void PlayRemoteRangerStandUpAnimation()
+    {
+        if (_lobbyRanger == null)
+            EnsureLobbyRanger();
+
+        if (_lobbyRanger == null)
+            return;
+
+        if (_remoteAnimator == null)
+            _remoteAnimator = _lobbyRanger.GetComponentInChildren<Animator>(true);
+
+        if (_remoteAnimator == null)
+            return;
+
+        _remoteEmotionActive = false;
+        _remoteWasWalking = false;
+        _remoteHasLastPosition = true;
+        _remoteLastPosition = _lobbyRanger.transform.position;
+        _remotePendingSeatedPoseSnap = false;
+        _lobbyRanger.PlayReplicatedStandUpAnimation();
     }
 
     private void CrossFadeRemoteRanger(Define.RangerAnimState state, float transitionDuration)

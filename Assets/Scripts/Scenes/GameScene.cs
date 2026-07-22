@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -16,6 +17,11 @@ public class GameScene : BaseScene
     private UI_TitanStat _titanStatUi;
     private UI_GameMenu _gameMenuUi;
     private UI_RoleMapping _roleMappingUi;
+    private UI_Victory _victoryUi;
+    private UI_GameOver _gameOverUi;
+    private BossStat _bossStat;
+    private TitanStat _titanStat;
+    private bool _gameEndShown;
 
     private void EnsureTitanRuntime()
     {
@@ -38,23 +44,35 @@ public class GameScene : BaseScene
         _titanStatUi = Managers.UI.ShowSceneUI<UI_TitanStat>(nameof(UI_TitanStat));
         _gameMenuUi = Managers.UI.ShowSceneUI<UI_GameMenu>(nameof(UI_GameMenu));
         _roleMappingUi = Managers.UI.ShowSceneUI<UI_RoleMapping>(nameof(UI_RoleMapping));
+        _victoryUi = Managers.UI.ShowSceneUI<UI_Victory>(nameof(UI_Victory));
+        _gameOverUi = Managers.UI.ShowSceneUI<UI_GameOver>(nameof(UI_GameOver));
         _gameMenuUi.gameObject.SetActive(false);
         _roleMappingUi.gameObject.SetActive(false);
+        _victoryUi.gameObject.SetActive(false);
+        _gameOverUi.gameObject.SetActive(false);
     }
 
     private void MapStatsToUIs()
     {
-        if (_bossUi != null && _grolarController != null)
-            _bossUi.SetStat(_grolarController.GetComponent<BossStat>());
+        if (_grolarController != null)
+            _bossStat = _grolarController.GetComponent<BossStat>();
 
-        if (_titanStatUi != null && _titanController != null)
-            _titanStatUi.SetStat(_titanController.GetComponent<TitanStat>());
+        if (_titanController != null)
+            _titanStat = _titanController.GetComponent<TitanStat>();
+
+        if (_bossUi != null)
+            _bossUi.SetStat(_bossStat);
+
+        if (_titanStatUi != null)
+            _titanStatUi.SetStat(_titanStat);
     }
 
     protected override void Init()
     {
         base.Init();
         SceneType = Define.Scene.Game;
+        UI_Victory.ResumeGameTime();
+        UI_GameOver.ResumeGameTime();
 
         Debug.Log($"{InputDebug.Prefix} GameScene.Init SceneType={SceneType}");
 
@@ -69,12 +87,95 @@ public class GameScene : BaseScene
 
     private void Update()
     {
+        UpdateGameEndVisibility();
+
+        if (_gameEndShown)
+            return;
+
         UpdateRoleMappingVisibility();
 
         if (!IsEscapePressedThisFrame())
             return;
 
         ToggleMenuInputMode();
+    }
+
+    private void UpdateGameEndVisibility()
+    {
+        if (_gameEndShown)
+            return;
+
+        if (LobbyNetworkPlayer.TryGetLatestGameEndResult(out Define.GameEndResult networkResult)
+            && networkResult != Define.GameEndResult.None)
+        {
+            ShowGameEnd(networkResult);
+            return;
+        }
+
+        Define.GameEndResult result = GetLocalGameEndResult();
+        if (result == Define.GameEndResult.None)
+            return;
+
+        if (IsNetworkSessionActive())
+        {
+            if (HasServerAuthority() && !LobbyNetworkPlayer.TryPublishServerGameEndResult(result))
+                ShowGameEnd(result);
+
+            return;
+        }
+
+        ShowGameEnd(result);
+    }
+
+    public void ShowGameEndFromNetwork(Define.GameEndResult result)
+    {
+        ShowGameEnd(result);
+    }
+
+    private void ShowGameEnd(Define.GameEndResult result)
+    {
+        if (result == Define.GameEndResult.None)
+            return;
+
+        if (_gameEndShown)
+            return;
+
+        Managers.UI.HideAllMenuUIs();
+        if (result == Define.GameEndResult.GameOver)
+            _gameOverUi.Open();
+        else
+            _victoryUi.Open();
+
+        Managers.Input.SetMode(Define.InputMode.UI);
+        _gameEndShown = true;
+    }
+
+    private Define.GameEndResult GetLocalGameEndResult()
+    {
+        if (IsHpDepleted(_titanStat))
+            return Define.GameEndResult.GameOver;
+
+        if (IsHpDepleted(_bossStat))
+            return Define.GameEndResult.Victory;
+
+        return Define.GameEndResult.None;
+    }
+
+    private static bool IsNetworkSessionActive()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        return networkManager != null && networkManager.IsListening;
+    }
+
+    private static bool HasServerAuthority()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        return networkManager != null && networkManager.IsListening && networkManager.IsServer;
+    }
+
+    private static bool IsHpDepleted(Stat stat)
+    {
+        return stat != null && stat.Hp <= 0;
     }
 
     private void UpdateRoleMappingVisibility()
@@ -132,11 +233,18 @@ public class GameScene : BaseScene
 
     public override void Clear()
     {
+        UI_Victory.ResumeGameTime();
+        UI_GameOver.ResumeGameTime();
         _titanController = null;
         _grolarController = null;
         _bossUi = null;
         _titanStatUi = null;
         _gameMenuUi = null;
         _roleMappingUi = null;
+        _victoryUi = null;
+        _gameOverUi = null;
+        _bossStat = null;
+        _titanStat = null;
+        _gameEndShown = false;
     }
 }
