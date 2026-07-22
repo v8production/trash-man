@@ -14,6 +14,7 @@ public class UI_Victory : UI_Menu
 
     public void Open()
     {
+        SetAnimatorUpdateMode(AnimatorUpdateMode.UnscaledTime);
         gameObject.SetActive(true);
         Time.timeScale = PausedTimeScale;
     }
@@ -27,8 +28,16 @@ public class UI_Victory : UI_Menu
     {
         base.Init();
         Bind<Button>(typeof(Buttons));
+        SetAnimatorUpdateMode(AnimatorUpdateMode.UnscaledTime);
 
         GetButton((int)Buttons.BackToLobby).gameObject.BindEvent(OnBackToLobbyButtonClicked);
+    }
+
+    private void SetAnimatorUpdateMode(AnimatorUpdateMode updateMode)
+    {
+        Animator[] animators = GetComponentsInChildren<Animator>(true);
+        for (int i = 0; i < animators.Length; i++)
+            animators[i].updateMode = updateMode;
     }
 
     private void OnBackToLobbyButtonClicked(PointerEventData eventData)
