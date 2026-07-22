@@ -13,6 +13,9 @@ public class RangerController : MonoBehaviour
     private const string UpperBodyEmoteStatePrefix = "UpperBody";
     private const float EmotionCrossFadeDuration = 0.1f;
     private const float UpperBodyEmoteFallbackDuration = 2f;
+    private const float HeadLookYawScale = 0.6f;
+    private const float HeadLookPitchScale = 0.45f;
+    private const float Emote02MoveSpeedMultiplier = 1f / 3f;
 
     [Header("Actions (Player Map)")]
     [SerializeField] private string moveActionName = "Move";
@@ -39,6 +42,13 @@ public class RangerController : MonoBehaviour
     private int _upperBodyEmoteLayerIndex = -1;
     private bool _upperBodyEmoteActive;
     private float _upperBodyEmoteEndTime;
+    private Define.RangerAnimState _upperBodyEmoteState = Define.RangerAnimState.Idle00;
+    private bool _upperBodyEmoteHolding;
+    private Transform _head;
+    private Quaternion _headBaseLocalRotation;
+    private bool _hasHeadBaseLocalRotation;
+    private float _seatedLookYaw;
+    private float _seatedLookPitch;
 
     Animator Anim;
     public event System.Action<Define.RangerAnimState> EmotionRequested;
@@ -68,6 +78,9 @@ public class RangerController : MonoBehaviour
         }
     }
 
+    public float SeatedLookYaw => _seatedLookYaw;
+    public float SeatedLookPitch => _seatedLookPitch;
+
     private void Awake()
     {
         Init();
@@ -87,6 +100,7 @@ public class RangerController : MonoBehaviour
         _characterController = GetComponent<CharacterController>();
         Anim = GetComponentInChildren<Animator>();
         _upperBodyEmoteLayerIndex = ResolveUpperBodyEmoteLayerIndex();
+        ResolveHeadBone();
         _renderers = GetComponentsInChildren<Renderer>(true);
 
         InputActionMap playerMap = Managers.Input.PlayerMap;
@@ -179,7 +193,8 @@ public class RangerController : MonoBehaviour
         bool hasEmotionInput = TryGetEmotionInput(out requestedEmotion);
 
         Vector3 moveDirection = GetTransformRelativeDirectionOnPlane(_moveInput);
-        Vector3 planarVelocity = moveDirection * moveSpeed;
+        float currentMoveSpeed = moveSpeed * GetMoveSpeedMultiplier(hasEmotionInput, requestedEmotion);
+        Vector3 planarVelocity = moveDirection * currentMoveSpeed;
         _characterController.Move(planarVelocity * Time.deltaTime);
 
         if (hasEmotionInput)
@@ -188,6 +203,9 @@ public class RangerController : MonoBehaviour
             EmotionRequested?.Invoke(requestedEmotion);
             return;
         }
+
+        if (AnimState == Define.RangerAnimState.Emote02)
+            return;
 
         bool isMoving = _moveInput.sqrMagnitude > 0.0001f;
         if (isMoving)
@@ -235,6 +253,7 @@ public class RangerController : MonoBehaviour
         _moveInput = Vector2.zero;
         transform.SetParent(null, true);
         StopUpperBodyEmoteLayer();
+        SetSeatedLookRotation(0f, 0f);
         AnimState = Define.RangerAnimState.Idle00;
         StandUpAnimationRequested?.Invoke();
     }
@@ -265,6 +284,7 @@ public class RangerController : MonoBehaviour
             _characterController.enabled = true;
 
         StopUpperBodyEmoteLayer();
+        SetSeatedLookRotation(0f, 0f);
         AnimState = Define.RangerAnimState.Idle00;
         StandUpAnimationRequested?.Invoke();
     }
@@ -287,14 +307,17 @@ public class RangerController : MonoBehaviour
         _seatedAnimState = Define.RangerAnimState.Sit00;
         _moveInput = Vector2.zero;
         StopUpperBodyEmoteLayer();
+        SetSeatedLookRotation(0f, 0f);
         AnimState = Define.RangerAnimState.Idle00;
     }
 
     public void PlayReplicatedEmotion(Define.RangerAnimState emotionState)
     {
-        if (IsSitState(_animState) && IsSeatedUpperBodyEmotionState(emotionState))
+        if (IsSitState(_animState))
         {
-            PlaySeatedUpperBodyEmotion(emotionState);
+            if (IsSeatedUpperBodyEmotionState(emotionState))
+                PlaySeatedUpperBodyEmotion(emotionState);
+
             return;
         }
 
@@ -313,6 +336,8 @@ public class RangerController : MonoBehaviour
 
         _upperBodyEmoteActive = false;
         _upperBodyEmoteEndTime = 0f;
+        _upperBodyEmoteState = Define.RangerAnimState.Idle00;
+        _upperBodyEmoteHolding = false;
         Anim.Play(GetUpperBodyIdleStatePath(), _upperBodyEmoteLayerIndex, 0f);
         Anim.SetLayerWeight(_upperBodyEmoteLayerIndex, 0f);
     }
@@ -339,7 +364,9 @@ public class RangerController : MonoBehaviour
         }
         else if (Managers.Input.WasDigitPressedThisFrame(3))
         {
-            emotionState = Define.RangerAnimState.Emote02;
+            emotionState = AnimState == Define.RangerAnimState.Emote02
+                ? Define.RangerAnimState.Idle00
+                : Define.RangerAnimState.Emote02;
             return true;
         }
 
@@ -360,17 +387,18 @@ public class RangerController : MonoBehaviour
             emotionState = Define.RangerAnimState.Emote01;
             return true;
         }
-        else if (Managers.Input.WasDigitPressedThisFrame(3))
-        {
-            emotionState = Define.RangerAnimState.Emote02;
-            return true;
-        }
-
         return false;
     }
 
     private void PlayEmotion(Define.RangerAnimState emotionState)
     {
+        if (emotionState == Define.RangerAnimState.Idle00)
+        {
+            StopUpperBodyEmoteLayer();
+            AnimState = Define.RangerAnimState.Idle00;
+            return;
+        }
+
         if (_isSeated)
         {
             PlaySeatedUpperBodyEmotion(emotionState);
@@ -406,6 +434,8 @@ public class RangerController : MonoBehaviour
         Anim.Play(GetUpperBodyEmoteStatePath(emotionState), _upperBodyEmoteLayerIndex, 0f);
         _upperBodyEmoteActive = true;
         _upperBodyEmoteEndTime = Time.time + GetAnimationClipLength(emotionState);
+        _upperBodyEmoteState = emotionState;
+        _upperBodyEmoteHolding = false;
     }
 
     private void UpdateUpperBodyEmoteLayer()
@@ -416,7 +446,105 @@ public class RangerController : MonoBehaviour
         if (Time.time < _upperBodyEmoteEndTime)
             return;
 
+        if (_upperBodyEmoteState == Define.RangerAnimState.Emote02)
+        {
+            Anim.Play(GetUpperBodyEmoteStatePath(_upperBodyEmoteState), _upperBodyEmoteLayerIndex, 0f);
+            _upperBodyEmoteEndTime = Time.time + GetAnimationClipLength(_upperBodyEmoteState);
+            return;
+        }
+
+        if (_upperBodyEmoteState == Define.RangerAnimState.Emote00 || _upperBodyEmoteState == Define.RangerAnimState.Emote01)
+        {
+            if (!_upperBodyEmoteHolding)
+            {
+                Anim.Play(GetUpperBodyEmoteStatePath(_upperBodyEmoteState), _upperBodyEmoteLayerIndex, 1f);
+                _upperBodyEmoteHolding = true;
+            }
+
+            return;
+        }
+
         StopUpperBodyEmoteLayer();
+    }
+
+    public void SetSeatedLookRotation(float yaw, float pitch)
+    {
+        _seatedLookYaw = Mathf.Clamp(yaw, -75f, 75f);
+        _seatedLookPitch = Mathf.Clamp(pitch, -60f, 60f);
+    }
+
+    private void LateUpdate()
+    {
+        ApplySeatedHeadLookRotation();
+    }
+
+    private void ResolveHeadBone()
+    {
+        if (_head != null)
+            return;
+
+        if (Anim != null && Anim.isHuman)
+            _head = Anim.GetBoneTransform(HumanBodyBones.Head);
+
+        if (_head == null)
+            _head = FindChildRecursive(transform, "Bip001 Head");
+
+        if (_head == null)
+            return;
+
+        _headBaseLocalRotation = _head.localRotation;
+        _hasHeadBaseLocalRotation = true;
+    }
+
+    private void ApplySeatedHeadLookRotation()
+    {
+        if (!_hasHeadBaseLocalRotation)
+            ResolveHeadBone();
+
+        if (_head == null || !_hasHeadBaseLocalRotation)
+            return;
+
+        if (!_isSeated)
+        {
+            _head.localRotation = _headBaseLocalRotation;
+            return;
+        }
+
+        Quaternion lookRotation = Quaternion.Euler(
+            _seatedLookPitch * HeadLookPitchScale,
+            _seatedLookYaw * HeadLookYawScale,
+            0f);
+        _head.localRotation = _headBaseLocalRotation * lookRotation;
+    }
+
+    private float GetMoveSpeedMultiplier(bool hasEmotionInput, Define.RangerAnimState requestedEmotion)
+    {
+        if (hasEmotionInput)
+        {
+            if (requestedEmotion == Define.RangerAnimState.Emote02)
+                return Emote02MoveSpeedMultiplier;
+
+            if (requestedEmotion == Define.RangerAnimState.Idle00)
+                return 1f;
+        }
+
+        return AnimState == Define.RangerAnimState.Emote02 ? Emote02MoveSpeedMultiplier : 1f;
+    }
+
+    private static Transform FindChildRecursive(Transform root, string childName)
+    {
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+            if (child.name == childName)
+                return child;
+
+            Transform result = FindChildRecursive(child, childName);
+            if (result != null)
+                return result;
+        }
+
+        return null;
     }
 
     private int ResolveUpperBodyEmoteLayerIndex()
@@ -471,8 +599,7 @@ public class RangerController : MonoBehaviour
     public static bool IsSeatedUpperBodyEmotionState(Define.RangerAnimState state)
     {
         return state == Define.RangerAnimState.Emote00
-            || state == Define.RangerAnimState.Emote01
-            || state == Define.RangerAnimState.Emote02;
+            || state == Define.RangerAnimState.Emote01;
     }
 
     private void ApplyColorPresentation()

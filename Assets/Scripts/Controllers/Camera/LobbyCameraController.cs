@@ -53,6 +53,9 @@ public class LobbyCameraController : MonoBehaviour
 
         transform.localPosition = GetCurrentLocalPosition();
         transform.localRotation = Quaternion.Euler(_pitch, _yaw, 0f);
+
+        if (_targetRanger != null)
+            _targetRanger.SetSeatedLookRotation(isTargetSeated ? _yaw : 0f, isTargetSeated ? _pitch : 0f);
     }
 
     public void SetTarget(Transform target)
