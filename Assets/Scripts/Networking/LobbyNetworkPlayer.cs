@@ -379,8 +379,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private void SubmitSeatedLookRotationServerRpc(Vector2 seatedLookRotation)
     {
         _seatedLookRotation.Value = new Vector2(
-            Mathf.Clamp(seatedLookRotation.x, -75f, 75f),
-            Mathf.Clamp(seatedLookRotation.y, -60f, 60f));
+            Mathf.Clamp(seatedLookRotation.x, -RangerController.SeatedHeadLookYawLimit, RangerController.SeatedHeadLookYawLimit),
+            Mathf.Clamp(seatedLookRotation.y, -RangerController.SeatedHeadLookPitchLimit, RangerController.SeatedHeadLookPitchLimit));
     }
 
     [Rpc(SendTo.ClientsAndHost)]

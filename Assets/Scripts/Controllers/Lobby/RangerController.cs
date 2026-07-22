@@ -16,6 +16,8 @@ public class RangerController : MonoBehaviour
     private const float HeadLookYawScale = 0.6f;
     private const float HeadLookPitchScale = 0.45f;
     private const float Emote02MoveSpeedMultiplier = 1f / 3f;
+    public const float SeatedHeadLookYawLimit = 75f;
+    public const float SeatedHeadLookPitchLimit = 60f;
 
     [Header("Actions (Player Map)")]
     [SerializeField] private string moveActionName = "Move";
@@ -74,7 +76,7 @@ public class RangerController : MonoBehaviour
             _animState = value;
 
             if (Anim != null)
-            Anim.CrossFade(_animState.ToString(), EmotionCrossFadeDuration);
+                Anim.CrossFade(_animState.ToString(), EmotionCrossFadeDuration);
         }
     }
 
@@ -469,8 +471,8 @@ public class RangerController : MonoBehaviour
 
     public void SetSeatedLookRotation(float yaw, float pitch)
     {
-        _seatedLookYaw = Mathf.Clamp(yaw, -75f, 75f);
-        _seatedLookPitch = Mathf.Clamp(pitch, -60f, 60f);
+        _seatedLookYaw = Mathf.Clamp(yaw, -SeatedHeadLookYawLimit, SeatedHeadLookYawLimit);
+        _seatedLookPitch = Mathf.Clamp(pitch, -SeatedHeadLookPitchLimit, SeatedHeadLookPitchLimit);
     }
 
     private void LateUpdate()
@@ -511,9 +513,9 @@ public class RangerController : MonoBehaviour
         }
 
         Quaternion lookRotation = Quaternion.Euler(
-            _seatedLookPitch * HeadLookPitchScale,
-            _seatedLookYaw * HeadLookYawScale,
-            0f);
+            -1 * _seatedLookYaw * HeadLookYawScale,
+            0f,
+            -1 * _seatedLookPitch * HeadLookPitchScale);
         _head.localRotation = _headBaseLocalRotation * lookRotation;
     }
 

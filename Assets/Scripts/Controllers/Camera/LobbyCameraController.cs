@@ -45,7 +45,10 @@ public class LobbyCameraController : MonoBehaviour
         Vector2 lookInput = Managers.Input.ReadPlayerLookInput();
         bool isTargetSeated = IsTargetSeated();
         if (isTargetSeated)
-            _yaw += lookInput.x * _mouseSensitivity;
+            _yaw = Mathf.Clamp(
+                _yaw + lookInput.x * _mouseSensitivity,
+                -RangerController.SeatedHeadLookYawLimit,
+                RangerController.SeatedHeadLookYawLimit);
         else
             _yaw = _initialViewEulerAngles.y;
 
