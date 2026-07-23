@@ -136,16 +136,11 @@ public class UI_RoleSelectMenu : UI_Scene
                 else
                     occupiedByOtherMask |= roleMask;
 
-                int selectedRoleCount = CountBits(roleMask);
-                string formattedName = selectedRoleCount > 1
-                    ? $"{displayName} ({selectedRoleCount}개 역할)"
-                    : displayName;
-
-                AddRoleNameIfSelected(namesByRole, Define.TitanRole.Torso, roleMask, formattedName);
-                AddRoleNameIfSelected(namesByRole, Define.TitanRole.LeftArm, roleMask, formattedName);
-                AddRoleNameIfSelected(namesByRole, Define.TitanRole.RightArm, roleMask, formattedName);
-                AddRoleNameIfSelected(namesByRole, Define.TitanRole.LeftLeg, roleMask, formattedName);
-                AddRoleNameIfSelected(namesByRole, Define.TitanRole.RightLeg, roleMask, formattedName);
+                AddRoleNameIfSelected(namesByRole, Define.TitanRole.Torso, roleMask, displayName);
+                AddRoleNameIfSelected(namesByRole, Define.TitanRole.LeftArm, roleMask, displayName);
+                AddRoleNameIfSelected(namesByRole, Define.TitanRole.RightArm, roleMask, displayName);
+                AddRoleNameIfSelected(namesByRole, Define.TitanRole.LeftLeg, roleMask, displayName);
+                AddRoleNameIfSelected(namesByRole, Define.TitanRole.RightLeg, roleMask, displayName);
             }
         }
 
@@ -163,16 +158,14 @@ public class UI_RoleSelectMenu : UI_Scene
 
     private void ApplyRoleNicknameText(Dictionary<Define.TitanRole, List<string>> namesByRole, Define.TitanRole role, Texts targetText)
     {
-        string roleLabel = GetRoleLabel(role);
-
         if (!namesByRole.TryGetValue(role, out List<string> names) || names == null || names.Count == 0)
         {
-            SetNicknameText(targetText, $"{roleLabel} - ");
+            SetNicknameText(targetText, string.Empty);
             return;
         }
 
         names.Sort(StringComparer.OrdinalIgnoreCase);
-        SetNicknameText(targetText, $"{roleLabel} -\n{string.Join("\n", names)}");
+        SetNicknameText(targetText, string.Join("\n", names));
     }
 
     private void ApplyRoleButtonInteractable(Define.TitanRole role, Buttons targetButton, int localRoleMask, int occupiedByOtherMask)
@@ -201,32 +194,6 @@ public class UI_RoleSelectMenu : UI_Scene
         }
 
         list.Add(displayName);
-    }
-
-    private static int CountBits(int value)
-    {
-        int count = 0;
-        int v = value;
-        while (v != 0)
-        {
-            v &= v - 1;
-            count++;
-        }
-
-        return count;
-    }
-
-    private static string GetRoleLabel(Define.TitanRole role)
-    {
-        return role switch
-        {
-            Define.TitanRole.Torso => "Center",
-            Define.TitanRole.LeftArm => "Left Arm",
-            Define.TitanRole.RightArm => "Right Arm",
-            Define.TitanRole.LeftLeg => "Left Leg",
-            Define.TitanRole.RightLeg => "Right Leg",
-            _ => "Unknown",
-        };
     }
 
     private void SetNicknameText(Texts textId, string value)

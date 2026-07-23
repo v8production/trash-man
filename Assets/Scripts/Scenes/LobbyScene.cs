@@ -546,15 +546,9 @@ public class LobbyScene : BaseScene
 
     private static string GetRoleLabel(Define.TitanRole role)
     {
-        return role switch
-        {
-            Define.TitanRole.Torso => "Center",
-            Define.TitanRole.LeftArm => "Left Arm",
-            Define.TitanRole.RightArm => "Right Arm",
-            Define.TitanRole.LeftLeg => "Left Leg",
-            Define.TitanRole.RightLeg => "Right Leg",
-            _ => "Unknown",
-        };
+        return role.ToString()
+            .Replace("Arm", " Arm")
+            .Replace("Leg", " Leg");
     }
 
     private void ToggleMenuInputMode()
