@@ -1,11 +1,18 @@
-using TMPro;
+using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class UI_GameMenu : UI_Menu
+public class UI_GameMenu : UI_Scene
 {
+    private const int CanvasOrder = 50;
+    private const string ContentLayoutName = "ContentLayout";
+    private const string ReusableObjectPath = "UIs/Objects";
+
     private UI_Settings _settings;
     private UI_Controls _controls;
+    private UI_Roles _roles;
+    private readonly Dictionary<string, GameObject> _contentPanels = new();
 
     enum Images
     {
@@ -16,56 +23,30 @@ public class UI_GameMenu : UI_Menu
     {
         Settings,
         Controls,
-        TempButton,
-        TempButton2,
-        LeaveGame,
-    }
-
-    enum Texts
-    {
-        Settings,
-        Controls,
-        TempButton,
-        TempButton2,
+        Roles,
+        Temp,
         LeaveGame,
     }
 
     public override void Init()
     {
         base.Init();
+        Managers.UI.ShowCanvas(gameObject, CanvasOrder);
         Bind<Image>(typeof(Images));
         Bind<Button>(typeof(Buttons));
-        Bind<TextMeshProUGUI>(typeof(Texts));
 
-        GetButton((int)Buttons.Settings).gameObject.BindEvent(OnSettingsButtonClicked);
-        GetButton((int)Buttons.Controls).gameObject.BindEvent(OnControlsButtonClicked);
-        GetButton((int)Buttons.TempButton).gameObject.BindEvent(OnTempButtonClicked);
-        GetButton((int)Buttons.TempButton2).gameObject.BindEvent(OnTempButtonClicked);
+        BindSettings(GetContentPanel<UI_Settings>(nameof(Buttons.Settings)));
+        GetButton((int)Buttons.Settings).gameObject.BindEvent(_ => ShowContentPanel(nameof(Buttons.Settings)));
+        BindControls(GetContentPanel<UI_Controls>(nameof(Buttons.Controls)));
+        GetButton((int)Buttons.Controls).gameObject.BindEvent(_ => ShowContentPanel(nameof(Buttons.Controls)));
+        BindRoles(GetContentPanel<UI_Roles>(nameof(Buttons.Roles)));
+        GetButton((int)Buttons.Roles).gameObject.BindEvent(_ => ShowContentPanel(nameof(Buttons.Roles)));
+        GetButton((int)Buttons.Temp).gameObject.BindEvent(OnTempButtonClicked);
         GetButton((int)Buttons.LeaveGame).gameObject.BindEvent(OnLeaveGameButtonClicked);
-    }
-
-    private void OnDestroy()
-    {
-        DestroySettingsUI();
-        DestroyControlsUI();
     }
 
     private void OnEnable()
     {
-    }
-
-    private void OnSettingsButtonClicked(PointerEventData eventData)
-    {
-        EnsureSettingsUI();
-        _settings.gameObject.SetActive(true);
-        gameObject.SetActive(false);
-    }
-
-    private void OnControlsButtonClicked(PointerEventData eventData)
-    {
-        EnsureControlsUI();
-        _controls.gameObject.SetActive(true);
-        gameObject.SetActive(false);
     }
 
     private void OnTempButtonClicked(PointerEventData eventData)
@@ -79,38 +60,26 @@ public class UI_GameMenu : UI_Menu
         Managers.Scene.LoadScene(Define.Scene.Intro);
     }
 
-    private void EnsureSettingsUI()
+    private void BindSettings(UI_Settings settings)
     {
-        if (_settings != null)
-            return;
-
-        _settings = Managers.UI.ShowSceneUI<UI_Settings>(nameof(UI_Settings));
-        _settings.Closed -= HandleSubMenuClosed;
-        _settings.Closed += HandleSubMenuClosed;
-        _settings.gameObject.SetActive(false);
+        _settings = settings;
     }
 
-    private void EnsureControlsUI()
+    private void BindControls(UI_Controls controls)
     {
-        if (_controls != null)
-            return;
-
-        _controls = Managers.UI.ShowSceneUI<UI_Controls>(nameof(UI_Controls));
-        _controls.Closed -= HandleSubMenuClosed;
-        _controls.Closed += HandleSubMenuClosed;
-        _controls.gameObject.SetActive(false);
+        _controls = controls;
     }
 
-    private void HandleSubMenuClosed()
+    private void BindRoles(UI_Roles roles)
     {
-        HideSubMenus();
-        gameObject.SetActive(true);
+        _roles = roles;
+        _roles.CaptureCurrentRoleMapping();
     }
 
     public void HideSubMenus()
     {
-        HideSettingsUI();
-        HideControlsUI();
+        foreach (GameObject panel in GetContentPanels())
+            panel.SetActive(false);
     }
 
     public bool CloseActiveSubMenu()
@@ -119,49 +88,68 @@ public class UI_GameMenu : UI_Menu
             return false;
 
         HideSubMenus();
-        gameObject.SetActive(true);
         return true;
     }
 
     private bool HasActiveSubMenu()
     {
         return _settings != null && _settings.gameObject.activeSelf
-            || _controls != null && _controls.gameObject.activeSelf;
+            || _controls != null && _controls.gameObject.activeSelf
+            || _roles != null && _roles.gameObject.activeSelf;
     }
 
-    private void HideSettingsUI()
+    private T GetContentPanel<T>(string contentName) where T : UI_Base
     {
-        if (_settings == null)
-            return;
-
-        _settings.gameObject.SetActive(false);
+        GameObject panel = GetContentPanelObject(contentName, typeof(T).Name);
+        T menu = panel.GetorAddComponent<T>();
+        panel.SetActive(false);
+        return menu;
     }
 
-    private void HideControlsUI()
+    private GameObject GetContentPanelObject(string contentName, string prefabName)
     {
-        if (_controls == null)
-            return;
+        foreach (GameObject panel in GetContentPanels())
+        {
+            if (panel.name == contentName)
+                return panel;
+        }
 
-        _controls.gameObject.SetActive(false);
+        GameObject createdPanel = Managers.Resource.Instantiate($"{ReusableObjectPath}/{prefabName}", GetContentLayout());
+        createdPanel.name = contentName;
+        StretchToParent(createdPanel.transform as RectTransform);
+        _contentPanels[contentName] = createdPanel;
+        return createdPanel;
     }
 
-    private void DestroySettingsUI()
+    private IEnumerable<GameObject> GetContentPanels()
     {
-        if (_settings == null)
-            return;
+        Transform contentLayout = GetContentLayout();
+        for (int i = 0; i < contentLayout.childCount; i++)
+        {
+            GameObject panel = contentLayout.GetChild(i).gameObject;
+            _contentPanels[panel.name] = panel;
+        }
 
-        _settings.Closed -= HandleSubMenuClosed;
-        Managers.Resource.Destory(_settings.gameObject);
-        _settings = null;
+        return _contentPanels.Values;
     }
 
-    private void DestroyControlsUI()
+    private Transform GetContentLayout()
     {
-        if (_controls == null)
-            return;
+        return Util.FindChild(gameObject, ContentLayoutName, true).transform;
+    }
 
-        _controls.Closed -= HandleSubMenuClosed;
-        Managers.Resource.Destory(_controls.gameObject);
-        _controls = null;
+    private void ShowContentPanel(string contentName)
+    {
+        foreach (GameObject panel in GetContentPanels())
+            panel.SetActive(panel.name == contentName);
+    }
+
+    private static void StretchToParent(RectTransform rectTransform)
+    {
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+        rectTransform.localScale = Vector3.one;
     }
 }

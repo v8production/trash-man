@@ -21,7 +21,6 @@ public class GameScene : BaseScene
     private UI_Boss _bossUi;
     private UI_TitanStat _titanStatUi;
     private UI_GameMenu _gameMenuUi;
-    private UI_RoleMapping _roleMappingUi;
     private UI_Victory _victoryUi;
     private UI_GameOver _gameOverUi;
     private BossStat _bossStat;
@@ -72,11 +71,9 @@ public class GameScene : BaseScene
         _bossUi = Managers.UI.ShowSceneUI<UI_Boss>(nameof(UI_Boss));
         _titanStatUi = Managers.UI.ShowSceneUI<UI_TitanStat>(nameof(UI_TitanStat));
         _gameMenuUi = Managers.UI.ShowSceneUI<UI_GameMenu>(nameof(UI_GameMenu));
-        _roleMappingUi = Managers.UI.ShowSceneUI<UI_RoleMapping>(nameof(UI_RoleMapping));
         _victoryUi = Managers.UI.ShowSceneUI<UI_Victory>(nameof(UI_Victory));
         _gameOverUi = Managers.UI.ShowSceneUI<UI_GameOver>(nameof(UI_GameOver));
         _gameMenuUi.gameObject.SetActive(false);
-        _roleMappingUi.gameObject.SetActive(false);
         _victoryUi.gameObject.SetActive(false);
         _gameOverUi.gameObject.SetActive(false);
     }
@@ -112,7 +109,6 @@ public class GameScene : BaseScene
         EnsureGrolarRuntime();
         EnsureUI();
         MapStatsToUIs();
-        _roleMappingUi.CaptureCurrentRoleMapping();
         Managers.Input.SetMode(Define.InputMode.Player);
         CacheTankPrefabs();
         _nextTankSpawnTime = Time.time + TankSpawnIntervalSeconds;
@@ -125,7 +121,6 @@ public class GameScene : BaseScene
         if (_gameEndShown)
             return;
 
-        UpdateRoleMappingVisibility();
         UpdateTankSpawning();
 
         if (!IsEscapePressedThisFrame())
@@ -174,7 +169,7 @@ public class GameScene : BaseScene
         if (_gameEndShown)
             return;
 
-        Managers.UI.HideAllMenuUIs();
+        HideGameMenu();
         if (result == Define.GameEndResult.GameOver)
             _gameOverUi.Open();
         else
@@ -244,18 +239,6 @@ public class GameScene : BaseScene
         return new Vector3(titanPosition.x + offset.x, TankSpawnY, titanPosition.z + offset.y);
     }
 
-    private void UpdateRoleMappingVisibility()
-    {
-        if (_roleMappingUi == null)
-            return;
-
-        bool shouldShow = IsTabPressed();
-        if (_roleMappingUi.gameObject.activeSelf == shouldShow)
-            return;
-
-        _roleMappingUi.gameObject.SetActive(shouldShow);
-    }
-
     private void ToggleMenuInputMode()
     {
         if (Managers.Input.Mode == Define.InputMode.UI)
@@ -263,7 +246,7 @@ public class GameScene : BaseScene
             if (_gameMenuUi != null && _gameMenuUi.CloseActiveSubMenu())
                 return;
 
-            Managers.UI.HideAllMenuUIs();
+            HideGameMenu();
             Managers.Input.SetMode(Define.InputMode.Player);
             return;
         }
@@ -272,14 +255,18 @@ public class GameScene : BaseScene
         Managers.Input.SetMode(Define.InputMode.UI);
     }
 
+    private void HideGameMenu()
+    {
+        if (_gameMenuUi == null)
+            return;
+
+        _gameMenuUi.HideSubMenus();
+        _gameMenuUi.gameObject.SetActive(false);
+    }
+
     private static bool IsEscapePressedThisFrame()
     {
         return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
-    }
-
-    private static bool IsTabPressed()
-    {
-        return Keyboard.current != null && Keyboard.current.tabKey.isPressed;
     }
 
     private static void CleanupLobbyRangers()
@@ -306,7 +293,6 @@ public class GameScene : BaseScene
         _bossUi = null;
         _titanStatUi = null;
         _gameMenuUi = null;
-        _roleMappingUi = null;
         _victoryUi = null;
         _gameOverUi = null;
         _bossStat = null;

@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-public class UI_BoardMenu : UI_Menu
+public class UI_BoardMenu : UI_Scene
 {
     private const int CanvasOrder = 10;
     private const float BoardAspect = 16f / 9f;

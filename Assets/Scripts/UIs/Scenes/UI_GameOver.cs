@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class UI_GameOver : UI_Menu
+public class UI_GameOver : UI_Scene
 {
     private const float PausedTimeScale = 0f;
     private const float RunningTimeScale = 1f;

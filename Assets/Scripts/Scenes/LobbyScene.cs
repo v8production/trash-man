@@ -576,15 +576,32 @@ public class LobbyScene : BaseScene
 
     private void HideAllMenus()
     {
-        Managers.UI.HideAllMenuUIs();
+        if (_lobbyMenu != null)
+        {
+            _lobbyMenu.HideSubMenus();
+            _lobbyMenu.gameObject.SetActive(false);
+        }
+
+        if (_roleSelectMenu != null)
+            _roleSelectMenu.gameObject.SetActive(false);
+
+        if (_boardMenu != null)
+            _boardMenu.gameObject.SetActive(false);
     }
 
     private void RefreshInputMode()
     {
         bool hasBlockingUi = _isLobbySetupPending
-            || Managers.UI.HasActiveMenuUI();
+            || IsMenuActive(_lobbyMenu)
+            || IsMenuActive(_roleSelectMenu)
+            || IsMenuActive(_boardMenu);
 
         Managers.Input.SetMode(hasBlockingUi ? Define.InputMode.UI : Define.InputMode.Player);
+    }
+
+    private static bool IsMenuActive(UI_Base ui)
+    {
+        return ui != null && ui.gameObject.activeSelf;
     }
 
     private static bool IsEscapePressedThisFrame()

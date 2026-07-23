@@ -1,12 +1,15 @@
+using System.Collections.Generic;
 using TMPro;
+using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-public class UI_LobbyMenu : UI_Menu
+public class UI_LobbyMenu : UI_Scene
 {
     private const string MaskedCodeText = "******";
-    private const string HiddenCodeButtonText = "Show Code";
-    private const string VisibleCodeButtonText = "Hide Code";
+    private const string ContentLayoutName = "ContentLayout";
+    private const string ReusableObjectPath = "UIs/Objects";
 
     enum Images
     {
@@ -17,27 +20,24 @@ public class UI_LobbyMenu : UI_Menu
     {
         DrawFace,
         InviteRoom,
-        ShowCode,
+        RoomCode,
         Settings,
         LeaveGame,
     }
 
     enum Texts
     {
-        DrawFace,
-        InviteRoom,
-        ShowCode,
         Code,
-        Settings,
-        LeaveGame,
     }
 
     private bool _isCodeVisible;
     private UI_DrawFace _drawFace;
     private UI_Settings _settings;
+    private readonly Dictionary<string, GameObject> _contentPanels = new();
 
     public bool IsDrawFaceVisible => _drawFace != null && _drawFace.gameObject.activeSelf;
     public bool IsSettingsVisible => _settings != null && _settings.gameObject.activeSelf;
+    private bool IsRoomCodeVisible => IsContentPanelVisible(nameof(Buttons.RoomCode));
 
     public override void Init()
     {
@@ -46,19 +46,15 @@ public class UI_LobbyMenu : UI_Menu
         Bind<Button>(typeof(Buttons));
         Bind<TextMeshProUGUI>(typeof(Texts));
 
-        GetButton((int)Buttons.DrawFace).gameObject.BindEvent(OnDrawFaceButtonClicked);
+        BindDrawFace(GetContentPanel<UI_DrawFace>(nameof(Buttons.DrawFace)));
+        GetButton((int)Buttons.DrawFace).gameObject.BindEvent(_ => ShowContentPanel(nameof(Buttons.DrawFace)));
         GetButton((int)Buttons.InviteRoom).gameObject.BindEvent(OnInviteRoomButtonClicked);
-        GetButton((int)Buttons.ShowCode).gameObject.BindEvent(OnShowCodeButtonClicked);
-        GetButton((int)Buttons.Settings).gameObject.BindEvent(OnSettingsButtonClicked);
+        GetButton((int)Buttons.RoomCode).gameObject.BindEvent(OnRoomCodeButtonClicked);
+        BindSettings(GetContentPanel<UI_Settings>(nameof(Buttons.Settings)));
+        GetButton((int)Buttons.Settings).gameObject.BindEvent(_ => ShowContentPanel(nameof(Buttons.Settings)));
         GetButton((int)Buttons.LeaveGame).gameObject.BindEvent(OnLeaveGameButtonClicked);
 
         ApplyJoinCodeState();
-    }
-
-    private void OnDestroy()
-    {
-        DestroyDrawFaceUI();
-        DestroySettingsUI();
     }
 
     private void OnEnable()
@@ -66,52 +62,27 @@ public class UI_LobbyMenu : UI_Menu
         ApplyJoinCodeState();
     }
 
-    private void OnSettingsButtonClicked(PointerEventData eventData)
+    private void Update()
     {
-        EnsureSettingsUI();
-        _settings.gameObject.SetActive(true);
-        gameObject.SetActive(false);
+        RefreshRoomCodeVisibility();
     }
 
-    private void OnDrawFaceButtonClicked(PointerEventData eventData)
+    private void BindDrawFace(UI_DrawFace drawFace)
     {
-        EnsureDrawFaceUI();
-        _drawFace.gameObject.SetActive(true);
-        gameObject.SetActive(false);
+        _drawFace = drawFace;
     }
 
-    private void EnsureDrawFaceUI()
+    private void BindSettings(UI_Settings settings)
     {
-        if (_drawFace != null)
-            return;
-
-        _drawFace = Managers.UI.ShowSceneUI<UI_DrawFace>(nameof(UI_DrawFace));
-        _drawFace.Closed -= HandleSubMenuClosed;
-        _drawFace.Closed += HandleSubMenuClosed;
-        _drawFace.gameObject.SetActive(false);
-    }
-
-    private void HandleSubMenuClosed()
-    {
-        HideSubMenus();
-        gameObject.SetActive(true);
-    }
-
-    private void EnsureSettingsUI()
-    {
-        if (_settings != null)
-            return;
-
-        _settings = Managers.UI.ShowSceneUI<UI_Settings>(nameof(UI_Settings));
-        _settings.Closed -= HandleSubMenuClosed;
-        _settings.Closed += HandleSubMenuClosed;
-        _settings.gameObject.SetActive(false);
+        _settings = settings;
     }
 
     public void HideSubMenus()
     {
-        HideDrawFaceUI();
-        HideSettingsUI();
+        foreach (GameObject panel in GetContentPanels())
+            panel.SetActive(false);
+
+        RefreshRoomCodeVisibility();
     }
 
     public bool CloseActiveSubMenu()
@@ -120,55 +91,95 @@ public class UI_LobbyMenu : UI_Menu
             return false;
 
         HideSubMenus();
-        gameObject.SetActive(true);
         return true;
     }
 
     private bool HasActiveSubMenu()
     {
-        return IsDrawFaceVisible || IsSettingsVisible;
+        return IsDrawFaceVisible || IsSettingsVisible || IsRoomCodeVisible;
     }
 
-    private void HideDrawFaceUI()
+    private void OnRoomCodeButtonClicked(PointerEventData eventData)
     {
-        if (_drawFace == null)
+        ShowContentPanel(nameof(Buttons.RoomCode));
+    }
+
+    private T GetContentPanel<T>(string contentName) where T : UI_Base
+    {
+        GameObject panel = GetContentPanelObject(contentName, typeof(T).Name);
+        T menu = panel.GetorAddComponent<T>();
+        panel.SetActive(false);
+        return menu;
+    }
+
+    private GameObject GetContentPanelObject(string contentName, string prefabName = null)
+    {
+        foreach (GameObject panel in GetContentPanels())
+        {
+            if (panel.name == contentName)
+                return panel;
+        }
+
+        GameObject createdPanel = Managers.Resource.Instantiate($"{ReusableObjectPath}/{prefabName}", GetContentLayout());
+        createdPanel.name = contentName;
+        StretchToParent(createdPanel.transform as RectTransform);
+        _contentPanels[contentName] = createdPanel;
+        return createdPanel;
+    }
+
+    private IEnumerable<GameObject> GetContentPanels()
+    {
+        Transform contentLayout = GetContentLayout();
+        for (int i = 0; i < contentLayout.childCount; i++)
+        {
+            GameObject panel = contentLayout.GetChild(i).gameObject;
+            _contentPanels[panel.name] = panel;
+        }
+
+        return _contentPanels.Values;
+    }
+
+    private Transform GetContentLayout()
+    {
+        return Util.FindChild(gameObject, ContentLayoutName, true).transform;
+    }
+
+    private void ShowContentPanel(string contentName)
+    {
+        foreach (GameObject panel in GetContentPanels())
+            panel.SetActive(panel.name == contentName);
+
+        RefreshRoomCodeVisibility();
+    }
+
+    private bool IsContentPanelVisible(string contentName)
+    {
+        foreach (GameObject panel in GetContentPanels())
+        {
+            if (panel.name == contentName)
+                return panel.activeSelf;
+        }
+
+        return false;
+    }
+
+    private void RefreshRoomCodeVisibility()
+    {
+        bool shouldShowCode = IsRoomCodeVisible && Keyboard.current != null && Keyboard.current.spaceKey.isPressed;
+        if (_isCodeVisible == shouldShowCode)
             return;
 
-        _drawFace.gameObject.SetActive(false);
-    }
-
-    private void DestroyDrawFaceUI()
-    {
-        if (_drawFace == null)
-            return;
-
-        _drawFace.Closed -= HandleSubMenuClosed;
-        Managers.Resource.Destory(_drawFace.gameObject);
-        _drawFace = null;
-    }
-
-    private void HideSettingsUI()
-    {
-        if (_settings == null)
-            return;
-
-        _settings.gameObject.SetActive(false);
-    }
-
-    private void DestroySettingsUI()
-    {
-        if (_settings == null)
-            return;
-
-        _settings.Closed -= HandleSubMenuClosed;
-        Managers.Resource.Destory(_settings.gameObject);
-        _settings = null;
-    }
-
-    private void OnShowCodeButtonClicked(PointerEventData eventData)
-    {
-        _isCodeVisible = !_isCodeVisible;
+        _isCodeVisible = shouldShowCode;
         ApplyJoinCodeState();
+    }
+
+    private static void StretchToParent(RectTransform rectTransform)
+    {
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+        rectTransform.localScale = Vector3.one;
     }
 
     private void OnInviteRoomButtonClicked(PointerEventData eventData)
@@ -190,14 +201,10 @@ public class UI_LobbyMenu : UI_Menu
 
     private void ApplyJoinCodeState()
     {
-        TextMeshProUGUI showCodeText = Get<TextMeshProUGUI>((int)Texts.ShowCode);
         TextMeshProUGUI codeText = Get<TextMeshProUGUI>((int)Texts.Code);
 
         string joinCode = Managers.LobbySession.CurrentJoinCode;
         bool canRevealCode = !string.IsNullOrWhiteSpace(joinCode);
-
-        if (showCodeText != null)
-            showCodeText.text = _isCodeVisible && canRevealCode ? VisibleCodeButtonText : HiddenCodeButtonText;
 
         if (codeText != null)
             codeText.text = _isCodeVisible && canRevealCode ? joinCode : MaskedCodeText;
