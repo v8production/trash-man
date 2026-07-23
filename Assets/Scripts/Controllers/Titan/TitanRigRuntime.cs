@@ -44,7 +44,7 @@ public sealed class TitanRigRuntime : MonoBehaviour
 
     [Header("Leg Input")]
     [SerializeField] private float footMoveSensitivity = 0.008f;
-    [SerializeField] private float footLiftRiseSpeed = 2.4f;
+    [SerializeField] private float footLiftRiseSpeed = 7.2f;
     [SerializeField] private float footLiftSmoothTime = 0.12f;
     [SerializeField] private float footLiftFallAcceleration = 2.4f;
     [SerializeField] private float footLiftMaxFallSpeed = 1.2f;

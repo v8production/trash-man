@@ -953,7 +953,7 @@ MonoBehaviour:
     GroundContactPoint: {x: 0, y: 0, z: 0}
     GroundContactNormal: {x: 0, y: 0, z: 0}
   footMoveSensitivity: 0.008
-  footLiftRiseSpeed: 2.4
+  footLiftRiseSpeed: 7.2
   footLiftSmoothTime: 0.12
   footLiftFallAcceleration: 2.4
   footLiftMaxFallSpeed: 1.2

@@ -11,6 +11,7 @@ public class UI_BoardMenu : UI_Menu
     private const float BoardAspect = 16f / 9f;
     private const float BoardMargin = 10f;
     private const int MaxPayloadPoints = 180;
+    private const BoardTool InitialTool = BoardTool.Pen;
     private static readonly Color32 UnassignedPenColor = Color.white;
 
     private enum GameObjects
@@ -51,7 +52,7 @@ public class UI_BoardMenu : UI_Menu
     private Image _cursorImage;
     private Slider _penBorderSlider;
     private Slider _eraserBorderSlider;
-    private BoardTool _activeTool = BoardTool.Pen;
+    private BoardTool _activeTool = InitialTool;
     private Color32 _activeColor = UnassignedPenColor;
     private bool _isInitialized;
     private bool _isPointerOverPanel;
@@ -85,6 +86,7 @@ public class UI_BoardMenu : UI_Menu
         BindPointerRelays();
         ApplyBoardSprite();
         RefreshActivePenColor(forceVisualRefresh: false);
+        _activeTool = InitialTool;
         RefreshSelectionVisuals();
         RefreshCursorVisual();
 
