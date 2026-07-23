@@ -9,13 +9,18 @@ public class UI_RoleSelectMenu : UI_Scene
 {
     private const int CanvasOrder = 10;
     private const float NicknameRefreshIntervalSeconds = 0.25f;
+    private const float RoleFaceSpritePixelsPerUnit = 32f;
 
     private bool _isInitialized;
     private float _nextNicknameRefreshTime;
+    private readonly Dictionary<Define.TitanRole, Image> _roleImages = new();
+    private readonly Dictionary<Define.TitanRole, Sprite> _roleFaceSprites = new();
+    private readonly Dictionary<Define.TitanRole, Texture2D> _roleFaceSpriteTextures = new();
 
     private enum GameObjects
     {
         Background,
+        TitanLayout,
     }
 
     private enum Buttons
@@ -50,6 +55,7 @@ public class UI_RoleSelectMenu : UI_Scene
         Bind<GameObject>(typeof(GameObjects));
         Bind<Button>(typeof(Buttons));
         Bind<TextMeshProUGUI>(typeof(Texts));
+        BindTitanRoleImages();
 
         GetButton((int)Buttons.Cancel).gameObject.BindEvent(OnCancelClicked);
         GetButton((int)Buttons.Torso).gameObject.BindEvent(_ => NotifyRoleSelected(Define.TitanRole.Torso));
@@ -63,8 +69,15 @@ public class UI_RoleSelectMenu : UI_Scene
 
     private void OnEnable()
     {
+        LobbyNetworkPlayer.LobbyRolePresentationChanged -= RefreshRoleNicknames;
+        LobbyNetworkPlayer.LobbyRolePresentationChanged += RefreshRoleNicknames;
         _nextNicknameRefreshTime = 0f;
         RefreshRoleNicknames();
+    }
+
+    private void OnDisable()
+    {
+        LobbyNetworkPlayer.LobbyRolePresentationChanged -= RefreshRoleNicknames;
     }
 
     private void Update()
@@ -81,6 +94,8 @@ public class UI_RoleSelectMenu : UI_Scene
 
     private void OnDestroy()
     {
+        LobbyNetworkPlayer.LobbyRolePresentationChanged -= RefreshRoleNicknames;
+        ClearRoleFaceSprites();
         RoleSelected = null;
         Closed = null;
     }
@@ -99,6 +114,7 @@ public class UI_RoleSelectMenu : UI_Scene
     {
         LobbyNetworkPlayer[] players = FindObjectsByType<LobbyNetworkPlayer>();
         Dictionary<Define.TitanRole, List<string>> namesByRole = new();
+        Dictionary<Define.TitanRole, LobbyNetworkPlayer> playersByRole = new();
         int localRoleMask = 0;
         int occupiedByOtherMask = 0;
 
@@ -108,10 +124,6 @@ public class UI_RoleSelectMenu : UI_Scene
             {
                 LobbyNetworkPlayer player = players[i];
                 if (player == null)
-                    continue;
-
-                string displayName = player.DisplayName;
-                if (string.IsNullOrWhiteSpace(displayName))
                     continue;
 
                 int roleMask = 0;
@@ -136,6 +148,16 @@ public class UI_RoleSelectMenu : UI_Scene
                 else
                     occupiedByOtherMask |= roleMask;
 
+                AddRolePlayerIfSelected(playersByRole, Define.TitanRole.Torso, roleMask, player);
+                AddRolePlayerIfSelected(playersByRole, Define.TitanRole.LeftArm, roleMask, player);
+                AddRolePlayerIfSelected(playersByRole, Define.TitanRole.RightArm, roleMask, player);
+                AddRolePlayerIfSelected(playersByRole, Define.TitanRole.LeftLeg, roleMask, player);
+                AddRolePlayerIfSelected(playersByRole, Define.TitanRole.RightLeg, roleMask, player);
+
+                string displayName = player.DisplayName;
+                if (string.IsNullOrWhiteSpace(displayName))
+                    continue;
+
                 AddRoleNameIfSelected(namesByRole, Define.TitanRole.Torso, roleMask, displayName);
                 AddRoleNameIfSelected(namesByRole, Define.TitanRole.LeftArm, roleMask, displayName);
                 AddRoleNameIfSelected(namesByRole, Define.TitanRole.RightArm, roleMask, displayName);
@@ -154,6 +176,36 @@ public class UI_RoleSelectMenu : UI_Scene
         ApplyRoleButtonInteractable(Define.TitanRole.RightArm, Buttons.RightArm, localRoleMask, occupiedByOtherMask);
         ApplyRoleButtonInteractable(Define.TitanRole.LeftLeg, Buttons.LeftLeg, localRoleMask, occupiedByOtherMask);
         ApplyRoleButtonInteractable(Define.TitanRole.RightLeg, Buttons.RightLeg, localRoleMask, occupiedByOtherMask);
+        ApplyRoleImage(playersByRole, Define.TitanRole.Torso);
+        ApplyRoleImage(playersByRole, Define.TitanRole.LeftArm);
+        ApplyRoleImage(playersByRole, Define.TitanRole.RightArm);
+        ApplyRoleImage(playersByRole, Define.TitanRole.LeftLeg);
+        ApplyRoleImage(playersByRole, Define.TitanRole.RightLeg);
+    }
+
+    private void BindTitanRoleImages()
+    {
+        _roleImages.Clear();
+        GameObject titanLayout = GetObject((int)GameObjects.TitanLayout);
+        if (titanLayout == null)
+            return;
+
+        BindTitanRoleImage(titanLayout, Define.TitanRole.Torso);
+        BindTitanRoleImage(titanLayout, Define.TitanRole.LeftArm);
+        BindTitanRoleImage(titanLayout, Define.TitanRole.RightArm);
+        BindTitanRoleImage(titanLayout, Define.TitanRole.LeftLeg);
+        BindTitanRoleImage(titanLayout, Define.TitanRole.RightLeg);
+    }
+
+    private void BindTitanRoleImage(GameObject titanLayout, Define.TitanRole role)
+    {
+        Image image = Util.FindChild<Image>(titanLayout, role.ToString());
+        if (image == null)
+            return;
+
+        image.preserveAspect = true;
+        HideRoleImage(image);
+        _roleImages[role] = image;
     }
 
     private void ApplyRoleNicknameText(Dictionary<Define.TitanRole, List<string>> namesByRole, Define.TitanRole role, Texts targetText)
@@ -180,6 +232,58 @@ public class UI_RoleSelectMenu : UI_Scene
         button.interactable = isSelectedByLocalPlayer || !isSelectedByOtherPlayer;
     }
 
+    private void ApplyRoleImage(Dictionary<Define.TitanRole, LobbyNetworkPlayer> playersByRole, Define.TitanRole role)
+    {
+        if (!_roleImages.TryGetValue(role, out Image image) || image == null)
+            return;
+
+        if (!playersByRole.TryGetValue(role, out LobbyNetworkPlayer player) || player == null || player.RangerFaceTexture == null)
+        {
+            HideRoleImage(image);
+            return;
+        }
+
+        image.gameObject.SetActive(true);
+        image.sprite = GetOrCreateRoleFaceSprite(role, player.RangerFaceTexture);
+        image.preserveAspect = true;
+        image.color = Color.white;
+    }
+
+    private Sprite GetOrCreateRoleFaceSprite(Define.TitanRole role, Texture2D faceTexture)
+    {
+        if (_roleFaceSpriteTextures.TryGetValue(role, out Texture2D cachedTexture)
+            && cachedTexture == faceTexture
+            && _roleFaceSprites.TryGetValue(role, out Sprite cachedSprite)
+            && cachedSprite != null)
+        {
+            return cachedSprite;
+        }
+
+        ClearRoleFaceSprite(role);
+        Rect faceRect = new(0f, RangerFaceTextureStore.TextureHeight, RangerFaceTextureStore.TextureWidth, RangerFaceTextureStore.TextureHeight);
+        Sprite sprite = Sprite.Create(faceTexture, faceRect, new Vector2(0.5f, 0.5f), RoleFaceSpritePixelsPerUnit);
+        _roleFaceSprites[role] = sprite;
+        _roleFaceSpriteTextures[role] = faceTexture;
+        return sprite;
+    }
+
+    private static void HideRoleImage(Image image)
+    {
+        image.sprite = null;
+        image.color = new Color(1f, 1f, 1f, 0f);
+        image.gameObject.SetActive(false);
+    }
+
+    private static void AddRolePlayerIfSelected(Dictionary<Define.TitanRole, LobbyNetworkPlayer> playersByRole, Define.TitanRole role, int roleMask, LobbyNetworkPlayer player)
+    {
+        int roleValue = (int)role;
+        int bit = 1 << (roleValue - (int)Define.TitanRole.Torso);
+        if ((roleMask & bit) == 0 || playersByRole.ContainsKey(role))
+            return;
+
+        playersByRole[role] = player;
+    }
+
     private static void AddRoleNameIfSelected(Dictionary<Define.TitanRole, List<string>> namesByRole, Define.TitanRole role, int roleMask, string displayName)
     {
         int roleValue = (int)role;
@@ -203,5 +307,28 @@ public class UI_RoleSelectMenu : UI_Scene
             return;
 
         text.text = value ?? string.Empty;
+    }
+
+    private void ClearRoleFaceSprites()
+    {
+        Define.TitanRole[] roles = new Define.TitanRole[_roleFaceSprites.Keys.Count];
+        _roleFaceSprites.Keys.CopyTo(roles, 0);
+        for (int i = 0; i < roles.Length; i++)
+        {
+            Define.TitanRole role = roles[i];
+            ClearRoleFaceSprite(role);
+        }
+
+        _roleFaceSprites.Clear();
+        _roleFaceSpriteTextures.Clear();
+    }
+
+    private void ClearRoleFaceSprite(Define.TitanRole role)
+    {
+        if (_roleFaceSprites.TryGetValue(role, out Sprite sprite) && sprite != null)
+            Destroy(sprite);
+
+        _roleFaceSprites.Remove(role);
+        _roleFaceSpriteTextures.Remove(role);
     }
 }
