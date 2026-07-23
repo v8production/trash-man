@@ -975,7 +975,7 @@ public class LobbySessionManager
             if (networkManager.IsHost)
                 return true;
 
-            networkManager.Shutdown();
+            LobbyNetworkRuntime.ShutdownNetworkManager(networkManager);
             Debug.Log("[Lobby] Existing NetworkManager was listening but not host. Shutdown requested before retry.");
             return false;
         }
@@ -992,7 +992,7 @@ public class LobbySessionManager
             return false;
 
         if (networkManager.IsListening)
-            networkManager.Shutdown();
+            LobbyNetworkRuntime.ShutdownNetworkManager(networkManager);
 
         HasLobbyNetworkConnectionFailed = false;
         LastLobbyNetworkError = string.Empty;
@@ -1007,7 +1007,7 @@ public class LobbySessionManager
 
     private void TryStopNetwork()
     {
-        NetworkManager networkManager = UnityEngine.Object.FindAnyObjectByType<NetworkManager>();
+        NetworkManager networkManager = LobbyNetworkRuntime.FindNetworkManager();
         if (networkManager == null)
             return;
 
@@ -1015,7 +1015,7 @@ public class LobbySessionManager
         networkManager.OnClientDisconnectCallback -= HandleClientDisconnected;
 
         if (networkManager.IsListening)
-            networkManager.Shutdown();
+            LobbyNetworkRuntime.ShutdownNetworkManager(networkManager);
 
         ResetClientConnectionTracking();
     }

@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[DefaultExecutionOrder(-10000)]
 public class Managers : MonoBehaviour
 {
     static Managers _instance;
@@ -111,6 +112,7 @@ public class Managers : MonoBehaviour
 
     public static void Shutdown()
     {
+        LobbyNetworkRuntime.ShutdownNetworkManager(LobbyNetworkRuntime.FindNetworkManager());
         Steam.Clear();
     }
 }

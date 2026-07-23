@@ -8,7 +8,9 @@ public static class LobbyNetworkRuntime
     private const int MaxLobbyPlayers = 5;
     private const string RuntimeRootName = "@NetworkManager";
     private const string NetworkObjectPrefabPath = "Prefabs/@NetworkObject";
+    private const float NetworkManagerDestroyDelaySeconds = 0.25f;
     private const BindingFlags InstanceFieldFlags = BindingFlags.Instance | BindingFlags.NonPublic;
+    private const BindingFlags InstanceMethodFlags = BindingFlags.Instance | BindingFlags.NonPublic;
 
     private static readonly uint LobbyPlayerPrefabHash = ComputeStableHash32("TrashMan.LobbyNetworkPlayerPrefab.v1");
 
@@ -19,13 +21,12 @@ public static class LobbyNetworkRuntime
     {
         try
         {
-            NetworkManager networkManager = Object.FindAnyObjectByType<NetworkManager>();
+            NetworkManager networkManager = FindNetworkManager();
             if (networkManager != null)
             {
-                if (networkManager.IsListening)
-                    networkManager.Shutdown();
+                ShutdownNetworkManager(networkManager);
 
-                Object.Destroy(networkManager.gameObject);
+                Object.Destroy(networkManager.gameObject, NetworkManagerDestroyDelaySeconds);
             }
         }
         catch
@@ -40,6 +41,16 @@ public static class LobbyNetworkRuntime
         s_registeredNetworkManagerInstanceId = EntityId.None;
     }
 
+    public static void ShutdownNetworkManager(NetworkManager networkManager)
+    {
+        if (networkManager == null || !networkManager.IsListening)
+            return;
+
+        EnsureRuntimeRootActive(networkManager.gameObject);
+        networkManager.Shutdown(discardMessageQueue: true);
+        ForceShutdownInternal(networkManager);
+    }
+
     public static bool EnsureSetup()
     {
         return EnsureSetup(out _, out _);
@@ -49,7 +60,7 @@ public static class LobbyNetworkRuntime
         out NetworkManager networkManager,
         out SteamNetworkingSocketsTransport transport)
     {
-        networkManager = Object.FindAnyObjectByType<NetworkManager>();
+        networkManager = FindNetworkManager();
         transport = networkManager != null
             ? networkManager.GetComponent<SteamNetworkingSocketsTransport>()
             : null;
@@ -57,6 +68,7 @@ public static class LobbyNetworkRuntime
         if (networkManager != null)
         {
             networkManager.gameObject.name = RuntimeRootName;
+            EnsureRuntimeRootActive(networkManager.gameObject);
             Object.DontDestroyOnLoad(networkManager.gameObject);
         }
 
@@ -66,6 +78,7 @@ public static class LobbyNetworkRuntime
             if (runtimeRoot == null)
                 runtimeRoot = new GameObject { name = RuntimeRootName };
 
+            EnsureRuntimeRootActive(runtimeRoot);
             Object.DontDestroyOnLoad(runtimeRoot);
 
             networkManager = runtimeRoot.GetComponent<NetworkManager>();
@@ -105,11 +118,34 @@ public static class LobbyNetworkRuntime
         return true;
     }
 
+    private static void EnsureRuntimeRootActive(GameObject runtimeRoot)
+    {
+        if (runtimeRoot == null)
+            return;
+
+        if (runtimeRoot.transform.parent != null && !runtimeRoot.activeInHierarchy)
+            runtimeRoot.transform.SetParent(null, true);
+
+        if (!runtimeRoot.activeSelf)
+            runtimeRoot.SetActive(true);
+    }
+
+    public static NetworkManager FindNetworkManager()
+    {
+        return Object.FindAnyObjectByType<NetworkManager>(FindObjectsInactive.Include);
+    }
+
+    private static void ForceShutdownInternal(NetworkManager networkManager)
+    {
+        MethodInfo shutdownInternalMethod = typeof(NetworkManager).GetMethod("ShutdownInternal", InstanceMethodFlags);
+        shutdownInternalMethod?.Invoke(networkManager, null);
+    }
+
     private static void RepairDisposedSceneEventDataStore()
     {
         NetworkManager networkManager = NetworkManager.Singleton != null
             ? NetworkManager.Singleton
-            : Object.FindAnyObjectByType<NetworkManager>();
+            : FindNetworkManager();
         NetworkSceneManager sceneManager = networkManager != null ? networkManager.SceneManager : null;
         if (sceneManager == null)
             return;
