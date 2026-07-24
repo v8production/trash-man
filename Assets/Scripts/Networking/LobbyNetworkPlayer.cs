@@ -39,6 +39,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private readonly NetworkVariable<int> _rangerColorRgba = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<FixedString4096Bytes> _rangerFacePayload = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> _lobbySpawnIndex = new(UnassignedLobbySpawnIndex, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    private readonly NetworkVariable<int> _lobbyRangerAnimState = new((int)Define.RangerAnimState.Idle00, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<Vector2> _seatedLookRotation = new(Vector2.zero, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanRoleInputPayload> _roleInput = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TorsoCameraStatePayload> _torsoCameraState = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -128,6 +129,11 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (scene == null || scene.SceneType != Define.Scene.Lobby)
             return;
 
+        if (IsServer)
+            AssignRandomLobbySpawnIndex();
+        else if (_lobbySpawnIndex.Value == UnassignedLobbySpawnIndex)
+            return;
+
         EnsureLobbyRanger();
         ApplyOwnershipState();
         EnsureNicknameUI();
@@ -143,6 +149,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         // Register lobby objects once we have them; remote identity updates will refresh via OnValueChanged.
         RefreshIdentityPresentation();
+        ApplyLobbyRangerAnimationState();
         PlayInitialLobbyGateAnimation();
     }
 
@@ -170,6 +177,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _rangerColorRgba.OnValueChanged += HandleRangerColorChanged;
         _rangerFacePayload.OnValueChanged += HandleRangerFaceChanged;
         _lobbySpawnIndex.OnValueChanged += HandleLobbySpawnIndexChanged;
+        _lobbyRangerAnimState.OnValueChanged += HandleLobbyRangerAnimStateChanged;
         _seatedLookRotation.OnValueChanged += HandleSeatedLookRotationChanged;
 
         if (isLobbyScene)
@@ -177,23 +185,27 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             if (IsServer)
                 AssignRandomLobbySpawnIndex();
 
-            EnsureLobbyRanger();
-            ApplyOwnershipState();
-            EnsureNicknameUI();
-            RefreshIdentityPresentation();
+            if (_lobbySpawnIndex.Value != UnassignedLobbySpawnIndex)
+            {
+                EnsureLobbyRanger();
+                ApplyOwnershipState();
+                EnsureNicknameUI();
+                RefreshIdentityPresentation();
 
-            ApplyRangerColorPresentation();
-            ApplyRangerFacePresentation();
+                ApplyRangerColorPresentation();
+                ApplyRangerFacePresentation();
+                ApplyLobbyRangerAnimationState();
 
-            // Ensure every peer starts from the server-assigned door spawn instead of the
-            // NetworkObject prefab origin before the first NetworkTransform tick arrives.
-            Vector3 initial = GetInitialSpawnPosition();
-            Quaternion initialRotation = GetInitialSpawnRotation();
-            transform.SetPositionAndRotation(initial, initialRotation);
-            if (_lobbyRanger != null)
-                _lobbyRanger.transform.SetPositionAndRotation(initial, initialRotation);
+                // Ensure every peer starts from the server-assigned door spawn instead of the
+                // NetworkObject prefab origin before the first NetworkTransform tick arrives.
+                Vector3 initial = GetInitialSpawnPosition();
+                Quaternion initialRotation = GetInitialSpawnRotation();
+                transform.SetPositionAndRotation(initial, initialRotation);
+                if (_lobbyRanger != null)
+                    _lobbyRanger.transform.SetPositionAndRotation(initial, initialRotation);
 
-            PlayInitialLobbyGateAnimation();
+                PlayInitialLobbyGateAnimation();
+            }
         }
         else if (isGameScene)
         {
@@ -234,6 +246,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _rangerColorRgba.OnValueChanged -= HandleRangerColorChanged;
         _rangerFacePayload.OnValueChanged -= HandleRangerFaceChanged;
         _lobbySpawnIndex.OnValueChanged -= HandleLobbySpawnIndexChanged;
+        _lobbyRangerAnimState.OnValueChanged -= HandleLobbyRangerAnimStateChanged;
         _seatedLookRotation.OnValueChanged -= HandleSeatedLookRotationChanged;
 
         if (_lobbyRanger != null && _subscribedLobbyRangerEmotion)
@@ -355,13 +368,13 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (!RangerController.IsSitState(rangerAnimState))
             return;
 
-        PlayRangerSitAnimationClientRpc(rangerAnimStateValue);
+        _lobbyRangerAnimState.Value = rangerAnimStateValue;
     }
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
     private void SubmitRangerStandUpAnimationServerRpc()
     {
-        PlayRangerStandUpAnimationClientRpc();
+        _lobbyRangerAnimState.Value = (int)Define.RangerAnimState.Idle00;
     }
 
     [Rpc(SendTo.ClientsAndHost)]
@@ -1089,6 +1102,12 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
     private void HandleLobbySpawnIndexChanged(int previousValue, int newValue)
     {
+        if (newValue == UnassignedLobbySpawnIndex)
+            return;
+
+        if (_lobbyRanger == null)
+            EnsureLobbyRanger();
+
         if (_lobbyRanger == null)
             return;
 
@@ -1099,6 +1118,27 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         transform.SetPositionAndRotation(position, rotation);
 
         PlayInitialLobbyGateAnimation();
+    }
+
+    private void HandleLobbyRangerAnimStateChanged(int previousValue, int newValue)
+    {
+        ApplyLobbyRangerAnimationState();
+    }
+
+    private void ApplyLobbyRangerAnimationState()
+    {
+        if (_lobbyRanger == null || IsOwner)
+            return;
+
+        Define.RangerAnimState rangerAnimState = (Define.RangerAnimState)_lobbyRangerAnimState.Value;
+        if (RangerController.IsSitState(rangerAnimState))
+        {
+            PlayRemoteRangerSitAnimation(rangerAnimState);
+            return;
+        }
+
+        if (rangerAnimState == Define.RangerAnimState.Idle00 && RangerController.IsSitState(_lobbyRanger.AnimState))
+            PlayRemoteRangerStandUpAnimation();
     }
 
     private void HandleSeatedLookRotationChanged(Vector2 previousValue, Vector2 newValue)
