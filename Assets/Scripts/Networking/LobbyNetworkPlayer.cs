@@ -48,6 +48,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private readonly NetworkVariable<int> _lobbySpawnIndex = new(UnassignedLobbySpawnIndex, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> _lobbyRangerAnimState = new((int)Define.RangerAnimState.Idle00, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> _seatedUpperBodyEmotionEvent = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    private readonly NetworkVariable<int> _seatedUpperBodyEmotionState = new((int)Define.RangerAnimState.Idle00, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<Vector2> _seatedLookRotation = new(Vector2.zero, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TitanRoleInputPayload> _roleInput = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<TorsoCameraStatePayload> _torsoCameraState = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -170,6 +171,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         else if (_lobbySpawnIndex.Value == UnassignedLobbySpawnIndex)
             return;
 
+        bool hadLobbyRanger = _lobbyRanger != null;
         EnsureLobbyRanger();
         ApplyOwnershipState();
         EnsureNicknameUI();
@@ -185,7 +187,8 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
         // Register lobby objects once we have them; remote identity updates will refresh via OnValueChanged.
         RefreshIdentityPresentation();
-        ApplyLobbyRangerAnimationState();
+        if (!hadLobbyRanger && _lobbyRanger != null)
+            ApplyLobbyRangerAnimationState();
         EnforceLobbyDoorSpawnDuringInitialFrames();
         PlayInitialLobbyGateAnimation();
     }
@@ -216,6 +219,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _lobbySpawnIndex.OnValueChanged += HandleLobbySpawnIndexChanged;
         _lobbyRangerAnimState.OnValueChanged += HandleLobbyRangerAnimStateChanged;
         _seatedUpperBodyEmotionEvent.OnValueChanged += HandleSeatedUpperBodyEmotionEventChanged;
+        _seatedUpperBodyEmotionState.OnValueChanged += HandleSeatedUpperBodyEmotionStateChanged;
         _seatedLookRotation.OnValueChanged += HandleSeatedLookRotationChanged;
 
         if (isLobbyScene)
@@ -287,6 +291,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         _lobbySpawnIndex.OnValueChanged -= HandleLobbySpawnIndexChanged;
         _lobbyRangerAnimState.OnValueChanged -= HandleLobbyRangerAnimStateChanged;
         _seatedUpperBodyEmotionEvent.OnValueChanged -= HandleSeatedUpperBodyEmotionEventChanged;
+        _seatedUpperBodyEmotionState.OnValueChanged -= HandleSeatedUpperBodyEmotionStateChanged;
         _seatedLookRotation.OnValueChanged -= HandleSeatedLookRotationChanged;
 
         if (_lobbyRanger != null && _subscribedLobbyRangerEmotion)
@@ -401,13 +406,33 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (RangerController.IsSeatedUpperBodyEmotionState(rangerAnimState)
             && RangerController.IsSitState((Define.RangerAnimState)_lobbyRangerAnimState.Value))
         {
-            _seatedUpperBodyEmotionSequence = (_seatedUpperBodyEmotionSequence + 1) & 0xFFFF;
-            _seatedUpperBodyEmotionEvent.Value = (_seatedUpperBodyEmotionSequence << SeatedUpperBodyEmotionSequenceShift)
-                | (rangerAnimStateValue & SeatedUpperBodyEmotionStateMask);
+            PublishSeatedUpperBodyRangerEmotion(rangerAnimStateValue);
             return;
         }
 
         PlayRangerEmotionClientRpc(rangerAnimStateValue);
+    }
+
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void SubmitSeatedUpperBodyRangerEmotionServerRpc(int rangerAnimStateValue, int seatedRangerAnimStateValue)
+    {
+        Define.RangerAnimState rangerAnimState = (Define.RangerAnimState)rangerAnimStateValue;
+        if (!RangerController.IsSeatedUpperBodyEmotionState(rangerAnimState))
+            return;
+
+        Define.RangerAnimState seatedRangerAnimState = (Define.RangerAnimState)seatedRangerAnimStateValue;
+        if (RangerController.IsSitState(seatedRangerAnimState))
+            _lobbyRangerAnimState.Value = seatedRangerAnimStateValue;
+
+        PublishSeatedUpperBodyRangerEmotion(rangerAnimStateValue);
+    }
+
+    private void PublishSeatedUpperBodyRangerEmotion(int rangerAnimStateValue)
+    {
+        _seatedUpperBodyEmotionSequence = (_seatedUpperBodyEmotionSequence + 1) & 0xFFFF;
+        _seatedUpperBodyEmotionState.Value = rangerAnimStateValue;
+        _seatedUpperBodyEmotionEvent.Value = (_seatedUpperBodyEmotionSequence << SeatedUpperBodyEmotionSequenceShift)
+            | (rangerAnimStateValue & SeatedUpperBodyEmotionStateMask);
     }
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
@@ -418,12 +443,14 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return;
 
         _lobbyRangerAnimState.Value = rangerAnimStateValue;
+        _seatedUpperBodyEmotionState.Value = (int)Define.RangerAnimState.Idle00;
     }
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
     private void SubmitRangerStandUpAnimationServerRpc()
     {
         _lobbyRangerAnimState.Value = (int)Define.RangerAnimState.Idle00;
+        _seatedUpperBodyEmotionState.Value = (int)Define.RangerAnimState.Idle00;
     }
 
     [Rpc(SendTo.ClientsAndHost)]
@@ -1206,6 +1233,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         transform.SetPositionAndRotation(position, rotation);
         BeginLobbySpawnEnforcement();
 
+        ApplyLobbyRangerAnimationState();
         PlayInitialLobbyGateAnimation();
     }
 
@@ -1223,7 +1251,13 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (!RangerController.IsSeatedUpperBodyEmotionState(rangerAnimState))
             return;
 
-        PlayRemoteRangerEmotion(rangerAnimState);
+        PlayRemoteRangerSeatedUpperBodyEmotion(rangerAnimState);
+    }
+
+    private void HandleSeatedUpperBodyEmotionStateChanged(int previousValue, int newValue)
+    {
+        if (newValue == (int)Define.RangerAnimState.Idle00)
+            ApplySeatedUpperBodyEmotionState();
     }
 
     private void ApplyLobbyRangerAnimationState()
@@ -1235,6 +1269,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (RangerController.IsSitState(rangerAnimState))
         {
             PlayRemoteRangerSitAnimation(rangerAnimState);
+            ApplySeatedUpperBodyEmotionState();
             return;
         }
 
@@ -1370,6 +1405,14 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         BaseScene scene = Managers.Scene.CurrentScene;
         if (scene == null || scene.SceneType != Define.Scene.Lobby)
             return;
+
+        if (_lobbyRanger != null
+            && _lobbyRanger.IsSeated
+            && RangerController.IsSeatedUpperBodyEmotionState(rangerAnimState))
+        {
+            SubmitSeatedUpperBodyRangerEmotionServerRpc((int)rangerAnimState, (int)_lobbyRanger.AnimState);
+            return;
+        }
 
         SubmitRangerEmotionServerRpc((int)rangerAnimState);
     }
@@ -1570,6 +1613,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         {
             _remoteHasLastPosition = true;
             _remoteLastPosition = currentPos;
+            if (RangerController.IsSitState(_lobbyRanger.AnimState))
+                return;
+
             _remoteAnimator.CrossFade(Define.RangerAnimState.Idle00.ToString(), 0.05f);
             _remoteWasWalking = false;
             return;
@@ -1642,6 +1688,53 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             _remoteWasWalking = false;
 
         _lobbyRanger.PlayReplicatedEmotion(rangerAnimState);
+    }
+
+    private void PlayRemoteRangerSeatedUpperBodyEmotion(Define.RangerAnimState rangerAnimState)
+    {
+        if (_lobbyRanger == null)
+            EnsureLobbyRanger();
+
+        if (_lobbyRanger == null)
+            return;
+
+        if (_remoteAnimator == null)
+            _remoteAnimator = _lobbyRanger.GetComponentInChildren<Animator>(true);
+
+        if (_remoteAnimator == null)
+            return;
+
+        if (!RangerController.IsSitState(_lobbyRanger.AnimState))
+        {
+            Define.RangerAnimState rangerAnimStateValue = (Define.RangerAnimState)_lobbyRangerAnimState.Value;
+            if (RangerController.IsSitState(rangerAnimStateValue))
+                PlayRemoteRangerSitAnimation(rangerAnimStateValue);
+        }
+
+        _remoteEmotionActive = false;
+        _remoteWasWalking = false;
+        _lobbyRanger.PlayReplicatedSeatedUpperBodyEmotion(rangerAnimState);
+    }
+
+    private void ApplySeatedUpperBodyEmotionState()
+    {
+        if (_lobbyRanger == null || IsOwner)
+            return;
+
+        if (!RangerController.IsSitState(_lobbyRanger.AnimState))
+            return;
+
+        Define.RangerAnimState rangerAnimState = (Define.RangerAnimState)_seatedUpperBodyEmotionState.Value;
+        if (!RangerController.IsSeatedUpperBodyEmotionState(rangerAnimState))
+        {
+            _lobbyRanger.StopUpperBodyEmoteLayer();
+            return;
+        }
+
+        if (_lobbyRanger.IsPlayingUpperBodyEmote(rangerAnimState))
+            return;
+
+        PlayRemoteRangerSeatedUpperBodyEmotion(rangerAnimState);
     }
 
     private void PlayRemoteRangerSitAnimation(Define.RangerAnimState rangerAnimState)

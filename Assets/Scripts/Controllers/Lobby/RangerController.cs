@@ -15,6 +15,7 @@ public class RangerController : MonoBehaviour
     private const float UpperBodyEmoteFallbackDuration = 2f;
     private const float HeadLookYawScale = 0.6f;
     private const float HeadLookPitchScale = 0.45f;
+    private const float SpineLookYawScale = HeadLookYawScale * 0.3f;
     private const float Emote02MoveSpeedMultiplier = 1f / 3f;
     public const float SeatedHeadLookYawLimit = 75f;
     public const float SeatedHeadLookPitchLimit = 60f;
@@ -49,6 +50,9 @@ public class RangerController : MonoBehaviour
     private Transform _head;
     private Quaternion _headBaseLocalRotation;
     private bool _hasHeadBaseLocalRotation;
+    private Transform _spine;
+    private Quaternion _spineBaseLocalRotation;
+    private bool _hasSpineBaseLocalRotation;
     private float _seatedLookYaw;
     private float _seatedLookPitch;
     private bool _localControlEnabled = true;
@@ -113,6 +117,7 @@ public class RangerController : MonoBehaviour
         Anim = GetComponentInChildren<Animator>();
         _upperBodyEmoteLayerIndex = ResolveUpperBodyEmoteLayerIndex();
         ResolveHeadBone();
+        ResolveSpineBone();
         _renderers = GetComponentsInChildren<Renderer>(true);
 
         InputActionMap playerMap = Managers.Input.PlayerMap;
@@ -342,6 +347,16 @@ public class RangerController : MonoBehaviour
         PlayFullBodyEmotion(emotionState);
     }
 
+    public void PlayReplicatedSeatedUpperBodyEmotion(Define.RangerAnimState emotionState)
+    {
+        PlaySeatedUpperBodyEmotion(emotionState);
+    }
+
+    public bool IsPlayingUpperBodyEmote(Define.RangerAnimState emotionState)
+    {
+        return _upperBodyEmoteActive && _upperBodyEmoteState == emotionState;
+    }
+
     public void RefreshUpperBodyEmoteLayer()
     {
         UpdateUpperBodyEmoteLayer();
@@ -493,7 +508,7 @@ public class RangerController : MonoBehaviour
 
     private void LateUpdate()
     {
-        ApplySeatedHeadLookRotation();
+        ApplySeatedLookRotation();
     }
 
     private void ResolveHeadBone()
@@ -512,6 +527,26 @@ public class RangerController : MonoBehaviour
 
         _headBaseLocalRotation = _head.localRotation;
         _hasHeadBaseLocalRotation = true;
+    }
+
+    private void ResolveSpineBone()
+    {
+        if (_spine != null)
+            return;
+
+        _spine = FindChildRecursive(transform, "Bip001 Spine1");
+
+        if (_spine == null)
+            return;
+
+        _spineBaseLocalRotation = _spine.localRotation;
+        _hasSpineBaseLocalRotation = true;
+    }
+
+    private void ApplySeatedLookRotation()
+    {
+        ApplySeatedHeadLookRotation();
+        ApplySeatedSpineLookRotation();
     }
 
     private void ApplySeatedHeadLookRotation()
@@ -533,6 +568,27 @@ public class RangerController : MonoBehaviour
             0f,
             -1 * _seatedLookPitch * HeadLookPitchScale);
         _head.localRotation = _headBaseLocalRotation * lookRotation;
+    }
+
+    private void ApplySeatedSpineLookRotation()
+    {
+        if (!_hasSpineBaseLocalRotation)
+            ResolveSpineBone();
+
+        if (_spine == null || !_hasSpineBaseLocalRotation)
+            return;
+
+        if (!_isSeated)
+        {
+            _spine.localRotation = _spineBaseLocalRotation;
+            return;
+        }
+
+        Quaternion lookRotation = Quaternion.Euler(
+            -1 * _seatedLookYaw * SpineLookYawScale,
+            0f,
+            0f);
+        _spine.localRotation = _spineBaseLocalRotation * lookRotation;
     }
 
     private float GetMoveSpeedMultiplier(bool hasEmotionInput, Define.RangerAnimState requestedEmotion)

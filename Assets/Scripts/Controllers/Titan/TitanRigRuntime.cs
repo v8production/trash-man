@@ -2088,44 +2088,14 @@ public sealed class TitanRigRuntime : MonoBehaviour
             return result;
         }
 
-        if (IsSwingTargetGloballyFeasible(swingIsLeft, requested, state.FootLift))
-        {
-            state.DesiredGroundTarget = requested;
-            result.AcceptedTarget = requested;
-            result.Changed = true;
-            result.WorkspaceClamped = false;
-            activeStepSolveThisTick = default;
-            AcceptedFootWorldDeltaThisTick = requested - previous;
-            FootInputAcceptanceRatioThisTick = AcceptedFootWorldDeltaThisTick.magnitude / requestedWorldDelta.magnitude;
-            FootTargetWorkspaceClampedThisTick = false;
-            return result;
-        }
-
-        Vector3 low = previous;
-        Vector3 high = requested;
-        for (int i = 0; i < 12; i++)
-        {
-            geometryBinarySearchIterationCountThisFixedFrame++;
-            Vector3 mid = Vector3.LerpUnclamped(low, high, 0.5f);
-            if (IsSwingTargetGloballyFeasible(swingIsLeft, mid, state.FootLift))
-            {
-                low = mid;
-            }
-            else
-            {
-                high = mid;
-            }
-        }
-
-        state.DesiredGroundTarget = low;
-        result.AcceptedTarget = low;
-        result.Changed = (low - previous).sqrMagnitude > RootQueryEpsilonSqr;
-        result.WorkspaceClamped = true;
-        AcceptedFootWorldDeltaThisTick = low - previous;
-        FootInputAcceptanceRatioThisTick = requestedWorldDelta.sqrMagnitude > 0f
-            ? AcceptedFootWorldDeltaThisTick.magnitude / requestedWorldDelta.magnitude
-            : 0f;
-        FootTargetWorkspaceClampedThisTick = true;
+        state.DesiredGroundTarget = requested;
+        result.AcceptedTarget = requested;
+        result.Changed = true;
+        result.WorkspaceClamped = false;
+        activeStepSolveThisTick = default;
+        AcceptedFootWorldDeltaThisTick = requested - previous;
+        FootInputAcceptanceRatioThisTick = 1f;
+        FootTargetWorkspaceClampedThisTick = false;
         return result;
     }
 
