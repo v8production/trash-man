@@ -166,6 +166,10 @@ public static class LobbyNetworkRuntime
 
         response.Approved = connectedCount < MaxLobbyPlayers;
         response.CreatePlayerObject = true;
+        int spawnIndex = LobbyNetworkPlayer.GetRandomLobbySpawnIndex();
+        LobbyNetworkPlayer.SetPendingLobbySpawnIndex(request.ClientNetworkId, spawnIndex);
+        response.Position = LobbyNetworkPlayer.GetLobbySpawnPosition(spawnIndex);
+        response.Rotation = LobbyNetworkPlayer.GetLobbySpawnRotation(spawnIndex);
         response.Pending = false;
         response.Reason = response.Approved ? string.Empty : "Lobby is full.";
     }

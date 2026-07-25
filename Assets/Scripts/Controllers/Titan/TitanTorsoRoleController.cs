@@ -4,7 +4,7 @@ using UnityEngine;
 public class TitanTorsoRoleController : TitanBaseController
 {
     private const float DrillGaugeCost = 10f;
-    private const float ShieldGaugeCost = 100f;
+    private const float ShieldGaugeCost = 10f;
     private const float DrillActiveDurationSeconds = 1f;
     private const float ShieldActiveDurationSeconds = 1f;
     private const float ClawLaunchGaugeCost = 10f;

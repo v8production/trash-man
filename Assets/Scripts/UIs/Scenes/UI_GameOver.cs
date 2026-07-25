@@ -19,6 +19,12 @@ public class UI_GameOver : UI_Scene
         Time.timeScale = PausedTimeScale;
     }
 
+    public void Close()
+    {
+        gameObject.SetActive(false);
+        ResumeGameTime();
+    }
+
     public static void ResumeGameTime()
     {
         Time.timeScale = RunningTimeScale;
@@ -42,7 +48,7 @@ public class UI_GameOver : UI_Scene
 
     private void OnBackToLobbyButtonClicked(PointerEventData eventData)
     {
-        ResumeGameTime();
+        Close();
         if (!LobbyNetworkPlayer.RequestLoadLobbyFromLocalPlayer())
             Managers.Scene.LoadScene(Define.Scene.Lobby);
     }

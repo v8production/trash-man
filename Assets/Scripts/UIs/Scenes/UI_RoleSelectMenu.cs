@@ -237,14 +237,23 @@ public class UI_RoleSelectMenu : UI_Scene
         if (!_roleImages.TryGetValue(role, out Image image) || image == null)
             return;
 
-        if (!playersByRole.TryGetValue(role, out LobbyNetworkPlayer player) || player == null || player.RangerFaceTexture == null)
+        if (!playersByRole.TryGetValue(role, out LobbyNetworkPlayer player) || player == null)
+        {
+            HideRoleImage(image);
+            return;
+        }
+
+        Texture2D faceTexture = player.TryGetRangerFaceTexture(out Texture2D customFaceTexture)
+            ? customFaceTexture
+            : RangerFaceTextureStore.LoadDefaultFaceTexture();
+        if (faceTexture == null)
         {
             HideRoleImage(image);
             return;
         }
 
         image.gameObject.SetActive(true);
-        image.sprite = GetOrCreateRoleFaceSprite(role, player.RangerFaceTexture);
+        image.sprite = GetOrCreateRoleFaceSprite(role, faceTexture);
         image.preserveAspect = true;
         image.color = Color.white;
     }

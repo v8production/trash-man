@@ -235,7 +235,7 @@ GameObject:
   - component: {fileID: 9205926048185500801}
   - component: {fileID: 7923289159531123606}
   m_Layer: 5
-  m_Name: Temp
+  m_Name: AbortMission
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -895,7 +895,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Temp
+  m_text: 'Abort Mission
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2fb41ece2ca545b47be7f91508ceaf1e, type: 2}
   m_sharedMaterial: {fileID: -2627801204937422189, guid: 2fb41ece2ca545b47be7f91508ceaf1e, type: 2}

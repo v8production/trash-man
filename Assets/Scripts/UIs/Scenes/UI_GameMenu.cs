@@ -24,7 +24,7 @@ public class UI_GameMenu : UI_Scene
         Settings,
         Controls,
         Roles,
-        Temp,
+        AbortMission,
         LeaveGame,
     }
 
@@ -41,7 +41,7 @@ public class UI_GameMenu : UI_Scene
         GetButton((int)Buttons.Controls).gameObject.BindEvent(_ => ShowContentPanel(nameof(Buttons.Controls)));
         BindRoles(GetContentPanel<UI_Roles>(nameof(Buttons.Roles)));
         GetButton((int)Buttons.Roles).gameObject.BindEvent(_ => ShowContentPanel(nameof(Buttons.Roles)));
-        GetButton((int)Buttons.Temp).gameObject.BindEvent(OnTempButtonClicked);
+        GetButton((int)Buttons.AbortMission).gameObject.BindEvent(OnAbortMissionButtonClicked);
         GetButton((int)Buttons.LeaveGame).gameObject.BindEvent(OnLeaveGameButtonClicked);
     }
 
@@ -49,9 +49,12 @@ public class UI_GameMenu : UI_Scene
     {
     }
 
-    private void OnTempButtonClicked(PointerEventData eventData)
+    private void OnAbortMissionButtonClicked(PointerEventData eventData)
     {
-        Managers.Toast.EnqueueMessage("There is no functions on this button.", 2.5f);
+        UI_Victory.ResumeGameTime();
+        UI_GameOver.ResumeGameTime();
+        if (!LobbyNetworkPlayer.RequestLoadLobbyFromLocalPlayer())
+            Managers.Scene.LoadScene(Define.Scene.Lobby);
     }
 
     private void OnLeaveGameButtonClicked(PointerEventData eventData)

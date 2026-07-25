@@ -48,6 +48,11 @@ public static class RangerFaceTextureStore
         ApplyTextureTo(root, LoadDefaultTexture());
     }
 
+    public static Texture2D LoadDefaultFaceTexture()
+    {
+        return LoadDefaultTexture();
+    }
+
     public static void ApplyTextureTo(GameObject root, Texture texture)
     {
         if (root == null || texture == null)

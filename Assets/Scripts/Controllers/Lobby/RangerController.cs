@@ -51,6 +51,7 @@ public class RangerController : MonoBehaviour
     private bool _hasHeadBaseLocalRotation;
     private float _seatedLookYaw;
     private float _seatedLookPitch;
+    private bool _localControlEnabled = true;
 
     Animator Anim;
     public event System.Action<Define.RangerAnimState> EmotionRequested;
@@ -82,6 +83,15 @@ public class RangerController : MonoBehaviour
 
     public float SeatedLookYaw => _seatedLookYaw;
     public float SeatedLookPitch => _seatedLookPitch;
+
+    public void SetLocalControlEnabled(bool enabled)
+    {
+        _localControlEnabled = enabled;
+        if (_localControlEnabled)
+            return;
+
+        _moveInput = Vector2.zero;
+    }
 
     private void Awake()
     {
@@ -166,6 +176,12 @@ public class RangerController : MonoBehaviour
     {
         if (!_initialized)
             Init();
+
+        if (!_localControlEnabled)
+        {
+            UpdateUpperBodyEmoteLayer();
+            return;
+        }
 
         if (_isSeated)
         {

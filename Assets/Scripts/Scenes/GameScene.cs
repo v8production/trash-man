@@ -74,8 +74,7 @@ public class GameScene : BaseScene
         _victoryUi = Managers.UI.ShowSceneUI<UI_Victory>(nameof(UI_Victory));
         _gameOverUi = Managers.UI.ShowSceneUI<UI_GameOver>(nameof(UI_GameOver));
         _gameMenuUi.gameObject.SetActive(false);
-        _victoryUi.gameObject.SetActive(false);
-        _gameOverUi.gameObject.SetActive(false);
+        ResetGameEndPresentation();
     }
 
     private void MapStatsToUIs()
@@ -99,6 +98,7 @@ public class GameScene : BaseScene
         SceneType = Define.Scene.Game;
         UI_Victory.ResumeGameTime();
         UI_GameOver.ResumeGameTime();
+        LobbyNetworkPlayer.ResetLocalGameEndResultState();
 
         Debug.Log($"{InputDebug.Prefix} GameScene.Init SceneType={SceneType}");
 
@@ -264,6 +264,17 @@ public class GameScene : BaseScene
         _gameMenuUi.gameObject.SetActive(false);
     }
 
+    private void ResetGameEndPresentation()
+    {
+        if (_victoryUi != null)
+            _victoryUi.Close();
+
+        if (_gameOverUi != null)
+            _gameOverUi.Close();
+
+        _gameEndShown = false;
+    }
+
     private static bool IsEscapePressedThisFrame()
     {
         return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
@@ -288,6 +299,7 @@ public class GameScene : BaseScene
     {
         UI_Victory.ResumeGameTime();
         UI_GameOver.ResumeGameTime();
+        ResetGameEndPresentation();
         _titanController = null;
         _grolarController = null;
         _bossUi = null;
