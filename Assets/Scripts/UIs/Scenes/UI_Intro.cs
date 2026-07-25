@@ -20,6 +20,7 @@ public class UI_Intro : UI_Scene
         NewGame,
         JoinGame,
         EnterCode,
+        Settings,
         Quit,
     }
 
@@ -34,6 +35,7 @@ public class UI_Intro : UI_Scene
         GetButton((int)Buttons.NewGame).gameObject.BindEvent(OnNewGameButtonClicked);
         GetButton((int)Buttons.JoinGame).gameObject.BindEvent(OnJoinGameCodeButtonClicked);
         GetButton((int)Buttons.EnterCode).gameObject.BindEvent(OnEnterCodeButtonClicked);
+        GetButton((int)Buttons.Settings).gameObject.BindEvent(OnSettingsButtonClicked);
         GetButton((int)Buttons.Quit).gameObject.BindEvent(OnQuitButtonClicked);
     }
 
@@ -69,6 +71,14 @@ public class UI_Intro : UI_Scene
             return;
 
         Managers.UI.ShowSceneUI<UI_EnterCode>(nameof(UI_EnterCode));
+    }
+
+    private void OnSettingsButtonClicked(PointerEventData eventData)
+    {
+        if (FindAnyObjectByType<UI_IntroSettings>() != null)
+            return;
+
+        Managers.UI.ShowSceneUI<UI_IntroSettings>(nameof(UI_IntroSettings));
     }
 
     private void OnQuitButtonClicked(PointerEventData eventData)

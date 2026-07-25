@@ -158,6 +158,14 @@ public class InputManager
         return WasPressedThisFrame(Key.E);
     }
 
+    public bool WasEscapePressedThisFrame()
+    {
+        if (Mode == Define.InputMode.Cinematic)
+            return false;
+
+        return WasPressedThisFrame(Key.Escape);
+    }
+
     private bool IsShiftHeld()
     {
         Keyboard keyboard = Keyboard.current;
