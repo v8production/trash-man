@@ -625,6 +625,7 @@ GameObject:
   - component: {fileID: 403723668193643131}
   - component: {fileID: 4372975517491616791}
   - component: {fileID: 4384350944722700358}
+  - component: {fileID: 5300567698012675278}
   m_Layer: 5
   m_Name: EraserButton
   m_TagString: Untagged
@@ -734,6 +735,21 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5300567698012675278
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2945612908803920395}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 1, g: 0.92941177, b: 0, a: 0.5}
+  m_EffectDistance: {x: 3, y: 3}
+  m_UseGraphicAlpha: 1
 --- !u!1 &3087192775485751741
 GameObject:
   m_ObjectHideFlags: 0
@@ -1260,6 +1276,7 @@ GameObject:
   - component: {fileID: 7200173010464673523}
   - component: {fileID: 5156012988177016113}
   - component: {fileID: 4305477186620480685}
+  - component: {fileID: 6516672406275345335}
   m_Layer: 5
   m_Name: PenButton
   m_TagString: Untagged
@@ -1369,6 +1386,21 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6516672406275345335
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5896008345494491880}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 1, g: 0.92941177, b: 0, a: 0.5}
+  m_EffectDistance: {x: 3, y: 3}
+  m_UseGraphicAlpha: 1
 --- !u!1 &6280324199357807134
 GameObject:
   m_ObjectHideFlags: 0

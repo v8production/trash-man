@@ -5,7 +5,7 @@ Shader "Custom/AuraEffect"
         _BaseColor ("Base Color", Color) = (0.35, 0.9, 1, 0.35)
         _RimColor ("Rim Color", Color) = (0.65, 0.95, 1, 0.65)
         _Intensity ("Glow Intensity", Range(0, 5)) = 1.8
-        _Alpha ("Alpha", Range(0, 1)) = 0.32
+        _Alpha ("Alpha", Range(0, 1)) = 0.2
         _WaveScale ("Wave Scale", Range(0.1, 20)) = 7
         _WaveSpeed ("Wave Speed", Range(0, 10)) = 1.6
         _Distortion ("Vertex Distortion", Range(0, 0.25)) = 0.045

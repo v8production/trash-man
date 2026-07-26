@@ -26,9 +26,9 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Alpha: 0.32
+    - _Alpha: 0.2
     - _Distortion: 0.045
-    - _Intensity: 1.8
+    - _Intensity: 0.8
     - _RimPower: 2.2
     - _WaveScale: 7
     - _WaveSpeed: 1.6

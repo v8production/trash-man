@@ -7,6 +7,7 @@ public sealed class TitanMovementFeedbackController : MonoBehaviour
     private const float FootGroundedShakeAmplitude = 0.08f;
     private const float FootGroundedShakeDuration = 0.18f;
     private const float FootGroundedVolumeScale = 2.0f;
+    private const float MotorVolumeScale = 0.2f;
     private const float MotorActivityHoldSeconds = 0.08f;
 
     private AudioSource motorAudioSource;
@@ -61,6 +62,6 @@ public sealed class TitanMovementFeedbackController : MonoBehaviour
     private void EnsureMotorPlaying()
     {
         if (motorAudioSource == null)
-            motorAudioSource = Managers.Sound.PlayControlledEffect(MotorSoundPath, loop: true);
+            motorAudioSource = Managers.Sound.PlayControlledEffect(MotorSoundPath, loop: true, volumeScale: MotorVolumeScale);
     }
 }

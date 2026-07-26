@@ -42,7 +42,6 @@ public class UI_BoardMenu : UI_Scene
     public event Action Closed;
 
     private readonly List<Vector2Int> _strokePoints = new();
-    private readonly Dictionary<Button, Color> _buttonBaseColors = new();
     private readonly Dictionary<Button, Outline> _buttonOutlines = new();
 
     private RectTransform _boardRect;
@@ -112,6 +111,7 @@ public class UI_BoardMenu : UI_Scene
         ConfigureBoardPanel();
         if (!_isDrawing)
             RefreshActivePenColor(forceVisualRefresh: false);
+        RefreshSelectionVisuals();
         RefreshPointerOverPanel();
         UpdateCursorPosition();
         RefreshCursorVisibility();
@@ -230,9 +230,7 @@ public class UI_BoardMenu : UI_Scene
 
     private void CacheButtonVisuals(Button button)
     {
-        _buttonBaseColors[button] = button.targetGraphic != null ? button.targetGraphic.color : Color.white;
         Outline outline = button.gameObject.GetorAddComponent<Outline>();
-        outline.effectColor = Color.black;
         outline.effectDistance = new Vector2(3f, -3f);
         outline.enabled = false;
         _buttonOutlines[button] = outline;
@@ -332,9 +330,6 @@ public class UI_BoardMenu : UI_Scene
 
     private void SetToolButtonSelected(Button button, bool selected)
     {
-        if (button.targetGraphic != null && _buttonBaseColors.TryGetValue(button, out Color baseColor))
-            button.targetGraphic.color = selected ? new Color(baseColor.r * 0.65f, baseColor.g * 0.65f, baseColor.b * 0.65f, baseColor.a) : baseColor;
-
         if (_buttonOutlines.TryGetValue(button, out Outline outline))
             outline.enabled = selected;
     }

@@ -1,7 +1,7 @@
 public class IntroScene : BaseScene
 {
     private const string IntroBgmPath = "Sounds/BGMs/Hero_BGM";
-    private const float IntroBgmVolume = 0.7f;
+    private const float IntroBgmVolume = 0.3f;
 
     protected override void Init()
     {

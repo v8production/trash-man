@@ -94,7 +94,7 @@ public class SoundManager
         return PlayControlledEffect(path, pitch, false, Mathf.Max(0f, duration));
     }
 
-    public AudioSource PlayControlledEffect(string path, float pitch = 1.0f, bool loop = false, float duration = 0f)
+    public AudioSource PlayControlledEffect(string path, float pitch = 1.0f, bool loop = false, float duration = 0f, float volumeScale = 1.0f)
     {
         AudioClip audioClip = GetorAddAudioClip(path, Define.Sound.Effect);
         if (audioClip == null)
@@ -107,6 +107,7 @@ public class SoundManager
         AudioSource audioSource = go.AddComponent<AudioSource>();
         audioSource.clip = audioClip;
         audioSource.pitch = pitch;
+        audioSource.volume = volumeScale;
         audioSource.loop = loop;
         audioSource.Play();
         _effectAudioSources.Add(audioSource);
