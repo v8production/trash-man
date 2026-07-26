@@ -32,4 +32,13 @@ namespace Data
             return dict;
         }
     }
+
+    [Serializable]
+    public class UserSettingsData
+    {
+        public float masterVolume = 0.5f;
+        public float bgmVolume = 1f;
+        public float sfxVolume = 1f;
+        public float mouseSensitivity = 0.5f;
+    }
 }

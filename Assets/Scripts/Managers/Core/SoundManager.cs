@@ -8,9 +8,13 @@ public class SoundManager
     // 관객         > AudioListener
     AudioSource[] _audioSources = new AudioSource[(int)Define.Sound.MaxCount];
     readonly Dictionary<string, AudioClip> _audioClips = new();
-    readonly List<AudioSource> _effectAudioSources = new();
+    readonly Dictionary<AudioSource, float> _effectAudioSources = new();
     const string OneShotRootName = "@OneShotSound";
     Transform _root;
+    float _masterVolume = 1f;
+    float _bgmVolume = 1f;
+    float _sfxVolume = 1f;
+    float _bgmVolumeScale = 1f;
 
     public void Init()
     {
@@ -31,6 +35,26 @@ public class SoundManager
         }
 
         _root = root.transform;
+        ApplyUserSettings(Managers.Data.UserSettings);
+    }
+
+    public void ApplyUserSettings(Data.UserSettingsData settings)
+    {
+        _masterVolume = Mathf.Clamp01(settings.masterVolume);
+        _bgmVolume = Mathf.Clamp01(settings.bgmVolume);
+        _sfxVolume = Mathf.Clamp01(settings.sfxVolume);
+
+        AudioSource bgmSource = _audioSources[(int)Define.Sound.Bgm];
+        if (bgmSource != null)
+            bgmSource.volume = GetEffectiveVolume(Define.Sound.Bgm, _bgmVolumeScale);
+
+        foreach ((AudioSource audioSource, float volumeScale) in _effectAudioSources)
+        {
+            if (audioSource == null)
+                continue;
+
+            audioSource.volume = GetEffectiveVolume(Define.Sound.Effect, volumeScale);
+        }
     }
 
     public void Clear()
@@ -44,9 +68,8 @@ public class SoundManager
             audioSource.Stop();
         }
 
-        for (int i = 0; i < _effectAudioSources.Count; i++)
+        foreach (AudioSource audioSource in _effectAudioSources.Keys)
         {
-            AudioSource audioSource = _effectAudioSources[i];
             if (audioSource == null)
                 continue;
 
@@ -75,6 +98,8 @@ public class SoundManager
 
     public void PlayOneShotPersistently(string path, float pitch = 1.0f)
     {
+        ApplyUserSettings(Managers.Data.UserSettings);
+
         AudioClip audioClip = GetorAddAudioClip(path, Define.Sound.Effect);
         if (audioClip == null)
             return;
@@ -84,7 +109,7 @@ public class SoundManager
 
         AudioSource audioSource = go.AddComponent<AudioSource>();
         audioSource.pitch = pitch;
-        audioSource.PlayOneShot(audioClip);
+        audioSource.PlayOneShot(audioClip, GetEffectiveVolume(Define.Sound.Effect));
 
         Object.Destroy(go, audioClip.length / Mathf.Max(0.01f, Mathf.Abs(pitch)) + 0.1f);
     }
@@ -96,6 +121,8 @@ public class SoundManager
 
     public AudioSource PlayControlledEffect(string path, float pitch = 1.0f, bool loop = false, float duration = 0f, float volumeScale = 1.0f)
     {
+        ApplyUserSettings(Managers.Data.UserSettings);
+
         AudioClip audioClip = GetorAddAudioClip(path, Define.Sound.Effect);
         if (audioClip == null)
             return null;
@@ -107,10 +134,10 @@ public class SoundManager
         AudioSource audioSource = go.AddComponent<AudioSource>();
         audioSource.clip = audioClip;
         audioSource.pitch = pitch;
-        audioSource.volume = volumeScale;
+        audioSource.volume = GetEffectiveVolume(Define.Sound.Effect, volumeScale);
         audioSource.loop = loop;
         audioSource.Play();
-        _effectAudioSources.Add(audioSource);
+        _effectAudioSources.Add(audioSource, volumeScale);
 
         if (!loop || duration > 0f)
         {
@@ -143,6 +170,8 @@ public class SoundManager
         if (audioClip == null)
             return;
 
+        ApplyUserSettings(Managers.Data.UserSettings);
+
         if (type == Define.Sound.Bgm)
         {
             AudioSource audioSource = _audioSources[(int)Define.Sound.Bgm];
@@ -150,7 +179,8 @@ public class SoundManager
                 audioSource.Stop();
 
             audioSource.pitch = pitch;
-            audioSource.volume = volumeScale;
+            _bgmVolumeScale = volumeScale;
+            audioSource.volume = GetEffectiveVolume(Define.Sound.Bgm, volumeScale);
             audioSource.clip = audioClip;
             audioSource.Play();
 
@@ -159,8 +189,14 @@ public class SoundManager
         {
             AudioSource audioSource = _audioSources[(int)Define.Sound.Effect];
             audioSource.pitch = pitch;
-            audioSource.PlayOneShot(audioClip, volumeScale);
+            audioSource.PlayOneShot(audioClip, GetEffectiveVolume(Define.Sound.Effect, volumeScale));
         }
+    }
+
+    float GetEffectiveVolume(Define.Sound type, float volumeScale = 1f)
+    {
+        float typeVolume = type == Define.Sound.Bgm ? _bgmVolume : _sfxVolume;
+        return _masterVolume * typeVolume * volumeScale;
     }
 
     AudioClip GetorAddAudioClip(string path, Define.Sound type = Define.Sound.Effect)

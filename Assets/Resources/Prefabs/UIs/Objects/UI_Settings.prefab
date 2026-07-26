@@ -1698,7 +1698,7 @@ GameObject:
   - component: {fileID: 5881799274692779785}
   - component: {fileID: 5036772031232496393}
   m_Layer: 5
-  m_Name: MusicVolume
+  m_Name: BGMVolume
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
