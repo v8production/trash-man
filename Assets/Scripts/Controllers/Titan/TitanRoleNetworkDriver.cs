@@ -14,6 +14,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
     private TitanRightLegRoleController _rightLegController;
     private TitanStat _titanStat;
     private TitanController _titanController;
+    private TitanMovementFeedbackController _movementFeedbackController;
 
     private bool _appliedClientPhysicsMode;
 
@@ -26,6 +27,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         _rightLegController = gameObject.GetOrAddComponent<TitanRightLegRoleController>();
         _titanStat = gameObject.GetOrAddComponent<TitanStat>();
         _titanController = gameObject.GetOrAddComponent<TitanController>();
+        _movementFeedbackController = gameObject.GetOrAddComponent<TitanMovementFeedbackController>();
     }
 
     private void FixedUpdate()
@@ -55,6 +57,7 @@ public class TitanRoleNetworkDriver : MonoBehaviour
         TickRole(_leftArmController, Define.TitanRole.LeftArm, dt);
         TickRole(_rightArmController, Define.TitanRole.RightArm, dt);
         TickLegRoles(dt);
+        _movementFeedbackController.TickMotorAudio();
         TickClawWire(dt);
 
         PublishAuthoritativePose();

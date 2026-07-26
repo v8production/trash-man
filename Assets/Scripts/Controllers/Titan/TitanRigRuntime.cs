@@ -255,6 +255,7 @@ public sealed class TitanRigRuntime : MonoBehaviour
     public Transform RightFoot => rightFoot;
     public Transform Drill => drill;
     public Transform Claw => claw;
+    public event System.Action<bool> FootGrounded;
     public Rigidbody MovementRigidbody
     {
         get
@@ -1630,6 +1631,7 @@ public sealed class TitanRigRuntime : MonoBehaviour
         GetMutableLegState(!swingIsLeft).PostureCanonicalizationPending = true;
         pelvisAlignmentToTorsoRequested = true;
         ClearStepState();
+        FootGrounded?.Invoke(swingIsLeft);
     }
 
     private void ValidatePlantedFeetAfterFinalSolve()

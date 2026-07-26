@@ -32,6 +32,17 @@ public class GameCameraController : MonoBehaviour
     private bool _hasCameraAngles;
     private TorsoCameraStatePayload _lastPublishedCameraState;
     private bool _hasLastPublishedCameraState;
+    private float _shakeTimeRemaining;
+    private float _shakeDuration;
+    private float _shakeAmplitude;
+
+    public static void ShakeActiveCamera(float amplitude, float duration)
+    {
+        Camera mainCamera = Camera.main;
+        GameCameraController controller = mainCamera != null ? mainCamera.GetComponent<GameCameraController>() : null;
+        if (controller != null)
+            controller.Shake(amplitude, duration);
+    }
 
     private void OnEnable()
     {
@@ -50,7 +61,7 @@ public class GameCameraController : MonoBehaviour
         if (!TryBuildCameraPose(out Vector3 desiredPosition, out Quaternion desiredRotation))
             return;
 
-        transform.position = desiredPosition;
+        transform.position = desiredPosition + GetShakeOffset();
         transform.rotation = desiredRotation;
     }
 
@@ -65,6 +76,24 @@ public class GameCameraController : MonoBehaviour
         {
             transform.SetPositionAndRotation(desiredPosition, desiredRotation);
         }
+    }
+
+    public void Shake(float amplitude, float duration)
+    {
+        _shakeAmplitude = Mathf.Max(_shakeAmplitude, amplitude);
+        _shakeDuration = Mathf.Max(0.01f, duration);
+        _shakeTimeRemaining = Mathf.Max(_shakeTimeRemaining, duration);
+    }
+
+    private Vector3 GetShakeOffset()
+    {
+        if (_shakeTimeRemaining <= 0f)
+            return Vector3.zero;
+
+        _shakeTimeRemaining = Mathf.Max(0f, _shakeTimeRemaining - Time.deltaTime);
+        float normalizedTime = _shakeTimeRemaining / _shakeDuration;
+        float strength = _shakeAmplitude * normalizedTime * normalizedTime;
+        return transform.right * Random.Range(-strength, strength) + transform.up * Random.Range(-strength, strength);
     }
 
     private void ResolveReferences()

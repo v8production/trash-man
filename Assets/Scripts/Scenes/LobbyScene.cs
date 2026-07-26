@@ -4,6 +4,8 @@ using UnityEngine.InputSystem;
 
 public class LobbyScene : BaseScene
 {
+    private const string LobbyBgmPath = "Sounds/SFXs/Lobby/Lab_ambience00";
+
     private UI_LobbyMenu _lobbyMenu;
     private UI_RoleSelectMenu _roleSelectMenu;
     private UI_BoardMenu _boardMenu;
@@ -133,6 +135,7 @@ public class LobbyScene : BaseScene
         SceneType = Define.Scene.Lobby;
 
         _ = Managers.Input;
+        Managers.Sound.Play(LobbyBgmPath, Define.Sound.Bgm);
         Managers.LobbySession.Init();
 
         Debug.Log("[Lobby] LobbyScene initialized.");

@@ -13,6 +13,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private const string LobbyRightGateName = "ML_GateR";
     private const string LobbyGateSpawnClipName = "LobbyGateSpawn";
     private const string LobbyGateSpawnClipPath = "Animations/LobbyGateSpawn";
+    private const string LobbyGateSpawnSoundPath = "Sounds/SFXs/Lobby/Door_open00";
     private const string LobbyGateLeftDoorName = "ML_Gate_doorL";
     private const string LobbyGateRightDoorName = "ML_Gate_doorR";
     private const int UnassignedLobbySpawnIndex = -1;
@@ -2078,6 +2079,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         animation.clip = playableClip;
         animation.Stop(LobbyGateSpawnClipName);
         animation.Play(LobbyGateSpawnClipName, PlayMode.StopSameLayer);
+        Managers.Sound.Play(LobbyGateSpawnSoundPath);
         _playedInitialLobbyGateAnimation = true;
     }
 

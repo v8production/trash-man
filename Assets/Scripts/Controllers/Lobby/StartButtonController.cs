@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteractionTarget
 {
+    private const string GameStartSoundPath = "Sounds/SFXs/Lobby/Game_start01";
+
     [SerializeField] private float _interactionTriggerDistance = 1.5f;
 
     private InteractionGuideController _interactionGuideController;
@@ -56,6 +58,8 @@ public class StartButtonController : MonoBehaviour, ILobbyWorldButtonInteraction
             Managers.Toast.EnqueueMessage($"Cannot start game: {label}", 2.8f);
             return;
         }
+
+        Managers.Sound.PlayOneShotPersistently(GameStartSoundPath);
 
         if (!LobbyNetworkPlayer.RequestLoadGameFromLocalPlayer())
             Managers.Scene.LoadScene(Define.Scene.Game);

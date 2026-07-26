@@ -7,6 +7,7 @@ public sealed class TitanClawWireController : MonoBehaviour
     private const int FloorCollisionMask = 1 << FloorLayer;
     private const float FloorProbeHeight = 100f;
     private const float FloorProbeDistance = FloorProbeHeight * 2f;
+    private const string ClawLaunchSoundPath = "Sounds/SFXs/Game/Heavy_thud00";
     private static readonly Quaternion ClawLocalForwardAxisToUnityForward = Quaternion.FromToRotation(Vector3.up, Vector3.forward);
 
     [Header("Claw References")]
@@ -59,6 +60,8 @@ public sealed class TitanClawWireController : MonoBehaviour
     private bool hasMountedClawOriginalPose;
     private Stat attackStat;
     private bool hasHitBoss;
+    private AudioSource clawLaunchAudioSource;
+    private bool hasPlayedClawLaunchSound;
 
     private float currentLength;
 
@@ -176,6 +179,7 @@ public sealed class TitanClawWireController : MonoBehaviour
         SetPhase(TitanClawWirePhase.Launching);
         currentLength = maxChainLength;
         ShowChain();
+        PlayClawLaunchSound();
         return true;
     }
 
@@ -191,6 +195,12 @@ public sealed class TitanClawWireController : MonoBehaviour
         SetPhase(TitanClawWirePhase.Idle);
         currentLength = 0f;
         HideChain();
+        StopClawLaunchSound();
+    }
+
+    private void OnDestroy()
+    {
+        StopClawLaunchSound();
     }
 
     private void IntegrateClawMotion(float dt, float allowedLength)
@@ -528,6 +538,7 @@ public sealed class TitanClawWireController : MonoBehaviour
 
         SetPhase(snapshot.Phase);
         currentLength = snapshot.CurrentLength;
+        PlayClawLaunchSound();
 
         if (spawnedClaw != null)
         {
@@ -549,6 +560,25 @@ public sealed class TitanClawWireController : MonoBehaviour
         currentLength = 0f;
 
         HideChain();
+        StopClawLaunchSound();
+    }
+
+    private void PlayClawLaunchSound()
+    {
+        if (hasPlayedClawLaunchSound)
+            return;
+
+        clawLaunchAudioSource = Managers.Sound.PlayControlledEffect(ClawLaunchSoundPath);
+        hasPlayedClawLaunchSound = true;
+    }
+
+    private void StopClawLaunchSound()
+    {
+        if (clawLaunchAudioSource != null)
+            Managers.Sound.StopEffect(clawLaunchAudioSource);
+
+        clawLaunchAudioSource = null;
+        hasPlayedClawLaunchSound = false;
     }
 
     private void EnsureSnapshotClaw(TitanClawWireSnapshot snapshot)

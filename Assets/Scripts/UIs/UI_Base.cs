@@ -33,6 +33,9 @@ public abstract class UI_Base : MonoBehaviour
             if (objects[i] == null)
                 Debug.Log($"Failed to bind - {names[i]}");
 
+            if (typeof(T) == typeof(Button) && objects[i] is Button button)
+                button.gameObject.GetorAddComponent<ButtonClickSoundPlayer>();
+
         }
     }
 

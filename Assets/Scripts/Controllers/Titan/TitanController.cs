@@ -13,6 +13,7 @@ public class TitanController : MonoBehaviour
     private TitanRightLegRoleController rightLegController;
     private TitanDrillController leftDrillController;
     private TitanClawWireController rightClawWireController;
+    private TitanMovementFeedbackController movementFeedbackController;
 
     [Header("Shield Visual")]
     [SerializeField] private string shieldPrefabName = "Shield";
@@ -40,6 +41,7 @@ public class TitanController : MonoBehaviour
     public bool LeftDrillActive { get { return _leftDrillActive; } set { _leftDrillActive = value; } }
     public int RightClawLaunchCount { get { return _rightClawLaunchCount; } }
     public TitanClawWireController RightClawWire => rightClawWireController;
+    public TitanMovementFeedbackController MovementFeedback => movementFeedbackController;
 
     public bool CanLaunchRightClaw => rightClawWireController.CanLaunch;
 
@@ -67,7 +69,21 @@ public class TitanController : MonoBehaviour
         rightLegController = gameObject.GetOrAddComponent<TitanRightLegRoleController>();
         leftDrillController = gameObject.GetOrAddComponent<TitanDrillController>();
         rightClawWireController = gameObject.GetOrAddComponent<TitanClawWireController>();
+        movementFeedbackController = gameObject.GetOrAddComponent<TitanMovementFeedbackController>();
+        rigRuntime.FootGrounded -= HandleFootGrounded;
+        rigRuntime.FootGrounded += HandleFootGrounded;
         SetShieldVisualActive(_guard);
+    }
+
+    private void OnDestroy()
+    {
+        if (rigRuntime != null)
+            rigRuntime.FootGrounded -= HandleFootGrounded;
+    }
+
+    private void HandleFootGrounded(bool _)
+    {
+        movementFeedbackController.PlayFootGroundedFeedback();
     }
 
     private void SetShieldVisualActive(bool active)

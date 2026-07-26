@@ -11,6 +11,7 @@ public class TitanTorsoRoleController : TitanBaseController
     private const float DrillHitRadius = 0.3f;
     private const float DrillHitIntervalSeconds = 0.25f;
     private const float TorsoYawSpeed = 90f;
+    private const string DrillRunningSoundPath = "Sounds/SFXs/Game/Drill_running00";
 
     private TitanController titanController;
     private TitanStat titanStat;
@@ -43,12 +44,16 @@ public class TitanTorsoRoleController : TitanBaseController
 
         Managers.TitanRig.SetWaistYaw(Managers.TitanRig.WaistYaw + input.TorsoYawInput * TorsoYawSpeed * deltaTime);
         Managers.TitanRig.ApplyTorsoPose();
+        MovementFeedback.RequestMotorActivity();
     }
 
     private void UpdateSpecialAbilities(in TitanAggregatedInput input, float deltaTime)
     {
         if (TryConsumePress(input.TorsoDrillPressCounter, ref lastHandledDrillPressCounter) && titanStat.TrySpendGauge(DrillGaugeCost))
+        {
             drillActiveTimeRemaining = DrillActiveDurationSeconds;
+            Managers.Sound.PlayEffectForDuration(DrillRunningSoundPath, DrillActiveDurationSeconds);
+        }
 
         if (TryConsumePress(input.TorsoShieldPressCounter, ref lastHandledShieldPressCounter) && titanStat.TrySpendGauge(ShieldGaugeCost))
             shieldActiveTimeRemaining = ShieldActiveDurationSeconds;
