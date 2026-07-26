@@ -1104,7 +1104,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: 1, z: 0}
 --- !u!64 &201826512
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -2393,7 +2392,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: 1, z: 0}
 --- !u!64 &533889757
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -7347,7 +7345,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: 0, z: 0.5}
 --- !u!64 &648468436
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -7707,7 +7704,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: 1, z: 0}
 --- !u!64 &682415618
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -7837,7 +7833,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: 0, z: 0.3}
 --- !u!1 &700022949
 GameObject:
   m_ObjectHideFlags: 0
@@ -14329,7 +14324,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: 0, z: 0.5}
 --- !u!64 &1287639154
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -14794,7 +14788,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: 1, z: 0}
 --- !u!64 &1365544244
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -15043,7 +15036,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: -0.6, z: 1}
 --- !u!64 &1393415073
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -15544,7 +15536,7 @@ MeshCollider:
   serializedVersion: 5
   m_Convex: 0
   m_CookingOptions: 30
-  m_Mesh: {fileID: 4944557015945844418, guid: 7e57e3b9844ee1840ae8c96d43fde1c9, type: 3}
+  m_Mesh: {fileID: 4154864533425439726, guid: 7e57e3b9844ee1840ae8c96d43fde1c9, type: 3}
 --- !u!1 &1451261800
 GameObject:
   m_ObjectHideFlags: 0
@@ -15895,7 +15887,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: 0, z: -0.2}
 --- !u!1001 &1541100549
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -16161,7 +16152,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: 0, z: 0.5}
 --- !u!64 &1569634075
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -17598,7 +17588,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: 1, z: 0}
 --- !u!64 &1835475063
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -19094,7 +19083,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: -0.6, z: 1}
 --- !u!64 &2077389806
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -19332,7 +19320,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGuideController
   _outlineTriggerDistance: 5
-  _interactionGuideLocalPosition: {x: 0, y: 0, z: 0.5}
 --- !u!64 &2143872173
 MeshCollider:
   m_ObjectHideFlags: 0
