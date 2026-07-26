@@ -517,6 +517,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private void LoadGameSceneClientRpc()
     {
         ResetLocalGameEndResultState();
+        ResetSpawnedRoleInputStateForSceneBoundary(resetServerNetworkValues: false);
         Managers.Scene.LoadScene(Define.Scene.Game);
     }
 
@@ -524,6 +525,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private void LoadLobbySceneClientRpc()
     {
         ResetLocalGameEndResultState();
+        ResetSpawnedRoleInputStateForSceneBoundary(resetServerNetworkValues: false);
         PrepareSpawnedPlayersForLobbySceneReturn(randomizeServerSpawn: false);
         Managers.Scene.LoadScene(Define.Scene.Lobby);
     }
@@ -770,6 +772,29 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         input.TorsoDrillPressCounter = _torsoDrillPressCounter;
         input.TorsoShieldPressCounter = _torsoShieldPressCounter;
         input.TorsoClawPressCounter = _torsoClawPressCounter;
+    }
+
+    private void ResetRoleInputStateForSceneBoundary(bool resetServerNetworkValue)
+    {
+        _torsoDrillPressCounter = 0;
+        _torsoShieldPressCounter = 0;
+        _torsoClawPressCounter = 0;
+
+        if (resetServerNetworkValue && IsServer && IsSpawned)
+            _roleInput.Value = default;
+    }
+
+    private static void ResetSpawnedRoleInputStateForSceneBoundary(bool resetServerNetworkValues)
+    {
+        LobbyNetworkPlayer[] players = Object.FindObjectsByType<LobbyNetworkPlayer>();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || !player.IsSpawned)
+                continue;
+
+            player.ResetRoleInputStateForSceneBoundary(resetServerNetworkValues);
+        }
     }
 
     public static LobbyNetworkPlayer FindLocalOwnedPlayer()
@@ -1070,6 +1095,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
             player._gameEndResult.Value = (int)Define.GameEndResult.None;
             ResetLocalGameEndResultState();
+            ResetSpawnedRoleInputStateForSceneBoundary(resetServerNetworkValues: true);
 
             if (player.TryLoadGameSceneForSession())
                 return true;
@@ -1105,6 +1131,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
 
             player._gameEndResult.Value = (int)Define.GameEndResult.None;
             ResetLocalGameEndResultState();
+            ResetSpawnedRoleInputStateForSceneBoundary(resetServerNetworkValues: true);
             PrepareSpawnedPlayersForLobbySceneReturn(randomizeServerSpawn: true);
             player.LoadLobbySceneClientRpc();
             return true;
