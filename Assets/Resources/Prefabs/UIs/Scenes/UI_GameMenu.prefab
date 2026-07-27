@@ -73,8 +73,8 @@ MonoBehaviour:
     \uC2E4\uB4DC \uAC00\uB3D9\n    - AD: \uBAB8\uD1B5 \uD68C\uC804\r\n- \uD314\r\n   
     - \uB9C8\uC6B0\uC2A4 \uC774\uB3D9: \uC5B4\uAE68 \uD68C\uC804\r\n    - WS: \uD314\uAFC8\uCE58
     \uD68C\uC804\r\n- \uB2E4\uB9AC\n    - \uB9C8\uC6B0\uC2A4 \uC2A4\uD06C\uB864:
-    \uBC1C \uB192\uC774 \uC870\uC808\n    - \uB9C8\uC6B0\uC2A4 \uC774\uB3D9:  \uB4E4\uC5B4\uC62C\uB9B0
-    \uBC1C \uC774\uB3D9"
+    \uBC1C \uB4E4\uC5B4 \uC62C\uB9AC\uAE30\n    - \uB9C8\uC6B0\uC2A4 \uC774\uB3D9: 
+    \uB4E4\uC5B4\uC62C\uB9B0 \uBC1C \uC774\uB3D9"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2fb41ece2ca545b47be7f91508ceaf1e, type: 2}
   m_sharedMaterial: {fileID: -2627801204937422189, guid: 2fb41ece2ca545b47be7f91508ceaf1e, type: 2}
