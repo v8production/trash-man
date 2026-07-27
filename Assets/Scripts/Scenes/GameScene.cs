@@ -8,6 +8,7 @@ public class GameScene : BaseScene
     private const string GrolarPrefabName = "Grolar";
     private const string HpTankPrefabName = "HPTank";
     private const string GaugeTankPrefabName = "GaugeTank";
+    private const string ControlsHintToastMessage = "박사: 조종이 낯설다면 ESC 메뉴의 Controls를 확인하게.";
     private const float TankSpawnIntervalSeconds = 5f;
     private const float TankSpawnRadius = 5f;
     private const float TankSpawnY = 0f;
@@ -108,6 +109,8 @@ public class GameScene : BaseScene
         SeedInitialTitanNetworkState();
         EnsureGrolarRuntime();
         EnsureUI();
+        UI_Toast controlsHintToast = Managers.UI.ShowSceneUI<UI_Toast>();
+        controlsHintToast.ShowBossMessage(ControlsHintToastMessage);
         MapStatsToUIs();
         Managers.Input.SetMode(Define.InputMode.Player);
         CacheTankPrefabs();
