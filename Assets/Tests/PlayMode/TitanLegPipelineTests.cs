@@ -559,6 +559,51 @@ public sealed class TitanLegPipelineTests
     }
 
     [Test]
+    public void TouchdownRecovery_CompletesWhenStrictSoleGapMisses()
+    {
+        using RuntimeFixture fixture = RuntimeFixture.CreateProcedural();
+        TitanRigRuntime runtime = fixture.Runtime;
+        TickUntilGrounded(runtime);
+        TestReflection.SetPrivateField(runtime, "touchdownMaximumSoleGap", -1f);
+        TestReflection.SetPrivateField(runtime, "touchdownRecoveryDelay", 0f);
+
+        for (int i = 0; i < 10; i++)
+        {
+            runtime.TickLegSystem(default, new TitanLegInputCommand { LiftInput = 1f, HorizontalDelta = new Vector2(3f, 1f) }, 0.02f);
+        }
+
+        TickUntilDoubleSupport(runtime, 120);
+
+        Assert.That(runtime.IsDoubleSupport, Is.True, DescribeLegState(runtime, false));
+        Assert.That(runtime.RightLegState.IsPlanted, Is.True, DescribeLegState(runtime, false));
+    }
+
+    [Test]
+    public void FootGroundedEvent_FiresOncePerTouchdown()
+    {
+        using RuntimeFixture fixture = RuntimeFixture.CreateProcedural();
+        TitanRigRuntime runtime = fixture.Runtime;
+        TickUntilGrounded(runtime);
+        int groundedEvents = 0;
+        runtime.FootGrounded += _ => groundedEvents++;
+
+        for (int i = 0; i < 10; i++)
+        {
+            runtime.TickLegSystem(default, new TitanLegInputCommand { LiftInput = 1f, HorizontalDelta = new Vector2(3f, 1f) }, 0.02f);
+        }
+
+        TickUntilDoubleSupport(runtime, 120);
+        int eventsAfterTouchdown = groundedEvents;
+        for (int i = 0; i < 30; i++)
+        {
+            runtime.TickLegSystem(default, default, 0.02f);
+        }
+
+        Assert.That(eventsAfterTouchdown, Is.EqualTo(1));
+        Assert.That(groundedEvents, Is.EqualTo(1));
+    }
+
+    [Test]
     public void SupportAnchor_RemainsBitwiseStableDuringStep()
     {
         using RuntimeFixture fixture = RuntimeFixture.CreateProcedural();
@@ -678,6 +723,7 @@ public sealed class TitanLegPipelineTests
         for (int i = 0; i < 60; i++)
         {
             Vector3 previous = runtime.RightLegState.DesiredGroundTarget;
+            Vector3 previousActual = runtime.RightLegState.ActualFootPosition;
             Vector3 expectedDelta = ExpectedWorldDelta(mouse, sensitivity);
 
             TickRightSwing(runtime, mouse);
@@ -686,6 +732,7 @@ public sealed class TitanLegPipelineTests
             Assert.That(mouse.sqrMagnitude, Is.GreaterThan(0f));
             Assert.That(actualDelta.sqrMagnitude, Is.GreaterThan(0f), $"tick={i}");
             Assert.That(Vector3.Distance(actualDelta, expectedDelta), Is.LessThanOrEqualTo(0.0001f), $"tick={i}");
+            Assert.That(Vector3.Distance(runtime.RightLegState.ActualFootPosition, previousActual), Is.GreaterThan(0f), $"actual tick={i}");
             Assert.That(runtime.FootTargetWorkspaceClampedThisTick, Is.False, $"tick={i}");
         }
     }
@@ -856,6 +903,28 @@ Assert.That(runtime.RequiredRootCorrectionThisTick.sqrMagnitude, Is.LessThanOrEq
             runtime.TickLegSystem(default, new TitanLegInputCommand { LiftInput = 1f }, 0.02f);
             Assert.That(Vector3.Distance(runtime.RightLegState.DesiredGroundTarget, inward), Is.LessThanOrEqualTo(0.0001f), $"zero tick={i}");
         }
+    }
+
+    [Test]
+    public void BoundaryMouseInput_DoesNotDiscardValidLift()
+    {
+        using RuntimeFixture fixture = RuntimeFixture.CreateProcedural();
+        TitanRigRuntime runtime = fixture.Runtime;
+        TickUntilGrounded(runtime);
+        BeginRightSwing(runtime);
+
+        for (int i = 0; i < 12; i++)
+        {
+            runtime.TickLegSystem(default, new TitanLegInputCommand { LiftInput = 1f }, 0.02f);
+        }
+
+        float liftedHeight = runtime.RightLegState.FootLift;
+        Assert.That(liftedHeight, Is.GreaterThan(0.05f));
+
+        TickRightSwing(runtime, new Vector2(1000f, 1000f));
+
+        Assert.That(runtime.FootTargetWorkspaceClampedThisTick, Is.True);
+        Assert.That(runtime.RightLegState.FootLift, Is.GreaterThanOrEqualTo(liftedHeight - 0.0001f));
     }
 
     [Test]

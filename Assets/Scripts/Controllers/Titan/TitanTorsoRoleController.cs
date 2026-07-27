@@ -3,11 +3,11 @@ using UnityEngine;
 
 public class TitanTorsoRoleController : TitanBaseController
 {
-    private const float DrillGaugeCost = 10f;
+    private const float DrillGaugeCost = 50f;
     private const float ShieldGaugeCost = 10f;
     private const float DrillActiveDurationSeconds = 1f;
     private const float ShieldActiveDurationSeconds = 1f;
-    private const float ClawLaunchGaugeCost = 10f;
+    private const float ClawLaunchGaugeCost = 20f;
     private const float DrillHitRadius = 0.3f;
     private const float DrillHitIntervalSeconds = 0.25f;
     private const float TorsoYawSpeed = 90f;
@@ -21,6 +21,7 @@ public class TitanTorsoRoleController : TitanBaseController
     private uint lastHandledDrillPressCounter;
     private uint lastHandledShieldPressCounter;
     private uint lastHandledClawPressCounter;
+    private bool pressCountersInitialized;
 
     public override Define.TitanRole Role => Define.TitanRole.Torso;
 
@@ -49,6 +50,14 @@ public class TitanTorsoRoleController : TitanBaseController
 
     private void UpdateSpecialAbilities(in TitanAggregatedInput input, float deltaTime)
     {
+        if (!pressCountersInitialized)
+        {
+            pressCountersInitialized = true;
+            lastHandledDrillPressCounter = input.TorsoDrillPressCounter;
+            lastHandledShieldPressCounter = input.TorsoShieldPressCounter;
+            lastHandledClawPressCounter = input.TorsoClawPressCounter;
+        }
+
         if (TryConsumePress(input.TorsoDrillPressCounter, ref lastHandledDrillPressCounter) && titanStat.TrySpendGauge(DrillGaugeCost))
         {
             drillActiveTimeRemaining = DrillActiveDurationSeconds;

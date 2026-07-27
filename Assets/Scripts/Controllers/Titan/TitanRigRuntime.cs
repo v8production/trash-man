@@ -6,6 +6,7 @@ public sealed class TitanRigRuntime : MonoBehaviour
 {
     private const float HorizontalInputEpsilonSqr = 0.00000001f;
     private const float RootQueryEpsilonSqr = 0.00000001f;
+    private const float StrictSwingTargetEpsilon = 0.00001f;
     private static readonly ProfilerMarker TitanLegTickMarker = new ProfilerMarker("Titan.Leg.Tick");
     private static readonly ProfilerMarker TitanLegActiveRootGeometryMarker = new ProfilerMarker("Titan.Leg.ActiveRootGeometry");
     private static readonly ProfilerMarker TitanLegRootConstraintFallbackMarker = new ProfilerMarker("Titan.Leg.RootFallback");
@@ -68,8 +69,13 @@ public sealed class TitanRigRuntime : MonoBehaviour
     [SerializeField] private float plantedSoleClearance = 0.002f;
     [SerializeField] private float touchdownPenetrationTolerance = 0.002f;
     [SerializeField] private float touchdownMaximumSoleGap = 0.008f;
+    [SerializeField] private float touchdownRecoveryDelay = 0.08f;
+    [SerializeField] private float touchdownRecoveryTargetTolerance = 0.12f;
     [SerializeField] private float plantedFootTargetTolerance = 0.004f;
     [SerializeField] private float plantedPenetrationTolerance = 0.002f;
+    [SerializeField] private float activeSwingInputSolveTolerance = 0.00005f;
+    [SerializeField] private float footGroundedFeedbackMinimumLift = 0.03f;
+    [SerializeField] private float footGroundedFeedbackMinimumMove = 0.02f;
 
     [Header("Leg IK")]
     [SerializeField] private TitanLegSolverSettings leftLegSolverSettings;
@@ -117,8 +123,13 @@ public sealed class TitanRigRuntime : MonoBehaviour
     private bool remotePhysicsOverride;
     private bool stepActive;
     private TitanSupportFoot activeSwingFoot;
+    private float touchdownRecoveryTimer;
     private Vector3 stepRootReferenceWorld;
     private Vector3 stepSupportPlantAnchor;
+    private bool activeStepFootGroundedEventArmed;
+    private Vector3 activeStepFootGroundedStartTarget;
+    private float activeStepMaxFootLift;
+    private float activeStepMaxGroundTargetMove;
     private bool pelvisAlignmentToTorsoRequested;
     private readonly Vector3[] stepRootCandidateBuffer = new Vector3[40];
     private TitanActiveStepSolveResult activeStepSolveThisTick;
@@ -223,6 +234,18 @@ public sealed class TitanRigRuntime : MonoBehaviour
         public Vector3 AcceptedTarget;
         public Vector3 RequestedWorldDelta;
         public bool WorkspaceClamped;
+    }
+
+    private readonly struct TitanStrictSwingTargetResult
+    {
+        public TitanStrictSwingTargetResult(Vector3 target, bool clamped)
+        {
+            Target = target;
+            Clamped = clamped;
+        }
+
+        public Vector3 Target { get; }
+        public bool Clamped { get; }
     }
 
     [ContextMenu("TitanRigRuntime/Bake Bone References")]
@@ -978,6 +1001,7 @@ public sealed class TitanRigRuntime : MonoBehaviour
         landingCandidateCollider = null;
         leftLeg.IsPlanted = false;
         rightLeg.IsPlanted = false;
+        activeStepFootGroundedEventArmed = false;
         leftPlantSurface = default;
         rightPlantSurface = default;
         lastValidGroundedPose = default;
@@ -1298,7 +1322,14 @@ public sealed class TitanRigRuntime : MonoBehaviour
                 {
                     UpdateAppliedLiftForSupportState(deltaTime);
                     TitanSwingTargetUpdate targetUpdate = ApplySwingHorizontalInput(false, ref rightLeg, rightCommand);
+                    targetUpdate.Changed = targetUpdate.Changed || rightCommand.LiftInput > 0f;
                     CorrectDescendingLandingTargetBeforeSolve(false, ref rightLeg, rightGroundContact);
+                    if (ClampSwingLiftToStrictFootPairRange(false, ref rightLeg))
+                    {
+                        targetUpdate.WorkspaceClamped = true;
+                        FootTargetWorkspaceClampedThisTick = true;
+                    }
+                    UpdateActiveStepFootGroundedMotion(rightLeg);
                     if (stepActive)
                     {
                         activeStepSolveThisTick = CalculateActiveStepSolveResult(false, deltaTime, targetUpdate);
@@ -1314,7 +1345,14 @@ public sealed class TitanRigRuntime : MonoBehaviour
                 {
                     UpdateAppliedLiftForSupportState(deltaTime);
                     TitanSwingTargetUpdate targetUpdate = ApplySwingHorizontalInput(true, ref leftLeg, leftCommand);
+                    targetUpdate.Changed = targetUpdate.Changed || leftCommand.LiftInput > 0f;
                     CorrectDescendingLandingTargetBeforeSolve(true, ref leftLeg, leftGroundContact);
+                    if (ClampSwingLiftToStrictFootPairRange(true, ref leftLeg))
+                    {
+                        targetUpdate.WorkspaceClamped = true;
+                        FootTargetWorkspaceClampedThisTick = true;
+                    }
+                    UpdateActiveStepFootGroundedMotion(leftLeg);
                     if (stepActive)
                     {
                         activeStepSolveThisTick = CalculateActiveStepSolveResult(true, deltaTime, targetUpdate);
@@ -1401,7 +1439,7 @@ public sealed class TitanRigRuntime : MonoBehaviour
             }
 
             UpdateLegContactState(swingIsLeftAfterSolve, postSolveHasContact, postSolveContact);
-            TryCompleteTouchdown(swingFoot);
+            TryCompleteTouchdown(swingFoot, deltaTime);
             ValidatePlantedFeetAfterFinalSolve();
         }
     }
@@ -1416,6 +1454,12 @@ public sealed class TitanRigRuntime : MonoBehaviour
         activeStepSolveThisTick = default;
         stepActive = true;
         activeSwingFoot = swingFoot;
+        activeStepFootGroundedEventArmed = true;
+        TitanLegControlState swingState = GetLegState(swingFoot == TitanSupportFoot.Left);
+        activeStepFootGroundedStartTarget = swingState.DesiredGroundTarget;
+        activeStepMaxFootLift = Mathf.Max(0f, swingState.FootLift);
+        activeStepMaxGroundTargetMove = 0f;
+        touchdownRecoveryTimer = 0f;
         InvalidatePlantSurface(swingFoot == TitanSupportFoot.Left);
         stepRootReferenceWorld = TryCalculateHighestDoubleSupportRoot(out Vector3 settledRoot)
             ? settledRoot
@@ -1430,6 +1474,11 @@ public sealed class TitanRigRuntime : MonoBehaviour
         activeStepSolveThisTick = default;
         stepActive = false;
         activeSwingFoot = TitanSupportFoot.Left;
+        activeStepFootGroundedEventArmed = false;
+        activeStepFootGroundedStartTarget = default;
+        activeStepMaxFootLift = 0f;
+        activeStepMaxGroundTargetMove = 0f;
+        touchdownRecoveryTimer = 0f;
         stepRootReferenceWorld = default;
         stepSupportPlantAnchor = default;
     }
@@ -1579,7 +1628,7 @@ public sealed class TitanRigRuntime : MonoBehaviour
         }
     }
 
-    private void TryCompleteTouchdown(TitanSupportFoot swingFoot)
+    private void TryCompleteTouchdown(TitanSupportFoot swingFoot, float deltaTime)
     {
         bool swingIsLeft = swingFoot == TitanSupportFoot.Left;
         ref TitanLegControlState swingState = ref GetMutableLegState(swingIsLeft);
@@ -1600,20 +1649,22 @@ public sealed class TitanRigRuntime : MonoBehaviour
         float actualTargetError = foot != null ? Vector3.Distance(foot.position, plantAnchor) : float.PositiveInfinity;
         TitanLegSolverSettings settings = swingIsLeft ? leftLegSolverSettings : rightLegSolverSettings;
         float actualTargetTolerance = GetActualFootReachTolerance(settings);
-        if (!stepActive
-            || activeSwingFoot != swingFoot
-            || swingState.FootLiftTarget != 0f
-            || swingState.FootLift > Mathf.Max(liftSnapEpsilon, touchdownLiftTolerance)
-            || !swingState.HasGroundContact
-            || !swingState.LastSolveReached
-            || swingState.TargetWasClamped
-            || actualTargetError > actualTargetTolerance
-            || minSoleGap < -touchdownPenetrationTolerance
-            || minSoleGap > touchdownMaximumSoleGap
-            || maxSoleGap < -touchdownPenetrationTolerance
-            || !float.IsFinite(actualTargetError)
-            || !float.IsFinite(minSoleGap)
-            || !float.IsFinite(maxSoleGap))
+        bool basicTouchdownCandidate = stepActive
+            && activeSwingFoot == swingFoot
+            && swingState.FootLiftTarget == 0f
+            && swingState.FootLift <= Mathf.Max(liftSnapEpsilon, touchdownLiftTolerance)
+            && swingState.HasGroundContact
+            && float.IsFinite(actualTargetError)
+            && float.IsFinite(minSoleGap)
+            && float.IsFinite(maxSoleGap)
+            && minSoleGap >= -touchdownPenetrationTolerance
+            && maxSoleGap >= -touchdownPenetrationTolerance;
+        bool strictTouchdown = basicTouchdownCandidate
+            && swingState.LastSolveReached
+            && !swingState.TargetWasClamped
+            && actualTargetError <= actualTargetTolerance
+            && minSoleGap <= touchdownMaximumSoleGap;
+        if (!strictTouchdown && !CanRecoverTouchdown(basicTouchdownCandidate, actualTargetError, minSoleGap, deltaTime))
         {
             return;
         }
@@ -1630,8 +1681,48 @@ public sealed class TitanRigRuntime : MonoBehaviour
         swingState.PostureCanonicalizationPending = true;
         GetMutableLegState(!swingIsLeft).PostureCanonicalizationPending = true;
         pelvisAlignmentToTorsoRequested = true;
+        UpdateActiveStepFootGroundedMotion(swingState);
+        bool shouldEmitFootGrounded = activeStepFootGroundedEventArmed
+            && activeSwingFoot == swingFoot
+            && HasActiveStepMovedEnoughForFootGroundedFeedback();
         ClearStepState();
-        FootGrounded?.Invoke(swingIsLeft);
+        if (shouldEmitFootGrounded)
+        {
+            FootGrounded?.Invoke(swingIsLeft);
+        }
+    }
+
+    private void UpdateActiveStepFootGroundedMotion(in TitanLegControlState swingState)
+    {
+        if (!activeStepFootGroundedEventArmed)
+        {
+            return;
+        }
+
+        activeStepMaxFootLift = Mathf.Max(activeStepMaxFootLift, swingState.FootLift, swingState.FootLiftTarget);
+        activeStepMaxGroundTargetMove = Mathf.Max(
+            activeStepMaxGroundTargetMove,
+            Vector3.Distance(swingState.DesiredGroundTarget, activeStepFootGroundedStartTarget));
+    }
+
+    private bool HasActiveStepMovedEnoughForFootGroundedFeedback()
+    {
+        return activeStepMaxFootLift >= footGroundedFeedbackMinimumLift
+            || activeStepMaxGroundTargetMove >= footGroundedFeedbackMinimumMove;
+    }
+
+    private bool CanRecoverTouchdown(bool basicTouchdownCandidate, float actualTargetError, float minSoleGap, float deltaTime)
+    {
+        if (!basicTouchdownCandidate
+            || actualTargetError > touchdownRecoveryTargetTolerance
+            || minSoleGap > touchdownRecoveryTargetTolerance)
+        {
+            touchdownRecoveryTimer = 0f;
+            return false;
+        }
+
+        touchdownRecoveryTimer += Mathf.Max(0f, deltaTime);
+        return touchdownRecoveryTimer >= touchdownRecoveryDelay;
     }
 
     private void ValidatePlantedFeetAfterFinalSolve()
@@ -2090,15 +2181,161 @@ public sealed class TitanRigRuntime : MonoBehaviour
             return result;
         }
 
-        state.DesiredGroundTarget = requested;
-        result.AcceptedTarget = requested;
+        TitanStrictSwingTargetResult strictTarget = ClampSwingGroundTargetToStrictFootPairRange(
+            swingIsLeft,
+            previous,
+            requested,
+            state.FootLift);
+        Vector3 accepted = strictTarget.Target;
+        if ((accepted - previous).sqrMagnitude <= HorizontalInputEpsilonSqr)
+        {
+            result.AcceptedTarget = previous;
+            result.WorkspaceClamped = strictTarget.Clamped;
+            AcceptedFootWorldDeltaThisTick = default;
+            FootInputAcceptanceRatioThisTick = 0f;
+            FootTargetWorkspaceClampedThisTick = strictTarget.Clamped;
+            return result;
+        }
+
+        state.DesiredGroundTarget = accepted;
+        result.AcceptedTarget = accepted;
         result.Changed = true;
-        result.WorkspaceClamped = false;
+        result.WorkspaceClamped = strictTarget.Clamped;
         activeStepSolveThisTick = default;
-        AcceptedFootWorldDeltaThisTick = requested - previous;
-        FootInputAcceptanceRatioThisTick = 1f;
-        FootTargetWorkspaceClampedThisTick = false;
+        AcceptedFootWorldDeltaThisTick = accepted - previous;
+        float requestedDistance = Vector3.Distance(requested, previous);
+        FootInputAcceptanceRatioThisTick = requestedDistance > StrictSwingTargetEpsilon
+            ? Mathf.Clamp01(Vector3.Distance(accepted, previous) / requestedDistance)
+            : 1f;
+        FootTargetWorkspaceClampedThisTick = strictTarget.Clamped;
         return result;
+    }
+
+    private TitanStrictSwingTargetResult ClampSwingGroundTargetToStrictFootPairRange(
+        bool swingIsLeft,
+        Vector3 previousGroundTarget,
+        Vector3 requestedGroundTarget,
+        float currentLift)
+    {
+        Vector3 up = TitanGroundFrame.Up;
+        Vector3 requestedSwingTarget = requestedGroundTarget + up * currentLift;
+        if (IsSwingTargetInsideStrictFootPairRange(swingIsLeft, requestedSwingTarget))
+        {
+            return new TitanStrictSwingTargetResult(requestedGroundTarget, false);
+        }
+
+        Vector3 previousSwingTarget = previousGroundTarget + up * currentLift;
+        if (!TryProjectSwingTargetToStrictFootPairRange(swingIsLeft, requestedSwingTarget, out Vector3 clampedSwingTarget))
+        {
+            return new TitanStrictSwingTargetResult(previousGroundTarget, true);
+        }
+
+        float requestedLiftHeight = Vector3.Dot(requestedSwingTarget, up);
+        if (Mathf.Abs(Vector3.Dot(clampedSwingTarget, up) - requestedLiftHeight) > StrictSwingTargetEpsilon)
+        {
+            return new TitanStrictSwingTargetResult(previousGroundTarget, true);
+        }
+
+        float groundHeight = Vector3.Dot(requestedGroundTarget, up);
+        Vector3 clampedGroundTarget = Vector3.ProjectOnPlane(clampedSwingTarget, up) + up * groundHeight;
+        if ((clampedGroundTarget - previousGroundTarget).sqrMagnitude <= HorizontalInputEpsilonSqr
+            && IsSwingTargetInsideStrictFootPairRange(swingIsLeft, previousSwingTarget))
+        {
+            return new TitanStrictSwingTargetResult(previousGroundTarget, true);
+        }
+
+        return new TitanStrictSwingTargetResult(clampedGroundTarget, true);
+    }
+
+    private bool TryProjectSwingTargetToStrictFootPairRange(bool swingIsLeft, Vector3 requestedSwingTarget, out Vector3 clampedSwingTarget)
+    {
+        bool supportIsLeft = !swingIsLeft;
+        TitanLegControlState supportState = GetLegState(supportIsLeft);
+        Vector3 supportTarget = supportState.PlantAnchorWorld;
+        if (!TryCreateWorkspace(supportIsLeft, supportTarget, out TitanLegRootWorkspace supportWorkspace)
+            || !TryCreateWorkspace(swingIsLeft, requestedSwingTarget, out TitanLegRootWorkspace requestedSwingWorkspace))
+        {
+            clampedSwingTarget = requestedSwingTarget;
+            return false;
+        }
+
+        Vector3 up = TitanGroundFrame.Up;
+        Vector3 supportCenter = supportWorkspace.Center;
+        Vector3 requestedCenter = requestedSwingWorkspace.Center;
+        Vector3 supportToRequested = requestedCenter - supportCenter;
+        float maxCenterDistance = Mathf.Max(
+            0f,
+            supportWorkspace.MaxReach + requestedSwingWorkspace.MaxReach - StrictSwingTargetEpsilon);
+
+        float verticalDelta = Vector3.Dot(supportToRequested, up);
+        float planarLimitSquared = maxCenterDistance * maxCenterDistance - verticalDelta * verticalDelta;
+        Vector3 clampedCenter;
+        if (planarLimitSquared <= 0f)
+        {
+            clampedCenter = supportCenter + up * Mathf.Clamp(verticalDelta, -maxCenterDistance, maxCenterDistance);
+        }
+        else
+        {
+            Vector3 planarDelta = Vector3.ProjectOnPlane(supportToRequested, up);
+            float planarLimit = Mathf.Sqrt(planarLimitSquared);
+            clampedCenter = supportCenter
+                + up * verticalDelta
+                + Vector3.ClampMagnitude(planarDelta, planarLimit);
+        }
+
+        clampedSwingTarget = clampedCenter + requestedSwingWorkspace.HipOffsetFromRoot;
+        return IsSwingTargetInsideStrictFootPairRange(swingIsLeft, clampedSwingTarget);
+    }
+
+    private bool ClampSwingLiftToStrictFootPairRange(bool swingIsLeft, ref TitanLegControlState state)
+    {
+        Vector3 liftedTarget = state.DesiredGroundTarget + TitanGroundFrame.Up * state.FootLift;
+        if (IsSwingTargetInsideStrictFootPairRange(swingIsLeft, liftedTarget))
+        {
+            return false;
+        }
+
+        Vector3 groundTarget = state.DesiredGroundTarget;
+        if (!IsSwingTargetInsideStrictFootPairRange(swingIsLeft, groundTarget))
+        {
+            return false;
+        }
+
+        float low = 0f;
+        float high = Mathf.Max(0f, state.FootLift);
+        for (int i = 0; i < 8; i++)
+        {
+            float mid = (low + high) * 0.5f;
+            Vector3 candidate = state.DesiredGroundTarget + TitanGroundFrame.Up * mid;
+            if (IsSwingTargetInsideStrictFootPairRange(swingIsLeft, candidate))
+            {
+                low = mid;
+            }
+            else
+            {
+                high = mid;
+            }
+        }
+
+        state.FootLift = low;
+        state.FootLiftTarget = Mathf.Min(state.FootLiftTarget, low);
+        state.FootLiftSmoothVelocity = 0f;
+        state.FootLiftFallVelocity = 0f;
+        activeStepSolveThisTick = default;
+        return true;
+    }
+
+    private bool IsSwingTargetInsideStrictFootPairRange(bool swingIsLeft, Vector3 swingTarget)
+    {
+        bool supportIsLeft = !swingIsLeft;
+        TitanLegControlState supportState = GetLegState(supportIsLeft);
+        return TryCreateWorkspace(supportIsLeft, supportState.PlantAnchorWorld, out TitanLegRootWorkspace supportWorkspace)
+            && TryCreateWorkspace(swingIsLeft, swingTarget, out TitanLegRootWorkspace swingWorkspace)
+            && TitanStanceRootSolver.SolveClosestSharedWorkspace(
+                MovementRoot.position,
+                TitanGroundFrame.Up,
+                supportWorkspace,
+                swingWorkspace).Feasible;
     }
 
     private void CorrectDescendingLandingTargetBeforeSolve(bool left, ref TitanLegControlState state, in FootGroundContact contact)
@@ -2757,6 +2994,15 @@ public sealed class TitanRigRuntime : MonoBehaviour
             Quaternion kneeBaseRotation = left ? leftKneeBaseRotation : rightKneeBaseRotation;
             TitanLegSolverSettings settings = left ? leftLegSolverSettings : rightLegSolverSettings;
             ref TitanLegControlState state = ref GetMutableLegState(left);
+            bool activelyDrivenSwing = stepActive
+                && activeSwingFoot == (left ? TitanSupportFoot.Left : TitanSupportFoot.Right)
+                && !state.IsPlanted
+                && (desiredTarget - state.LastSolveTarget).sqrMagnitude > HorizontalInputEpsilonSqr;
+            if (activelyDrivenSwing)
+            {
+                settings.PositionTolerance = Mathf.Min(settings.PositionTolerance, Mathf.Max(0.000001f, activeSwingInputSolveTolerance));
+            }
+
             TitanLegIkAngles angles = state.SolvedAngles;
             Transform movementRoot = MovementRoot;
             TitanRootPose rootPose = new TitanRootPose
