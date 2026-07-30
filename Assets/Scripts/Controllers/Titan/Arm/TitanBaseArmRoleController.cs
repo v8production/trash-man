@@ -16,9 +16,10 @@ public abstract class TitanBaseArmRoleController : TitanBaseController
     {
         TitanArmControlState state = Managers.TitanRig.GetArmState(IsLeftArm);
         TitanArmControlState previousState = state;
+        float shoulderRollDirection = IsLeftArm ? -1f : 1f;
         float shoulderPitchDirection = IsLeftArm ? 1f : -1f;
 
-        state.ShoulderRoll = Mathf.Clamp(state.ShoulderRoll + input.MouseDelta.x * ShoulderRollSensitivity, MinShoulderRoll, MaxShoulderRoll);
+        state.ShoulderRoll = Mathf.Clamp(state.ShoulderRoll + input.MouseDelta.x * ShoulderRollSensitivity * shoulderRollDirection, MinShoulderRoll, MaxShoulderRoll);
         state.ShoulderPitch += input.MouseDelta.y * ShoulderPitchSensitivity * shoulderPitchDirection;
         state.ElbowPitch = Mathf.Clamp(state.ElbowPitch + input.ArmElbowInput * ElbowSpeed * deltaTime, MinElbowPitch, MaxElbowPitch);
         Managers.TitanRig.SetArmState(IsLeftArm, state);
