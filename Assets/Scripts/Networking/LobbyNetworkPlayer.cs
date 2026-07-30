@@ -25,6 +25,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     private const float LobbyOriginSnapSqrDistance = 0.25f;
 
     private static bool s_ignoreGameEndResultUntilNetworkReset;
+    private static Define.GameEndResult s_latestLocalGameEndResult = Define.GameEndResult.None;
     private static readonly Dictionary<ulong, int> s_pendingLobbySpawnIndexesByClientId = new();
 
     private static readonly Vector3[] LobbySpawnPositions =
@@ -394,6 +395,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
     private void SubmitTorsoCameraStateServerRpc(TorsoCameraStatePayload cameraState)
     {
+        if (!cameraState.IsValid || !IsActivelyControllingRole(Define.TitanRole.Torso))
+            return;
+
         _torsoCameraState.Value = cameraState;
     }
 
@@ -858,6 +862,9 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         if (localPlayer == null || !localPlayer.IsOwner || !localPlayer.IsSpawned)
             return false;
 
+        if (!localPlayer.IsActivelyControllingRole(Define.TitanRole.Torso))
+            return false;
+
         if (localPlayer._torsoCameraState.Value.Equals(cameraState))
             return true;
 
@@ -1017,22 +1024,38 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             return false;
 
         s_ignoreGameEndResultUntilNetworkReset = false;
+        s_latestLocalGameEndResult = result;
 
-        LobbyNetworkPlayer publisher = FindServerPosePublisher();
-        if (publisher == null || !publisher.IsServer || !publisher.IsSpawned)
+        LobbyNetworkPlayer[] players = FindAllSpawnedPlayers();
+        bool published = false;
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player == null || !player.IsServer || !player.IsSpawned)
+                continue;
+
+            if (player._gameEndResult.Value == (int)Define.GameEndResult.None)
+                player._gameEndResult.Value = (int)result;
+
+            player.ShowGameEndClientRpc((int)result);
+            published = true;
+        }
+
+        if (!published)
             return false;
 
-        if (publisher._gameEndResult.Value != (int)Define.GameEndResult.None)
-            return true;
-
-        publisher._gameEndResult.Value = (int)result;
-        publisher.ShowGameEndClientRpc((int)result);
         return true;
     }
 
     public static bool TryGetLatestGameEndResult(out Define.GameEndResult result)
     {
         result = Define.GameEndResult.None;
+
+        if (s_latestLocalGameEndResult != Define.GameEndResult.None)
+        {
+            result = s_latestLocalGameEndResult;
+            return true;
+        }
 
         LobbyNetworkPlayer publisher = FindServerPosePublisher();
         if (publisher == null || !publisher.IsSpawned)
@@ -1053,14 +1076,28 @@ public class LobbyNetworkPlayer : NetworkBehaviour
     public static void ResetLocalGameEndResultState()
     {
         s_ignoreGameEndResultUntilNetworkReset = true;
+        s_latestLocalGameEndResult = Define.GameEndResult.None;
+    }
+
+    private static void ResetServerGameEndResults()
+    {
+        LobbyNetworkPlayer[] players = FindAllSpawnedPlayers();
+        for (int i = 0; i < players.Length; i++)
+        {
+            LobbyNetworkPlayer player = players[i];
+            if (player != null && player.IsServer && player.IsSpawned)
+                player._gameEndResult.Value = (int)Define.GameEndResult.None;
+        }
     }
 
     [Rpc(SendTo.ClientsAndHost)]
     private void ShowGameEndClientRpc(int resultValue)
     {
         s_ignoreGameEndResultUntilNetworkReset = false;
+        Define.GameEndResult result = (Define.GameEndResult)resultValue;
+        s_latestLocalGameEndResult = result;
         if (Managers.Scene.CurrentScene is GameScene gameScene)
-            gameScene.ShowGameEndFromNetwork((Define.GameEndResult)resultValue);
+            gameScene.ShowGameEndFromNetwork(result);
     }
 
     private static LobbyNetworkPlayer FindServerPosePublisher()
@@ -1093,7 +1130,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             if (player == null || !player.IsServer || !player.IsSpawned)
                 continue;
 
-            player._gameEndResult.Value = (int)Define.GameEndResult.None;
+            ResetServerGameEndResults();
             ResetLocalGameEndResultState();
             ResetSpawnedRoleInputStateForSceneBoundary(resetServerNetworkValues: true);
 
@@ -1129,7 +1166,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             if (player == null || !player.IsServer || !player.IsSpawned)
                 continue;
 
-            player._gameEndResult.Value = (int)Define.GameEndResult.None;
+            ResetServerGameEndResults();
             ResetLocalGameEndResultState();
             ResetSpawnedRoleInputStateForSceneBoundary(resetServerNetworkValues: true);
             PrepareSpawnedPlayersForLobbySceneReturn(randomizeServerSpawn: true);

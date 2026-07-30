@@ -194,13 +194,10 @@ public class GameCameraController : MonoBehaviour
 
     private void ApplyTorsoCameraInput()
     {
-        Vector2 mouseDelta = Vector2.zero;
-        float scrollInput = 0f;
-
         if (IsLocalTorsoActive())
         {
-            mouseDelta = Managers.Input.ReadTitanMouseDelta();
-            scrollInput = Managers.Input.ReadMouseScrollY();
+            Vector2 mouseDelta = Managers.Input.ReadTitanMouseDelta();
+            float scrollInput = Managers.Input.ReadMouseScrollY();
 
             ApplyCameraDelta(mouseDelta, scrollInput);
             EnsureCameraAnglesInitialized();
@@ -216,19 +213,6 @@ public class GameCameraController : MonoBehaviour
             _hasCameraAngles = true;
             return;
         }
-
-        if (Managers.TitanRole.TryGetRoleInput(Define.TitanRole.Torso, out TitanAggregatedInput torsoInput))
-        {
-            mouseDelta = torsoInput.MouseDelta;
-            scrollInput = torsoInput.TorsoCameraScrollInput;
-        }
-        else
-        {
-            mouseDelta = Managers.Input.ReadTitanMouseDelta();
-            scrollInput = Managers.Input.ReadMouseScrollY();
-        }
-
-        ApplyCameraDelta(mouseDelta, scrollInput);
     }
 
     private static bool IsLocalTorsoActive()
