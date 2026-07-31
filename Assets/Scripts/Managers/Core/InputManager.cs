@@ -16,6 +16,7 @@ public class InputManager
     private const string ArmAimActionName = "ArmAim";
     private const string LegAimActionName = "LegAim";
     private const string LegScrollActionName = "LegScroll";
+    private const string TitanDevMoveActionName = "TitanDevMove";
     private const string AttackActionName = "Attack";
     private const string InteractActionName = "Interact";
     private const string DrillActionName = "Drill";
@@ -48,6 +49,7 @@ public class InputManager
     private InputAction _armAimAction;
     private InputAction _legAimAction;
     private InputAction _legScrollAction;
+    private InputAction _titanDevMoveAction;
     private InputAction _attackAction;
     private InputAction _interactAction;
     private InputAction _drillAction;
@@ -75,6 +77,7 @@ public class InputManager
         _armAimAction = PlayerMap.FindAction(ArmAimActionName, throwIfNotFound: true);
         _legAimAction = PlayerMap.FindAction(LegAimActionName, throwIfNotFound: true);
         _legScrollAction = PlayerMap.FindAction(LegScrollActionName, throwIfNotFound: true);
+        _titanDevMoveAction = PlayerMap.FindAction(TitanDevMoveActionName, throwIfNotFound: true);
         _attackAction = PlayerMap.FindAction(AttackActionName, throwIfNotFound: true);
         _interactAction = PlayerMap.FindAction(InteractActionName, throwIfNotFound: true);
         _drillAction = PlayerMap.FindAction(DrillActionName, throwIfNotFound: true);
@@ -232,6 +235,14 @@ public class InputManager
             return 0f;
 
         return _legScrollAction.ReadValue<Vector2>().y;
+    }
+
+    public Vector2 ReadTitanDevMoveInput()
+    {
+        if (Mode != Define.InputMode.Player)
+            return Vector2.zero;
+
+        return _titanDevMoveAction.ReadValue<Vector2>();
     }
 
     public Vector2 ReadTitanMouseDelta()

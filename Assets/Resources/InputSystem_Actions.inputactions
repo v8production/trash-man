@@ -220,6 +220,15 @@
           "processors": "",
           "interactions": "",
           "initialStateCheck": true
+        },
+        {
+          "name": "TitanDevMove",
+          "type": "Value",
+          "id": "6a899670-e83c-4433-a6f9-a80b61683f4d",
+          "expectedControlType": "Vector2",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
         }
       ],
       "bindings": [
@@ -860,6 +869,61 @@
           "action": "LegScroll",
           "isComposite": false,
           "isPartOfComposite": false
+        },
+        {
+          "name": "WASD",
+          "id": "2e56033e-038a-4382-a2c9-1c868bc551f8",
+          "path": "2DVector",
+          "interactions": "",
+          "processors": "",
+          "groups": "",
+          "action": "TitanDevMove",
+          "isComposite": true,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "up",
+          "id": "88bc4967-2a95-4332-87e4-46bd62174c27",
+          "path": "<Keyboard>/w",
+          "interactions": "",
+          "processors": "",
+          "groups": "Keyboard&Mouse",
+          "action": "TitanDevMove",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "down",
+          "id": "6757dfdb-c531-4adc-9601-a37638f674ee",
+          "path": "<Keyboard>/s",
+          "interactions": "",
+          "processors": "",
+          "groups": "Keyboard&Mouse",
+          "action": "TitanDevMove",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "left",
+          "id": "3dd2a048-1d2a-4f3d-a232-26a2334163b9",
+          "path": "<Keyboard>/a",
+          "interactions": "",
+          "processors": "",
+          "groups": "Keyboard&Mouse",
+          "action": "TitanDevMove",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "right",
+          "id": "fe7e6c71-52c6-4400-b3d6-713f3f80049f",
+          "path": "<Keyboard>/d",
+          "interactions": "",
+          "processors": "",
+          "groups": "Keyboard&Mouse",
+          "action": "TitanDevMove",
+          "isComposite": false,
+          "isPartOfComposite": true
         }
       ]
     },

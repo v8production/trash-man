@@ -7,8 +7,20 @@ public sealed class TitanDevController : MonoBehaviour
     [SerializeField] private float _turnSpeed = 720f;
 
     private Transform _cameraTransform;
+    private Rigidbody _rigidbody;
 
-    private void Update()
+    private void Awake()
+    {
+        _rigidbody = GetComponent<Rigidbody>();
+    }
+
+    private void OnEnable()
+    {
+        Time.timeScale = 1f;
+        Managers.Input.SetMode(Define.InputMode.Player);
+    }
+
+    private void FixedUpdate()
     {
         Transform cameraTransform = ResolveCameraTransform();
         Vector3 forward = cameraTransform != null ? Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up) : Vector3.forward;
@@ -21,17 +33,26 @@ public sealed class TitanDevController : MonoBehaviour
             right = Vector3.Cross(Vector3.up, forward);
         right.Normalize();
 
-        Vector2 moveInput = Managers.Input.ReadRangerMoveInput();
+        Vector2 moveInput = Managers.Input.ReadTitanDevMoveInput();
         Vector3 moveDirection = forward * moveInput.y + right * moveInput.x;
 
         if (moveDirection.sqrMagnitude <= 0f)
             return;
 
         moveDirection.Normalize();
-        transform.position += moveDirection * (_moveSpeed * Time.deltaTime);
+        Vector3 nextPosition = transform.position + moveDirection * (_moveSpeed * Time.fixedDeltaTime);
 
         Quaternion targetRotation = Quaternion.LookRotation(moveDirection, Vector3.up);
-        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, _turnSpeed * Time.deltaTime);
+        Quaternion nextRotation = Quaternion.RotateTowards(transform.rotation, targetRotation, _turnSpeed * Time.fixedDeltaTime);
+
+        if (_rigidbody != null)
+        {
+            _rigidbody.MovePosition(nextPosition);
+            _rigidbody.MoveRotation(nextRotation);
+            return;
+        }
+
+        transform.SetPositionAndRotation(nextPosition, nextRotation);
     }
 
     private Transform ResolveCameraTransform()
