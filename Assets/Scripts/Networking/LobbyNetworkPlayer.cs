@@ -1047,6 +1047,26 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         return true;
     }
 
+    public static bool TryPublishServerTankSpawn(int spawnTypeValue, Vector3 spawnPosition)
+    {
+        LobbyNetworkPlayer publisher = FindServerPosePublisher();
+        if (publisher == null || !publisher.IsServer || !publisher.IsSpawned)
+            return false;
+
+        publisher.SpawnTankClientRpc(spawnTypeValue, spawnPosition);
+        return true;
+    }
+
+    public static bool TryPublishServerFootGroundedFeedback()
+    {
+        LobbyNetworkPlayer publisher = FindServerPosePublisher();
+        if (publisher == null || !publisher.IsServer || !publisher.IsSpawned)
+            return false;
+
+        publisher.PlayFootGroundedFeedbackClientRpc();
+        return true;
+    }
+
     public static bool TryGetLatestGameEndResult(out Define.GameEndResult result)
     {
         result = Define.GameEndResult.None;
@@ -1098,6 +1118,21 @@ public class LobbyNetworkPlayer : NetworkBehaviour
         s_latestLocalGameEndResult = result;
         if (Managers.Scene.CurrentScene is GameScene gameScene)
             gameScene.ShowGameEndFromNetwork(result);
+    }
+
+    [Rpc(SendTo.ClientsAndHost)]
+    private void SpawnTankClientRpc(int spawnTypeValue, Vector3 spawnPosition)
+    {
+        if (Managers.Scene.CurrentScene is GameScene gameScene)
+            gameScene.SpawnTankFromNetwork(spawnTypeValue, spawnPosition);
+    }
+
+    [Rpc(SendTo.ClientsAndHost)]
+    private void PlayFootGroundedFeedbackClientRpc()
+    {
+        TitanController titanController = FindAnyObjectByType<TitanController>();
+        if (titanController != null)
+            titanController.MovementFeedback.PlayFootGroundedFeedback();
     }
 
     private static LobbyNetworkPlayer FindServerPosePublisher()

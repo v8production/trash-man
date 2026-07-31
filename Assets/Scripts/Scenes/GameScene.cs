@@ -30,6 +30,12 @@ public class GameScene : BaseScene
     private GameObject _gaugeTankOriginal;
     private float _nextTankSpawnTime;
 
+    public enum TankSpawnType
+    {
+        Hp = 0,
+        Gauge = 1,
+    }
+
     private void EnsureTitanRuntime()
     {
         GameObject titanObject = Managers.Resource.Instantiate(TitanPrefabName);
@@ -220,18 +226,41 @@ public class GameScene : BaseScene
         if (_titanController == null || Time.time < _nextTankSpawnTime)
             return;
 
+        if (IsNetworkSessionActive() && !HasServerAuthority())
+            return;
+
         SpawnRandomTank();
         _nextTankSpawnTime = Time.time + TankSpawnIntervalSeconds;
     }
 
     private void SpawnRandomTank()
     {
-        GameObject original = Random.value < 0.5f ? _hpTankOriginal : _gaugeTankOriginal;
+        TankSpawnType spawnType = Random.value < 0.5f ? TankSpawnType.Hp : TankSpawnType.Gauge;
+        Vector3 spawnPosition = GetRandomTankSpawnPosition();
+
+        if (IsNetworkSessionActive()
+            && LobbyNetworkPlayer.TryPublishServerTankSpawn((int)spawnType, spawnPosition))
+            return;
+
+        SpawnTank(spawnType, spawnPosition);
+    }
+
+    public void SpawnTankFromNetwork(int spawnTypeValue, Vector3 spawnPosition)
+    {
+        SpawnTank((TankSpawnType)spawnTypeValue, spawnPosition);
+    }
+
+    private void SpawnTank(TankSpawnType spawnType, Vector3 spawnPosition)
+    {
+        if (_hpTankOriginal == null || _gaugeTankOriginal == null)
+            CacheTankPrefabs();
+
+        GameObject original = spawnType == TankSpawnType.Gauge ? _gaugeTankOriginal : _hpTankOriginal;
         if (original == null)
             return;
 
         Poolable tank = Managers.Pool.Pop(original, transform);
-        tank.transform.SetPositionAndRotation(GetRandomTankSpawnPosition(), Quaternion.identity);
+        tank.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
     }
 
     private Vector3 GetRandomTankSpawnPosition()

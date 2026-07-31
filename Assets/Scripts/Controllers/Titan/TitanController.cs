@@ -1,4 +1,5 @@
 using Unity.VisualScripting;
+using Unity.Netcode;
 using UnityEngine;
 
 public class TitanController : MonoBehaviour
@@ -83,7 +84,28 @@ public class TitanController : MonoBehaviour
 
     private void HandleFootGrounded(bool _)
     {
+        if (IsNetworkSessionActive())
+        {
+            if (HasServerAuthority() && LobbyNetworkPlayer.TryPublishServerFootGroundedFeedback())
+                return;
+
+            if (!HasServerAuthority())
+                return;
+        }
+
         movementFeedbackController.PlayFootGroundedFeedback();
+    }
+
+    private static bool IsNetworkSessionActive()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        return networkManager != null && networkManager.IsListening;
+    }
+
+    private static bool HasServerAuthority()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        return networkManager != null && networkManager.IsListening && networkManager.IsServer;
     }
 
     private void SetShieldVisualActive(bool active)
