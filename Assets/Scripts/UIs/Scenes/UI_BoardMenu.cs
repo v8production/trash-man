@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class UI_BoardMenu : UI_Scene
@@ -394,14 +393,7 @@ public class UI_BoardMenu : UI_Scene
 
     private static bool TryGetMousePosition(out Vector2 mousePosition)
     {
-        Mouse mouse = Mouse.current;
-        if (mouse == null)
-        {
-            mousePosition = default;
-            return false;
-        }
-
-        mousePosition = mouse.position.ReadValue();
+        mousePosition = Managers.Input.ReadMousePosition();
         return true;
     }
 

@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class UI_LobbyMenu : UI_Scene
@@ -165,7 +164,7 @@ public class UI_LobbyMenu : UI_Scene
 
     private void RefreshRoomCodeVisibility()
     {
-        bool shouldShowCode = IsRoomCodeVisible && Keyboard.current != null && Keyboard.current.spaceKey.isPressed;
+        bool shouldShowCode = IsRoomCodeVisible && Managers.Input.IsRoomCodeRevealHeld();
         if (_isCodeVisible == shouldShowCode)
             return;
 

@@ -744,7 +744,7 @@ public class LobbyNetworkPlayer : NetworkBehaviour
             // InputDebug.Log($"PublishLocalRoleInput (client={OwnerClientId}, isOwner={IsOwner}) selectedMask=0x{selectedMask:X}, activeRole={activeRole}");
         }
 
-        TitanAggregatedInput currentInput = Managers.Input.CaptureTitanInput();
+        TitanAggregatedInput currentInput = Managers.Input.CaptureTitanInput((Define.TitanRole)activeRole);
         StampTorsoPressCounters(ref currentInput, activeRole == (int)Define.TitanRole.Torso);
         TitanRoleInputPayload payload = new(currentInput);
         if (_roleInput.Value.Equals(payload))

@@ -196,7 +196,7 @@ public class GameCameraController : MonoBehaviour
     {
         if (IsLocalTorsoActive())
         {
-            Vector2 mouseDelta = Managers.Input.ReadTitanMouseDelta();
+            Vector2 mouseDelta = Managers.Input.ReadTorsoLookInput();
             float scrollInput = Managers.Input.ReadMouseScrollY();
 
             ApplyCameraDelta(mouseDelta, scrollInput);

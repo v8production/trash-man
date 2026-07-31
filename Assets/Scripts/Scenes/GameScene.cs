@@ -1,6 +1,5 @@
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class GameScene : BaseScene
 {
@@ -280,7 +279,7 @@ public class GameScene : BaseScene
 
     private static bool IsEscapePressedThisFrame()
     {
-        return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
+        return Managers.Input.WasEscapePressedThisFrame();
     }
 
     private static void CleanupLobbyRangers()

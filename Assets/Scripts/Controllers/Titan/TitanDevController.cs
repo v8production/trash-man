@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 [DisallowMultipleComponent]
 public sealed class TitanDevController : MonoBehaviour
@@ -11,10 +10,6 @@ public sealed class TitanDevController : MonoBehaviour
 
     private void Update()
     {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null)
-            return;
-
         Transform cameraTransform = ResolveCameraTransform();
         Vector3 forward = cameraTransform != null ? Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up) : Vector3.forward;
         if (forward.sqrMagnitude <= 0.0001f)
@@ -26,15 +21,8 @@ public sealed class TitanDevController : MonoBehaviour
             right = Vector3.Cross(Vector3.up, forward);
         right.Normalize();
 
-        Vector3 moveDirection = Vector3.zero;
-        if (keyboard.wKey.isPressed)
-            moveDirection += forward;
-        if (keyboard.sKey.isPressed)
-            moveDirection -= forward;
-        if (keyboard.dKey.isPressed)
-            moveDirection += right;
-        if (keyboard.aKey.isPressed)
-            moveDirection -= right;
+        Vector2 moveInput = Managers.Input.ReadRangerMoveInput();
+        Vector3 moveDirection = forward * moveInput.y + right * moveInput.x;
 
         if (moveDirection.sqrMagnitude <= 0f)
             return;

@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 [DisallowMultipleComponent]
 public sealed class GameDevCameraController : MonoBehaviour
@@ -29,16 +28,12 @@ public sealed class GameDevCameraController : MonoBehaviour
         if (target == null)
             return;
 
-        Mouse mouse = Mouse.current;
-        if (mouse != null)
-        {
-            Vector2 mouseDelta = mouse.delta.ReadValue();
-            _yaw += mouseDelta.x * _mouseSensitivity * MouseDeltaScale;
-            _pitch -= mouseDelta.y * _mouseSensitivity * MouseDeltaScale;
-            _pitch = Mathf.Clamp(_pitch, _minPitch, _maxPitch);
-        }
+        Vector2 mouseDelta = Managers.Input.ReadTorsoLookInput();
+        _yaw += mouseDelta.x * _mouseSensitivity * MouseDeltaScale;
+        _pitch -= mouseDelta.y * _mouseSensitivity * MouseDeltaScale;
+        _pitch = Mathf.Clamp(_pitch, _minPitch, _maxPitch);
 
-        float scroll = mouse != null ? mouse.scroll.ReadValue().y * ScrollDeltaScale : 0f;
+        float scroll = Managers.Input.ReadMouseScrollY() * ScrollDeltaScale;
         if (scroll != 0f)
             _distance = Mathf.Clamp(_distance - scroll * _zoomSensitivity, _minDistance, _maxDistance);
 

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
 public class RangerController : MonoBehaviour
@@ -20,10 +19,6 @@ public class RangerController : MonoBehaviour
     public const float SeatedHeadLookYawLimit = 75f;
     public const float SeatedHeadLookPitchLimit = 60f;
 
-    [Header("Actions (Player Map)")]
-    [SerializeField] private string moveActionName = "Move";
-
-
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 2f;
     [SerializeField] private float mouseYawSensitivity = 0.12f;
@@ -35,7 +30,6 @@ public class RangerController : MonoBehaviour
     [SerializeField] private float _faceEmissive = 1f;
 
     private CharacterController _characterController;
-    private InputAction _moveAction;
     private MaterialPropertyBlock _materialPropertyBlock;
     private Renderer[] _renderers = System.Array.Empty<Renderer>();
     private Vector2 _moveInput;
@@ -119,10 +113,6 @@ public class RangerController : MonoBehaviour
         ResolveHeadBone();
         ResolveSpineBone();
         _renderers = GetComponentsInChildren<Renderer>(true);
-
-        InputActionMap playerMap = Managers.Input.PlayerMap;
-        if (playerMap != null)
-            _moveAction = playerMap.FindAction(moveActionName, false);
 
         AnimState = Define.RangerAnimState.Idle00;
         RangerFaceTextureStore.ApplyTo(gameObject);
@@ -377,7 +367,7 @@ public class RangerController : MonoBehaviour
 
     private void UpdateInput()
     {
-        _moveInput = _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
+        _moveInput = Managers.Input.ReadRangerMoveInput();
         _moveInput = Vector2.ClampMagnitude(_moveInput, 1f);
     }
 
@@ -806,7 +796,7 @@ public class RangerController : MonoBehaviour
 
     private void UpdateMouseYaw()
     {
-        Vector2 lookInput = Managers.Input.ReadPlayerLookInput();
+        Vector2 lookInput = Managers.Input.ReadRangerLookInput();
         if (Mathf.Abs(lookInput.x) <= 0.0001f)
             return;
 

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class LobbyScene : BaseScene
 {
@@ -603,7 +602,7 @@ public class LobbyScene : BaseScene
 
     private static bool IsEscapePressedThisFrame()
     {
-        return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
+        return Managers.Input.WasEscapePressedThisFrame();
     }
 
     public override void Clear()

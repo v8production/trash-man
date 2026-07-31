@@ -1,7 +1,6 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class UI_EnterCode : UI_Scene
@@ -42,7 +41,7 @@ public class UI_EnterCode : UI_Scene
 
     private void Update()
     {
-        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        if (Managers.Input.WasEscapePressedThisFrame())
             Close();
     }
 

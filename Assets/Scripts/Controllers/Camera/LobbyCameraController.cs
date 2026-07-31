@@ -42,7 +42,7 @@ public class LobbyCameraController : MonoBehaviour
         if (_target == null)
             return;
 
-        Vector2 lookInput = Managers.Input.ReadPlayerLookInput();
+        Vector2 lookInput = Managers.Input.ReadRangerLookInput();
         bool isTargetSeated = IsTargetSeated();
         if (isTargetSeated)
             _yaw = Mathf.Clamp(
