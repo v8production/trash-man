@@ -42,13 +42,16 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _FresnelPower: 2
+    - _FresnelPower: 0.78
     - _QueueControl: 0
     - _QueueOffset: 0
+    - _Size: 0
+    - _VectorFrequency: 1
     m_Colors:
-    - _Backcolor: {r: 0, g: 3.4185948, b: 29.857056, a: 0.21176471}
-    - _FresnelColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Frontcolor: {r: 0, g: 264.65338, b: 683.0918, a: 1}
+    - _Backcolor: {r: 0, g: 3.904338, b: 33.896755, a: 0.39215687}
+    - _FresnelColor: {r: 0.010232719, g: 0, b: 1.9543787, a: 1}
+    - _Frontcolor: {r: 8.140284, g: 80.23796, b: 191.74898, a: 1}
+    - _VectorAmount: {r: 0.1, g: 0.1, b: 0.1, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &7128490181511398411
